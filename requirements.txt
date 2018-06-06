@@ -1,0 +1,6 @@
+pydash==4.5.0
+pymysql==0.8.0
+python-dotenv==0.8.1
+progressbar2==3.38.0
+nltk==3.3
+pychalk==2.0.0
