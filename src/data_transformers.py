@@ -32,9 +32,7 @@ def _transform_page(entity_lookup,
 def _transform_raw_dataset(entity_lookup, embedding_lookup, raw_dataset):
   description_label_tuples = map(_.curry(_transform_page, 3)(entity_lookup, embedding_lookup),
                                  raw_dataset)
-  descriptions = map(lambda tup: tup[0], description_label_tuples)
-  labels = map(lambda tup: tup[1], description_label_tuples)
-  return descriptions, labels
+  return map(list, zip(*description_label_tuples))
 
 def transform_raw_datasets(entity_lookup, embedding_lookup, raw_datasets):
   return _.map_values(raw_datasets,
