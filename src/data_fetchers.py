@@ -1,8 +1,11 @@
 import os
 import pymysql.cursors
+import numpy as np
+import torch
 from dotenv import load_dotenv
 from pathlib import Path
 import pydash as _
+from functools import reduce
 
 import utils as u
 
@@ -49,9 +52,34 @@ def _get_data_fetcher(num_items_per_dataset):
     splits[dataset_name] = [split_index, split_index + num_items]
     split_index += num_items
   def __data_fetcher(cursor, dataset_name):
-    cursor.execute('select * from pages limit %s, %s', splits[dataset_name])
+    cursor.execute('select * from pages where is_seed_page = 1 limit %s, %s', splits[dataset_name])
     return u.build_cursor_generator(cursor)
   return __data_fetcher
 
 def get_raw_datasets(cursors, num_items):
   return _.map_values(cursors, _get_data_fetcher(num_items))
+
+def get_entity_lookup():
+  try:
+    connection = get_connection()
+    with get_cursor(connection) as cursor:
+      cursor.execute('select * from entities')
+      entities = cursor.fetchall()
+      return reduce(lambda lookup, entity: _.assign(lookup, {entity['text']: entity['id']}),
+                    entities,
+                    {})
+  finally:
+    connection.close()
+
+def get_embedding_lookup(path, embedding_dim=100):
+  lookup = {'<PAD>': torch.rand(size=(embedding_dim,), dtype=torch.float32),
+            '<UNK>': torch.rand(size=(embedding_dim,), dtype=torch.float32)}
+  with open(path) as f:
+    while True:
+      line = f.readline()
+      if line and len(line) > 0:
+        split_line = line.strip().split(' ')
+        lookup[split_line[0]] = torch.tensor(np.array(split_line[1:], dtype=np.float32), dtype=torch.float32)
+      else:
+        break
+  return lookup

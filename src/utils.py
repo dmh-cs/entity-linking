@@ -1,3 +1,5 @@
+import torch
+
 def build_cursor_generator(cursor, buff_len=1000):
   while True:
     results = cursor.fetchmany(buff_len)
@@ -6,4 +8,5 @@ def build_cursor_generator(cursor, buff_len=1000):
 
 def get_batches(data, batch_size):
   args = [iter(data)] * batch_size
-  return zip(*args)
+  for batch in zip(*args):
+    yield torch.stack([torch.tensor(elem) for elem in batch])

@@ -7,3 +7,5 @@ node_modules
 *.sql
 *.prof
 *.iobes
+*.pickle
+/glove.6B.100d.txt
