@@ -19,20 +19,20 @@ def _build_description(tokens, embedding_lookup, desc_len=100) -> torch.Tensor:
     desc_vec.extend([embedding_lookup['<PAD>'] for _ in range(desc_len - len(desc_vec))])
   return torch.stack(desc_vec)
 
-def _transform_page(entity_lookup,
-                    embedding_lookup,
-                    page,
-                    num_tokens=100,
-                    use_entire_page=False):
+def _transform_raw_dataset(entity_lookup, embedding_lookup, raw_dataset):
+  description_label_tuples = map(_.curry(transform_page, 3)(entity_lookup, embedding_lookup),
+                                 raw_dataset)
+  return map(list, zip(*description_label_tuples))
+
+def transform_page(entity_lookup,
+                   embedding_lookup,
+                   page,
+                   num_tokens=100,
+                   use_entire_page=False):
   tokenized_page = _tokenize_page(page)
   if use_entire_page: raise NotImplementedError('Using entire pages is not yet implemented.')
   return (_build_description(tokenized_page['tokens'][:num_tokens], embedding_lookup),
           entity_lookup[tokenized_page['entity_name']])
-
-def _transform_raw_dataset(entity_lookup, embedding_lookup, raw_dataset):
-  description_label_tuples = map(_.curry(_transform_page, 3)(entity_lookup, embedding_lookup),
-                                 raw_dataset)
-  return map(list, zip(*description_label_tuples))
 
 def transform_raw_datasets(entity_lookup, embedding_lookup, raw_datasets):
   return _.map_values(raw_datasets,
