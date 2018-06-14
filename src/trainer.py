@@ -18,17 +18,22 @@ class Trainer:
     print("Creating optimizer '{}' for model:\n{} with params {}".format(optimizer, self.model, params or {}))
     return optim.Adam(self.model.parameters())
 
+  def _classification_error(self, logits, labels):
+    predictions = torch.argmax(logits, 1)
+    batch_true_labels = torch.arange(len(labels), dtype=torch.long)
+    return ((predictions - batch_true_labels) != 0).sum()
+
   def train(self):
     for epoch_num in range(self.num_epochs):
       print("Epoch", epoch_num)
       for batch_num, batch in enumerate(self.datasets['train']):
         self.optimizer.zero_grad()
-        desc_embeds = self.model(torch.unsqueeze(batch['description'], 1))
+        desc_embeds = self.model(batch['description'])
         loss = self.model.loss(desc_embeds, batch['label'])
         loss.backward()
         self.optimizer.step()
         if batch_num == 0:
-          print(((torch.argmax(self.model.logits, 1) - torch.tensor(range(len(batch['label'])))) != 0).sum())
+          print(self._classification_error(self.model.logits, batch['label']))
           print('[epoch %d, batch %5d] loss: %.3f' % (epoch_num, batch_num, loss.item()))
 
     print('Finished Training')

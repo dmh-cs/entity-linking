@@ -10,10 +10,10 @@ class DescriptionEncoder(nn.Module):
     self.embed_len = embed_len
     self.kernel_size = 5
     self.dropout_keep_prob = 0.6
-    self.conv = nn.Conv2d(1, self.embed_len, self.kernel_size, stride=1, padding=0)
+    self.conv = nn.Conv1d(100, self.embed_len, self.kernel_size, stride=1, padding=0)
     self.relu = nn.ReLU()
     self.dropout = nn.Dropout(p=self.dropout_keep_prob)
-    self.global_avg_pooling = nn.AdaptiveAvgPool2d(1)
+    self.global_avg_pooling = nn.AdaptiveAvgPool1d(1)
     self.criterion = nn.CrossEntropyLoss()
 
   def forward(self, descriptions):
