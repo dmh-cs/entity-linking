@@ -23,13 +23,14 @@ class Trainer:
     batch_true_labels = torch.arange(len(labels), dtype=torch.long)
     return ((predictions - batch_true_labels) != 0).sum()
 
-  def train(self):
+  def train(self, batch_size):
+    labels_for_batch = torch.arange(batch_size, dtype=torch.long)
     for epoch_num in range(self.num_epochs):
       print("Epoch", epoch_num)
       for batch_num, batch in enumerate(self.datasets['train']):
         self.optimizer.zero_grad()
         desc_embeds = self.model(batch['description'])
-        loss = self.model.loss(desc_embeds, batch['label'])
+        loss = self.model.loss(desc_embeds, batch['label'], labels_for_batch)
         loss.backward()
         self.optimizer.step()
         if batch_num == 0:

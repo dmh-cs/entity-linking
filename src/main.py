@@ -32,7 +32,7 @@ def main():
     desc_encoder = DescriptionEncoder(word_embed_len, entity_embeds)
     print('Training')
     trainer = Trainer(model=desc_encoder, datasets=datasets, num_epochs=num_epochs)
-    trainer.train()
+    trainer.train(batch_size)
 
   finally:
     close_cursors(cursors)

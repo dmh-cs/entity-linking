@@ -28,7 +28,9 @@ def test_description_encoder_loss():
                                                    _weight=torch.rand((num_entities, embed_len))))
   descriptions = torch.rand((batch_size, word_embed_len, desc_len))
   desc_embeds = desc_enc(descriptions)
+  labels_for_batch = torch.arange(batch_size, dtype=torch.long)
   loss = desc_enc.loss(desc_embeds,
-                       torch.randint(0, num_entities, (batch_size,), dtype=torch.long))
+                       torch.randint(0, num_entities, (batch_size,), dtype=torch.long),
+                       labels_for_batch)
   assert isinstance(loss, torch.Tensor)
   assert loss.shape == torch.Size([])
