@@ -8,11 +8,11 @@ import itertools
 import utils as u
 
 class Trainer:
-  def __init__(self, model: nn.Module, datasets):
+  def __init__(self, model: nn.Module, datasets, num_epochs):
     self.model = model
     self.datasets = datasets
     self.optimizer = self._create_optimizer('adam')
-    self.num_epochs = 1000
+    self.num_epochs = num_epochs
 
   def _create_optimizer(self, optimizer: str, params=None):
     print("Creating optimizer '{}' for model:\n{} with params {}".format(optimizer, self.model, params or {}))
@@ -25,11 +25,10 @@ class Trainer:
         self.optimizer.zero_grad()
         desc_embeds = self.model(torch.unsqueeze(batch['description'], 1))
         loss = self.model.loss(desc_embeds, batch['label'])
-        print(((torch.argmax(self.model.logits, 1) - batch['label']) != 0).sum())
-        print(torch.mm(desc_embeds, torch.transpose(self.model.entity_embeds.weight, 0, 1)))
         loss.backward()
         self.optimizer.step()
-        print('[epoch %d, batch %5d] loss: %.3f' %
-              (epoch_num, batch_num, loss.item()))
+        if batch_num == 0:
+          print(((torch.argmax(self.model.logits, 1) - torch.tensor(range(len(batch['label'])))) != 0).sum())
+          print('[epoch %d, batch %5d] loss: %.3f' % (epoch_num, batch_num, loss.item()))
 
     print('Finished Training')

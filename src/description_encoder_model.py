@@ -19,8 +19,9 @@ class DescriptionEncoder(nn.Module):
   def forward(self, descriptions):
     return torch.squeeze(self.global_avg_pooling(self.dropout(self.relu(self.conv(descriptions)))))
 
-  def loss(self, desc_embeds, true_entity_ids):
+  def loss(self, desc_embeds, batch_true_entity_ids):
+    labels_for_batch = torch.tensor(range(desc_embeds.shape[0]))
     self.logits = torch.sum(torch.mul(torch.unsqueeze(desc_embeds, 1),
-                                      self.entity_embeds.weight),
+                                      self.entity_embeds(batch_true_entity_ids)),
                             2)
-    return self.criterion(self.logits, true_entity_ids)
+    return self.criterion(self.logits, labels_for_batch)
