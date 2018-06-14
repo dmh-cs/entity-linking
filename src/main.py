@@ -23,12 +23,13 @@ def main():
     entity_embeds = nn.Embedding(num_entities, embed_len, _weight=entity_embed_weights)
     print('Creating word embedding lookup')
     embedding_lookup = get_embedding_lookup('./glove.6B.100d.txt')
+    word_embed_len = 100
     print('Building datasets')
     datasets = build_datasets(data_splits,
                               entity_lookup,
                               embedding_lookup,
                               batch_size)
-    desc_encoder = DescriptionEncoder(embed_len, entity_embeds)
+    desc_encoder = DescriptionEncoder(word_embed_len, entity_embeds)
     print('Training')
     trainer = Trainer(model=desc_encoder, datasets=datasets, num_epochs=num_epochs)
     trainer.train()
