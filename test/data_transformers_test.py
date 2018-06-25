@@ -22,3 +22,8 @@ def test_transform_raw_datasets():
     assert label == result['train'][1][0]
     ctr += 1
   assert ctr == 1
+
+def test_get_mention_sentence_splits():
+  sentences = ['a b c', 'aa bb cc']
+  mention_info = {'mention': 'bb cc', 'offset': 9}
+  assert dt.get_mention_sentence_splits(sentences, mention_info) == [['aa', 'bb', 'cc'], ['bb', 'cc']]

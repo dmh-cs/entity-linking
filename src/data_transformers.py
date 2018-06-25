@@ -1,7 +1,7 @@
 import pydash as _
 from functools import reduce
 import torch
-from parsers import parse_text_for_tokens
+from parsers import parse_text_for_tokens, parse_for_tokens
 
 
 def _tokenize_page(page):
@@ -37,3 +37,16 @@ def transform_page(entity_lookup,
 def transform_raw_datasets(entity_lookup, embedding_lookup, raw_datasets):
   return _.map_values(raw_datasets,
                       _.curry(_transform_raw_dataset)(entity_lookup, embedding_lookup))
+
+def _find_mention_sentence(sentences, mention_info):
+  sentence_lengths = [len(sentence) for sentence in sentences]
+  cumsum = reduce(lambda acc, length: [length] if _.is_empty(acc) else acc + [acc[-1] + length], sentence_lengths, [])
+  index = _.find_index(cumsum, lambda ends_at: mention_info['offset'] <= ends_at)
+  return sentences[index]
+
+def get_mention_sentence_splits(sentences, mention_info):
+  sentence = _find_mention_sentence(sentences, mention_info)
+  mention_index = sentence.index(mention_info['mention'])
+  mention_len = len(mention_info['mention'])
+  return [parse_for_tokens(sentence[:mention_index + mention_len]),
+          parse_for_tokens(sentence[mention_index:])]
