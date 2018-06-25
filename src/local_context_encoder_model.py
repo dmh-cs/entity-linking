@@ -3,9 +3,9 @@ import torch.nn as nn
 
 
 class LocalContextEncoder(nn.Module):
-  def __init__(self, dropout_keep_prob, lstm_size, word_embed_len, context_embed_len):
+  def __init__(self, dropout_keep_prob, lstm_size, num_lstm_layers, word_embed_len, context_embed_len):
     super(LocalContextEncoder, self).__init__()
-    self.num_lstm_layers = 1
+    self.num_lstm_layers = num_lstm_layers
     self.lstm_size = lstm_size
     self.word_embed_len = word_embed_len
     self.context_embed_len = context_embed_len
@@ -21,9 +21,9 @@ class LocalContextEncoder(nn.Module):
     self.projection = nn.Linear(2 * self.lstm_size, self.context_embed_len)
     self.relu = nn.ReLU()
 
-  def forward(self, mention_sequences):
-    mention_left_sequences = mention_sequences[:, 0]
-    mention_right_sequences = mention_sequences[:, 1]
+  def forward(self, sentence_splits):
+    mention_left_sequences = sentence_splits[:, 0]
+    mention_right_sequences = sentence_splits[:, 1]
     sentence_embed = torch.cat((self.left_lstm(mention_left_sequences),
                                 self.right_lstm(mention_right_sequences)),
                                dim=1)
