@@ -52,7 +52,18 @@ def get_mention_sentence_splits(sentences, mention_info):
   return [parse_for_tokens(sentence[:mention_index + mention_len]),
           parse_for_tokens(sentence[mention_index:])]
 
-def embed_sentence_splits(embedding_lookup, left_batch_len, right_batch_len, sample):
-  embedded = [_tokens_to_embeddings(sample['sentence_splits'][0], embedding_lookup, left_batch_len),
-              _tokens_to_embeddings(sample['sentence_splits'][1], embedding_lookup, right_batch_len)]
-  return _.assign({}, sample, {'sentence_splits': embedded})
+def _embed_sentence_splits(embedding_lookup, left_batch_len, right_batch_len, sentence_splits):
+  return [_tokens_to_embeddings(sentence_splits[0], embedding_lookup, left_batch_len),
+          _tokens_to_embeddings(sentence_splits[1], embedding_lookup, right_batch_len)]
+
+def _get_left_right_max_len(sentence_splits):
+  left_batch = [split[0] for split in sentence_splits]
+  right_batch = [split[1] for split in sentence_splits]
+  return max(map(len, left_batch)), max(map(len, right_batch))
+
+def pad_and_embed_batch(embedding_lookup, sentence_splits):
+  left_batch_len, right_batch_len = _get_left_right_max_len(sentence_splits)
+  return _embed_sentence_splits(embedding_lookup,
+                                left_batch_len,
+                                right_batch_len,
+                                sentence_splits)
