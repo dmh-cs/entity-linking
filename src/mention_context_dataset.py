@@ -65,7 +65,7 @@ class MentionContextDataset(Dataset):
     lookup = {}
     for page_id in page_ids:
       self.cursor.execute('select id from mentions where page_id = %s', page_id)
-      lookup[page_id] = self.cursor.fetchall()
+      lookup[page_id] = [row['id'] for row in self.cursor.fetchall()]
     return lookup
 
   def _next_batch(self, batch_size):

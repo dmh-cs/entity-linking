@@ -1,6 +1,7 @@
 import pydash as _
 from functools import reduce
 import torch
+import torch.sparse as sparse
 from parsers import parse_text_for_tokens, parse_for_tokens
 
 
@@ -8,7 +9,7 @@ def _tokenize_page(page):
   return {'entity_name': page['title'],
           'tokens': parse_text_for_tokens(page['content'])}
 
-def _build_description(tokens, embedding_lookup, desc_len=100) -> torch.Tensor:
+def _tokens_to_embeddings(tokens, embedding_lookup, desc_len=100) -> torch.Tensor:
   desc_vec = []
   for token in tokens:
     if token in embedding_lookup:
@@ -31,7 +32,7 @@ def transform_page(entity_lookup,
                    use_entire_page=False):
   tokenized_page = _tokenize_page(page)
   if use_entire_page: raise NotImplementedError('Using entire pages is not yet implemented.')
-  return (_build_description(tokenized_page['tokens'][:num_tokens], embedding_lookup),
+  return (_tokens_to_embeddings(tokenized_page['tokens'][:num_tokens], embedding_lookup),
           entity_lookup[tokenized_page['entity_name']])
 
 def transform_raw_datasets(entity_lookup, embedding_lookup, raw_datasets):
@@ -50,3 +51,8 @@ def get_mention_sentence_splits(sentences, mention_info):
   mention_len = len(mention_info['mention'])
   return [parse_for_tokens(sentence[:mention_index + mention_len]),
           parse_for_tokens(sentence[mention_index:])]
+
+def embed_sentence_splits(embedding_lookup, left_batch_len, right_batch_len, sample):
+  embedded = [_tokens_to_embeddings(sample['sentence_splits'][0], embedding_lookup, left_batch_len),
+              _tokens_to_embeddings(sample['sentence_splits'][1], embedding_lookup, right_batch_len)]
+  return _.assign({}, sample, {'sentence_splits': embedded})
