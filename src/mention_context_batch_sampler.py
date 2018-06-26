@@ -2,6 +2,7 @@ from random import shuffle
 from torch.utils.data.sampler import Sampler
 import pydash as _
 import math
+import random
 
 class MentionContextBatchSampler(Sampler):
   def __init__(self, cursor, page_id_order, batch_size):
@@ -25,7 +26,7 @@ class MentionContextBatchSampler(Sampler):
   def _get_next_batch(self):
     self.ids = []
     if len(self.ids_from_last_page) > self.batch_size:
-      self.ids = list(self.ids_from_last_page)[:self.batch_size]
+      self.ids = random.sample(list(self.ids_from_last_page), self.batch_size)
       self.ids_from_last_page = self.ids_from_last_page - set(self.ids)
       shuffle(self.ids)
       return self.ids
