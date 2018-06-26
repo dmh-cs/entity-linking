@@ -36,7 +36,7 @@ class Trainer:
         context_embeds = self.model(torch.stack((embedded_sentence_splits,
                                                  batch['document_mention_indices']),
                                                 0))
-        candidate_entity_ids = torch.stack((batch['labels'], batch['candidates']), 0)
+        candidate_entity_ids = torch.stack((batch['label'], batch['candidates']), 0)
         loss = self.model.loss(context_embeds, candidate_entity_ids, labels_for_batch)
         loss.backward()
         self.optimizer.step()

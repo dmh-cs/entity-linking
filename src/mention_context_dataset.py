@@ -37,10 +37,11 @@ class MentionContextDataset(Dataset):
       self._next_batch(self.batch_size)
     mention_info = self._mention_infos[idx]
     sentences = self._page_id_sentences_lookup[mention_info['page_id']]
-    self.entity_label_lookup[mention_info['entity_id']] = self._entity_label_ctr
-    self._entity_label_ctr += 1
+    if mention_info['entity_id'] not in self.entity_label_lookup:
+      self.entity_label_lookup[mention_info['entity_id']] = self._entity_label_ctr
+      self._entity_label_ctr += 1
     sample = {'sentence_splits': get_mention_sentence_splits(sentences, mention_info),
-              'labels': self.entity_label_lookup[mention_info['entity_id']],
+              'label': self.entity_label_lookup[mention_info['entity_id']],
               'document_mention_indices': self._document_mention_lookup[mention_info['entity_id']],
               'candidates': self.entity_candidates_lookup[mention_info['mention_id']]}
     if self.transform:
