@@ -40,18 +40,35 @@ def transform_raw_datasets(entity_lookup, embedding_lookup, raw_datasets):
   return _.map_values(raw_datasets,
                       _.curry(_transform_raw_dataset)(entity_lookup, embedding_lookup))
 
-def _find_mention_sentence(sentences, mention_info):
+def _find_mention_sentence_index(sentences, mention_info):
   sentence_lengths = [len(sentence) for sentence in sentences]
-  cumsum = reduce(lambda acc, length: [length] if _.is_empty(acc) else acc + [acc[-1] + length], sentence_lengths, [])
+  def _reducer(acc, length__sentence_num):
+    sentence_num = length__sentence_num[0]
+    length = length__sentence_num[1]
+    if sentence_num == 0:
+      return [length]
+    else:
+      return acc + [acc[-1] + length + 1]
+  cumsum = reduce(_reducer, enumerate(sentence_lengths), [])
   index = _.find_index(cumsum, lambda ends_at: mention_info['offset'] <= ends_at)
-  return sentences[index]
+  return index
 
 def get_mention_sentence_splits(sentences, mention_info):
-  sentence = _find_mention_sentence(sentences, mention_info)
-  mention_index = sentence.index(mention_info['mention'])
-  mention_len = len(mention_info['mention'])
-  return [parse_for_tokens(sentence[:mention_index + mention_len]),
-          parse_for_tokens(sentence[mention_index:])]
+  try:
+    sentence_index = _find_mention_sentence_index(sentences, mention_info)
+    indices_to_check = [sentence_index, sentence_index - 1, sentence_index + 1]
+    for index in indices_to_check:
+      try:
+        sentence = sentences[index]
+        mention_index = sentence.index(mention_info['mention'])
+      except ValueError:
+        print('Mention not found in sentence', mention_info, sentence)
+      mention_len = len(mention_info['mention'])
+      return [parse_for_tokens(sentence[:mention_index + mention_len]),
+              parse_for_tokens(sentence[mention_index:])]
+  except ValueError:
+    print('Mention sentence not found', mention_info)
+    raise
 
 def _embed_sentence_splits(embedding_lookup, left_batch_len, right_batch_len, sentence_splits):
   flipped = reversed(sentence_splits[0])
@@ -60,8 +77,12 @@ def _embed_sentence_splits(embedding_lookup, left_batch_len, right_batch_len, se
           _tokens_to_embeddings(sentence_splits[1], embedding_lookup, right_batch_len)]
 
 def _get_left_right_max_len(sentence_splits_batch):
-  left_batch = [sentence_splits[0] for sentence_splits in sentence_splits_batch]
-  right_batch = [sentence_splits[1] for sentence_splits in sentence_splits_batch]
+  try:
+    left_batch = [sentence_splits[0] for sentence_splits in sentence_splits_batch]
+    right_batch = [sentence_splits[1] for sentence_splits in sentence_splits_batch]
+  except:
+    print(sentence_splits_batch)
+    raise
   return max(map(len, left_batch)), max(map(len, right_batch))
 
 def pad_and_embed_batch(embedding_lookup, sentence_splits_batch):
