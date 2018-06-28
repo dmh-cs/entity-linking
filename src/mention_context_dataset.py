@@ -12,11 +12,13 @@ class MentionContextDataset(Dataset):
                cursor,
                page_id_order,
                entity_candidates_lookup,
+               entity_label_lookup,
                batch_size,
                num_mentions,
                transform=None):
     self.page_id_order = page_id_order
     self.entity_candidates_lookup = entity_candidates_lookup
+    self.entity_label_lookup = entity_label_lookup
     self.cursor = cursor
     self.transform = transform
     self.batch_size = batch_size
@@ -25,16 +27,17 @@ class MentionContextDataset(Dataset):
     self._document_mention_lookup = {}
     self._mention_infos = {}
     self._entity_label_ctr = 0
-    self.entity_label_lookup = {}
+    self._num_seen_mentions = 0
     self.page_ctr = 0
 
   def __len__(self):
-    return self.num_mentions - 1
+    return self.num_mentions
 
   def __getitem__(self, idx):
-    if idx > len(self): raise IndexError
+    if self._num_seen_mentions == self.num_mentions: raise IndexError
     if idx not in self._mention_infos:
-      self._next_batch(self.batch_size)
+      print(idx, 'not in cache')
+      self._next_batch()
     mention_info = self._mention_infos[idx]
     sentences = self._page_id_sentences_lookup[mention_info['page_id']]
     if mention_info['entity_id'] not in self.entity_label_lookup:
@@ -42,10 +45,11 @@ class MentionContextDataset(Dataset):
       self._entity_label_ctr += 1
     sample = {'sentence_splits': get_mention_sentence_splits(sentences, mention_info),
               'label': self.entity_label_lookup[mention_info['entity_id']],
-              'document_mention_indices': self._document_mention_lookup[mention_info['entity_id']],
+              'document_mention_indices': self._document_mention_lookup[mention_info['page_id']],
               'candidates': self.entity_candidates_lookup[mention_info['mention_id']]}
     if self.transform:
       sample = self.transform(sample)
+    self._num_seen_mentions += 1
     return sample
 
   def _get_mention_infos_by_page_id(self, page_id):
@@ -53,9 +57,10 @@ class MentionContextDataset(Dataset):
     return self.cursor.fetchall()
 
   def _get_batch_mention_infos(self, closeby_page_ids, batch_size):
-    mention_infos = []
+    mention_infos = {}
     while len(mention_infos) < batch_size:
-      mention_infos.extend(self._get_mention_infos_by_page_id(closeby_page_ids[self.page_ctr]))
+      mentions = self._get_mention_infos_by_page_id(closeby_page_ids[self.page_ctr])
+      mention_infos.update({mention['mention_id']: mention for mention in mentions})
       self.page_ctr += 1
     return mention_infos
 
@@ -73,8 +78,9 @@ class MentionContextDataset(Dataset):
       lookup[page_id] = [row['id'] for row in self.cursor.fetchall()]
     return lookup
 
-  def _next_batch(self, batch_size):
-    closeby_page_ids = self.page_id_order[self.page_ctr : self.page_ctr + batch_size]
+  def _next_batch(self):
+    print('getting batch')
+    closeby_page_ids = self.page_id_order[self.page_ctr : self.page_ctr + 100]
     self._page_id_sentences_lookup = self._get_batch_page_id_sentences_lookup(closeby_page_ids)
-    self._mention_infos = self._get_batch_mention_infos(closeby_page_ids, batch_size)
+    self._mention_infos = self._get_batch_mention_infos(closeby_page_ids, self.batch_size)
     self._document_mention_lookup = self._get_batch_document_mention_lookup(closeby_page_ids)
