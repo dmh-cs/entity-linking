@@ -25,19 +25,20 @@ class Trainer:
     batch_true_labels = torch.arange(len(labels), dtype=torch.long)
     return ((predictions - batch_true_labels) != 0).sum()
 
+  def _get_labels_for_batch(self, labels, candidates):
+    return torch.squeeze(torch.unsqueeze(labels, 1) == candidates)
+
   def train(self, batch_size):
-    labels_for_batch = torch.arange(batch_size, dtype=torch.long)
     for epoch_num in range(self.num_epochs):
       print("Epoch", epoch_num)
       for batch_num, batch in enumerate(self.dataset):
         self.optimizer.zero_grad()
         embedded_sentence_splits = pad_and_embed_batch(self.embedding_lookup,
                                                        batch['sentence_splits'])
-        context_embeds = self.model(torch.stack((embedded_sentence_splits,
-                                                 batch['document_mention_indices']),
-                                                0))
-        candidate_entity_ids = torch.stack((batch['label'], batch['candidates']), 0)
-        loss = self.model.loss(context_embeds, candidate_entity_ids, labels_for_batch)
+        context_embeds = self.model((embedded_sentence_splits,
+                                     batch['document_mention_indices']))
+        labels_for_batch = self._get_labels_for_batch(batch['label'], batch['candidates'])
+        loss = self.model.loss(context_embeds, batch['candidates'], labels_for_batch)
         loss.backward()
         self.optimizer.step()
         if batch_num == 0:
