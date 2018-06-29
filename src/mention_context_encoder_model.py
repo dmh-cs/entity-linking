@@ -24,13 +24,14 @@ class MentionContextEncoder(nn.Module):
     self.document_context_encoder = DocumentContextEncoder(num_mentions, context_embed_len)
     self.projection = nn.Linear(2 * context_embed_len, embed_len)
     self.relu = nn.ReLU()
+    self.criterion = nn.CrossEntropyLoss()
 
   def forward(self, data):
     sentence_splits = data[0]
     document_mention_indices = data[1]
     local_context_embeds = self.local_context_encoder(sentence_splits)
     document_context_embeds = self.document_context_encoder(document_mention_indices)
-    context_embeds = torch.cat(local_context_embeds, document_context_embeds, 2)
+    context_embeds = torch.cat((local_context_embeds, document_context_embeds), 1)
     return self.relu(self.projection(context_embeds))
 
   def loss(self, mention_embeds, candidate_entity_ids, labels_for_batch):
