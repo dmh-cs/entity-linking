@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.sparse as sparse
+import pydash as _
 
 
 class DocumentContextEncoder(nn.Module):
@@ -12,8 +13,12 @@ class DocumentContextEncoder(nn.Module):
     self.relu = nn.ReLU()
 
   def forward(self, document_mention_indices):
-    batch_size = document_mention_indices.shape[0]
-    mention_surfaces = sparse.LongTensor(document_mention_indices,
-                                         torch.ones(document_mention_indices.shape),
+    batch_size = len(document_mention_indices)
+    first_indices = []
+    for elem_num, elem_indices in enumerate(document_mention_indices):
+      first_indices.extend([elem_num] * len(elem_indices))
+    indices = (first_indices, _.flatten(document_mention_indices))
+    mention_surfaces = sparse.FloatTensor(torch.tensor(indices, dtype=torch.long),
+                                         torch.ones(len(first_indices)),
                                          (batch_size, self.num_mentions))
     return self.relu(self.projection(mention_surfaces))
