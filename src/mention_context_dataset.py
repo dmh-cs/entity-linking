@@ -5,7 +5,7 @@ import pydash as _
 import random
 
 from data_transformers import get_mention_sentence_splits
-from parsers import parse_for_sentences
+from parsers import parse_for_sentence_spans
 
 
 class MentionContextDataset(Dataset):
@@ -26,7 +26,8 @@ class MentionContextDataset(Dataset):
     self.batch_size = batch_size
     self.num_mentions = num_mentions
     self.num_entities = num_entities
-    self._page_id_sentences_lookup = {}
+    self._sentence_spans_lookup = {}
+    self._page_content_lookup = {}
     self._document_mention_lookup = {}
     self._mention_infos = {}
     self._num_seen_mentions = 0
@@ -42,9 +43,12 @@ class MentionContextDataset(Dataset):
       print(idx, 'not in cache')
       self._next_batch()
     mention_info = self._mention_infos.pop(idx)
-    sentences = self._page_id_sentences_lookup.pop(mention_info['page_id'])
+    sentence_spans = self._sentence_spans_lookup.pop(mention_info['page_id'])
+    page_content = self._page_content_lookup.pop(mention_info['page_id'])
     label = self.entity_label_lookup[mention_info['entity_id']]
-    sample = {'sentence_splits': get_mention_sentence_splits(sentences, mention_info),
+    sample = {'sentence_splits': get_mention_sentence_splits(page_content,
+                                                             sentence_spans,
+                                                             mention_info),
               'label': label,
               'document_mention_indices': self._document_mention_lookup.pop(mention_info['page_id']),
               'candidates': self._get_candidates(mention_info['mention'], label)}
@@ -80,11 +84,18 @@ class MentionContextDataset(Dataset):
       mention_infos.update({mention['mention_id']: mention for mention in mentions})
     return mention_infos
 
-  def _get_batch_page_id_sentences_lookup(self, page_ids):
+  def _get_batch_sentence_spans_lookup(self, page_ids):
     lookup = {}
     for page_id in page_ids:
       self.cursor.execute('select content from pages where id = %s', page_id)
-      lookup[page_id] = parse_for_sentences(self.cursor.fetchone()['content'])
+      lookup[page_id] = parse_for_sentence_spans(self.cursor.fetchone()['content'])
+    return lookup
+
+  def _get_batch_page_content_lookup(self, page_ids):
+    lookup = {}
+    for page_id in page_ids:
+      self.cursor.execute('select content from pages where id = %s', page_id)
+      lookup[page_id] = self.cursor.fetchone()['content']
     return lookup
 
   def _get_batch_document_mention_lookup(self, page_ids):
@@ -107,6 +118,7 @@ class MentionContextDataset(Dataset):
   def _next_batch(self):
     print('getting batch')
     closeby_page_ids = self._next_page_id_batch()
-    self._page_id_sentences_lookup.update(self._get_batch_page_id_sentences_lookup(closeby_page_ids))
+    self._sentence_spans_lookup.update(self._get_batch_sentence_spans_lookup(closeby_page_ids))
+    self._page_content_lookup.update(self._get_batch_page_content_lookup(closeby_page_ids))
     self._mention_infos.update(self._get_batch_mention_infos(closeby_page_ids))
     self._document_mention_lookup.update(self._get_batch_document_mention_lookup(closeby_page_ids))

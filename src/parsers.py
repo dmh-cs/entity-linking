@@ -18,6 +18,10 @@ _treebank_word_tokenizer.STARTING_QUOTES.insert(0, (other_improved_open_quote_re
 _treebank_word_tokenizer.ENDING_QUOTES.insert(0, (other_improved_close_quote_regex, r' \1 '))
 _treebank_word_tokenizer.PUNCTUATION.insert(0, (improved_punct_regex, r'\1 \2 \3 '))
 
+def parse_for_sentence_spans(page_content):
+  tokenizer = load('tokenizers/punkt/{0}.pickle'.format('english'))
+  return list(tokenizer.span_tokenize(page_content))
+
 def parse_for_sentences(page_content):
   tokenizer = load('tokenizers/punkt/{0}.pickle'.format('english'))
   return list(tokenizer.tokenize(page_content))

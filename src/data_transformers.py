@@ -40,38 +40,17 @@ def transform_raw_datasets(entity_lookup, embedding_lookup, raw_datasets):
   return _.map_values(raw_datasets,
                       _.curry(_transform_raw_dataset)(entity_lookup, embedding_lookup))
 
-def _find_mention_sentence_index(sentences, mention_info):
-  sentence_lengths = [len(sentence) for sentence in sentences]
-  def _reducer(acc, length__sentence_num):
-    sentence_num = length__sentence_num[0]
-    length = length__sentence_num[1]
-    if sentence_num == 0:
-      return [length]
-    else:
-      return acc + [acc[-1] + length + 1]
-  cumsum = reduce(_reducer, enumerate(sentence_lengths), [])
-  index = _.find_index(cumsum, lambda ends_at: mention_info['offset'] <= ends_at)
-  return index
+def _find_mention_sentence_span(sentence_spans, mention_info):
+  offset = mention_info['offset']
+  return _.find(sentence_spans, lambda start, end: offset >= start and offset <= end)
 
-def get_mention_sentence_splits(sentences, mention_info):
-  try:
-    sentence_index = _find_mention_sentence_index(sentences, mention_info)
-    indices_to_check = [sentence_index, sentence_index - 1, sentence_index + 1]
-    for index in indices_to_check:
-      try:
-        sentence = sentences[index]
-        mention_index = sentence.index(mention_info['mention'])
-        break
-      except ValueError:
-        print('Mention not found in sentence', mention_info, sentence)
-      except IndexError:
-        continue
-    mention_len = len(mention_info['mention'])
-    return [parse_for_tokens(sentence[:mention_index + mention_len]),
-            parse_for_tokens(sentence[mention_index:])]
-  except ValueError:
-    print('Mention sentence not found', mention_info)
-    raise
+def get_mention_sentence_splits(page_content, sentence_spans, mention_info):
+  sentence_span = _find_mention_sentence_span(sentence_spans, mention_info)
+  sentence = page_content[sentence_span[0] : sentence_span[1]]
+  mention_index = sentence.index(mention_info['mention'])
+  mention_len = len(mention_info['mention'])
+  return [parse_for_tokens(sentence[:mention_index + mention_len]),
+          parse_for_tokens(sentence[mention_index:])]
 
 def _embed_sentence_splits(embedding_lookup, left_batch_len, right_batch_len, sentence_splits):
   flipped = reversed(sentence_splits[0])
