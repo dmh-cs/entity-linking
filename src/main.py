@@ -34,7 +34,7 @@ def collate(batch):
   return {'sentence_splits': [sample['sentence_splits'] for sample in batch],
           'label': torch.tensor([sample['label'] for sample in batch]),
           'document_mention_indices': [sample['document_mention_indices'] for sample in batch],
-          'candidates': [sample['candidates'] for sample in batch]}
+          'candidates': torch.stack([sample['candidates'][:30] for sample in batch])}
 
 def main():
   try:
