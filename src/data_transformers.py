@@ -61,11 +61,14 @@ def get_mention_sentence_splits(sentences, mention_info):
       try:
         sentence = sentences[index]
         mention_index = sentence.index(mention_info['mention'])
+        break
       except ValueError:
         print('Mention not found in sentence', mention_info, sentence)
-      mention_len = len(mention_info['mention'])
-      return [parse_for_tokens(sentence[:mention_index + mention_len]),
-              parse_for_tokens(sentence[mention_index:])]
+      except IndexError:
+        continue
+    mention_len = len(mention_info['mention'])
+    return [parse_for_tokens(sentence[:mention_index + mention_len]),
+            parse_for_tokens(sentence[mention_index:])]
   except ValueError:
     print('Mention sentence not found', mention_info)
     raise
