@@ -47,6 +47,7 @@ def main():
       lookups = load_entity_candidates_and_label_lookup()
       entity_candidates_lookup = lookups['entity_candidates']
       entity_label_lookup = lookups['entity_labels']
+      num_entities = len(entity_label_lookup)
       embed_len = 100
       context_embed_len = 2 * embed_len
       print('Creating word embedding lookup')
@@ -59,6 +60,7 @@ def main():
                                       entity_candidates_lookup,
                                       entity_label_lookup,
                                       batch_size,
+                                      num_entities,
                                       max_num_mentions)
       batch_sampler = MentionContextBatchSampler(cursor, page_id_order, batch_size)
       dataloader = DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate)
