@@ -26,7 +26,7 @@ class Trainer:
     return ((predictions - batch_true_labels) != 0).sum()
 
   def _get_labels_for_batch(self, labels, candidates):
-    return torch.squeeze(torch.unsqueeze(labels, 1) == candidates)
+    return (torch.unsqueeze(labels, 1) == candidates).nonzero()[:, 1]
 
   def train(self, batch_size):
     for epoch_num in range(self.num_epochs):
