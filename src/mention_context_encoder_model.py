@@ -21,8 +21,9 @@ class MentionContextEncoder(nn.Module):
                                                      num_lstm_layers,
                                                      word_embed_len,
                                                      context_embed_len)
-    self.document_context_encoder = DocumentContextEncoder(num_mentions, context_embed_len)
-    self.projection = nn.Linear(2 * context_embed_len, embed_len)
+    # self.document_context_encoder = DocumentContextEncoder(num_mentions, context_embed_len)
+    # self.projection = nn.Linear(2 * context_embed_len, embed_len)
+    self.projection = nn.Linear(context_embed_len, embed_len)
     self.relu = nn.ReLU()
     self.criterion = nn.CrossEntropyLoss()
 
@@ -30,8 +31,9 @@ class MentionContextEncoder(nn.Module):
     sentence_splits = data[0]
     document_mention_indices = data[1]
     local_context_embeds = self.local_context_encoder(sentence_splits)
-    document_context_embeds = self.document_context_encoder(document_mention_indices)
-    context_embeds = torch.cat((local_context_embeds, document_context_embeds), 1)
+    # document_context_embeds = self.document_context_encoder(document_mention_indices)
+    # context_embeds = torch.cat((local_context_embeds, document_context_embeds), 1)
+    context_embeds = local_context_embeds
     return self.relu(self.projection(context_embeds))
 
   def loss(self, mention_embeds, candidate_entity_ids, labels_for_batch):
