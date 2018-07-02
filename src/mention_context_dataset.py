@@ -41,12 +41,12 @@ class MentionContextDataset(Dataset):
     if idx not in self._mention_infos:
       print(idx, 'not in cache')
       self._next_batch()
-    mention_info = self._mention_infos[idx]
-    sentences = self._page_id_sentences_lookup[mention_info['page_id']]
+    mention_info = self._mention_infos.pop(idx)
+    sentences = self._page_id_sentences_lookup.pop(mention_info['page_id'])
     label = self.entity_label_lookup[mention_info['entity_id']]
     sample = {'sentence_splits': get_mention_sentence_splits(sentences, mention_info),
               'label': label,
-              'document_mention_indices': self._document_mention_lookup[mention_info['page_id']],
+              'document_mention_indices': self._document_mention_lookup.pop(mention_info['page_id']),
               'candidates': self._get_candidates(mention_info['mention'], label)}
     if self.transform:
       sample = self.transform(sample)
@@ -73,12 +73,11 @@ class MentionContextDataset(Dataset):
     self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id = %s', page_id)
     return self.cursor.fetchall()
 
-  def _get_batch_mention_infos(self, closeby_page_ids, batch_size):
+  def _get_batch_mention_infos(self, closeby_page_ids):
     mention_infos = {}
-    while len(mention_infos) < batch_size:
-      mentions = self._get_mention_infos_by_page_id(closeby_page_ids[self.page_ctr])
+    for page_id in closeby_page_ids:
+      mentions = self._get_mention_infos_by_page_id(page_id)
       mention_infos.update({mention['mention_id']: mention for mention in mentions})
-      self.page_ctr += 1
     return mention_infos
 
   def _get_batch_page_id_sentences_lookup(self, page_ids):
@@ -95,9 +94,19 @@ class MentionContextDataset(Dataset):
       lookup[page_id] = [row['id'] for row in self.cursor.fetchall()]
     return lookup
 
+  def _next_page_id_batch(self):
+    num_mentions_in_batch = 0
+    page_ids = []
+    while num_mentions_in_batch < self.batch_size:
+      self.cursor.execute('select count(*) from mentions where page_id = %s', self.page_ctr)
+      num_mentions_in_batch += self.cursor.fetchone()['count(*)']
+      page_ids.append(self.page_id_order[self.page_ctr])
+    self.page_ctr += len(page_ids)
+    return page_ids
+
   def _next_batch(self):
     print('getting batch')
-    closeby_page_ids = self.page_id_order[self.page_ctr : self.page_ctr + 100]
-    self._page_id_sentences_lookup = self._get_batch_page_id_sentences_lookup(closeby_page_ids)
-    self._mention_infos = self._get_batch_mention_infos(closeby_page_ids, self.batch_size)
-    self._document_mention_lookup = self._get_batch_document_mention_lookup(closeby_page_ids)
+    closeby_page_ids = self._next_page_id_batch()
+    self._page_id_sentences_lookup.update(self._get_batch_page_id_sentences_lookup(closeby_page_ids))
+    self._mention_infos.update(self._get_batch_mention_infos(closeby_page_ids))
+    self._document_mention_lookup.update(self._get_batch_document_mention_lookup(closeby_page_ids))
