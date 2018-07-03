@@ -8,10 +8,22 @@ from data_transformers import pad_and_embed_batch
 
 import utils as u
 
+def collate(batch):
+  return {'sentence_splits': [sample['sentence_splits'] for sample in batch],
+          'label': torch.tensor([sample['label'] for sample in batch]),
+          'document_mention_indices': [sample['document_mention_indices'] for sample in batch],
+          'candidates': torch.stack([sample['candidates'] for sample in batch])}
+
 class Trainer:
-  def __init__(self, embedding_lookup, model: nn.Module, dataset, num_epochs):
+  def __init__(self,
+               embedding_lookup,
+               model: nn.Module,
+               dataset,
+               batch_sampler,
+               num_epochs):
     self.model = model
     self.dataset = dataset
+    self.batch_sampler = batch_sampler
     self.optimizer = self._create_optimizer('adam')
     self.num_epochs = num_epochs
     self.embedding_lookup = embedding_lookup
@@ -22,16 +34,18 @@ class Trainer:
 
   def _classification_error(self, logits, labels):
     predictions = torch.argmax(logits, 1)
-    batch_true_labels = torch.arange(len(labels), dtype=torch.long)
-    return ((predictions - batch_true_labels) != 0).sum()
+    return int(((predictions - labels) != 0).sum())
 
   def _get_labels_for_batch(self, labels, candidates):
     return (torch.unsqueeze(labels, 1) == candidates).nonzero()[:, 1]
 
-  def train(self, batch_size):
+  def train(self):
     for epoch_num in range(self.num_epochs):
       print("Epoch", epoch_num)
-      for batch_num, batch in enumerate(self.dataset):
+      dataloader = DataLoader(dataset=self.dataset,
+                              batch_sampler=self.batch_sampler,
+                              collate_fn=collate)
+      for batch_num, batch in enumerate(dataloader):
         self.optimizer.zero_grad()
         embedded_sentence_splits = pad_and_embed_batch(self.embedding_lookup,
                                                        batch['sentence_splits'])
@@ -41,8 +55,8 @@ class Trainer:
         loss = self.model.loss(context_embeds, batch['candidates'], labels_for_batch)
         loss.backward()
         self.optimizer.step()
-        if batch_num == 0:
-          print(self._classification_error(self.model.logits, batch['label']))
+        if batch_num % 100 == 0:
+          print('Classification error', self._classification_error(self.model.logits, labels_for_batch))
           print('[epoch %d, batch %5d] loss: %.3f' % (epoch_num, batch_num, loss.item()))
 
     print('Finished Training')

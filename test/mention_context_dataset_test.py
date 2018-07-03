@@ -29,14 +29,15 @@ def test_mention_context_dataset():
                               'cc': [2]}
   entity_label_lookup = dict(zip(range(5), range(5)))
   num_entities = 5
+  num_candidates = 2
   dataset = MentionContextDataset(cursor,
                                   page_id_order,
                                   entity_candidates_lookup,
                                   entity_label_lookup,
                                   batch_size,
                                   num_entities,
-                                  num_mentions)
-  dataset._num_candidates = 2
+                                  num_mentions,
+                                  num_candidates)
   dataset._mention_infos = {0: {'mention': 'bb', 'offset': 9, 'page_id': 2, 'entity_id': 0, 'mention_id': 0},
                             1: {'mention': 'aa', 'offset': 6, 'page_id': 2, 'entity_id': 1, 'mention_id': 1},
                             2: {'mention': 'cc', 'offset': 0, 'page_id': 1, 'entity_id': 2, 'mention_id': 2},

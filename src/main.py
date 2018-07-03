@@ -1,15 +1,18 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data.sampler import BatchSampler, RandomSampler
 from trainer import Trainer
 from mention_context_encoder_model import MentionContextEncoder
 from data_fetchers import get_connection, get_entity_lookup, get_embedding_lookup
 from mention_context_dataset import MentionContextDataset
+from simple_mention_context_dataset import SimpleMentionContextDataset
 from mention_context_batch_sampler import MentionContextBatchSampler
 import math
 import pickle
 from random import shuffle
 import pydash as _
+
+DEBUG = True
 
 def load_entity_candidates_and_label_lookup(path='../entity-linking-preprocessing/lookups.pkl'):
   with open(path, 'rb') as lookup_file:
@@ -29,18 +32,18 @@ def get_num_entities(cursor):
   cursor.execute('select count(*) from entities')
   return cursor.fetchone()['count(*)']
 
-def collate(batch):
-  max_num_candidates = max(map(len, [sample['candidates'] for sample in batch]))
-  return {'sentence_splits': [sample['sentence_splits'] for sample in batch],
-          'label': torch.tensor([sample['label'] for sample in batch]),
-          'document_mention_indices': [sample['document_mention_indices'] for sample in batch],
-          'candidates': torch.stack([sample['candidates'][:30] for sample in batch])}
-
 def main():
   try:
-    batch_size = 10
     num_epochs = 1000
-    max_num_mentions = 10000000
+    if DEBUG:
+      # max_num_mentions = 10000
+      max_num_mentions = 10000
+      # batch_size = 1000
+      batch_size = 1000
+    else:
+      max_num_mentions = 10000000
+      batch_size = 1000
+    num_candidates = 30
     db_connection = get_connection()
     with db_connection.cursor() as cursor:
       print('Loading entity candidates lookup')
@@ -55,15 +58,26 @@ def main():
       word_embed_len = 100
       print('Getting page id order')
       page_id_order = get_page_id_order(cursor)
-      dataset = MentionContextDataset(cursor,
-                                      page_id_order,
-                                      entity_candidates_lookup,
-                                      entity_label_lookup,
-                                      batch_size,
-                                      num_entities,
-                                      max_num_mentions)
-      batch_sampler = MentionContextBatchSampler(cursor, page_id_order, batch_size, max_num_mentions)
-      dataloader = DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate)
+      if DEBUG:
+        dataset = SimpleMentionContextDataset(cursor,
+                                              page_id_order,
+                                              entity_candidates_lookup,
+                                              entity_label_lookup,
+                                              batch_size,
+                                              num_entities,
+                                              max_num_mentions,
+                                              num_candidates)
+        batch_sampler = BatchSampler(RandomSampler(dataset), batch_size, True)
+      else:
+        dataset = MentionContextDataset(cursor,
+                                        page_id_order,
+                                        entity_candidates_lookup,
+                                        entity_label_lookup,
+                                        batch_size,
+                                        num_entities,
+                                        max_num_mentions,
+                                        num_candidates)
+        batch_sampler = MentionContextBatchSampler(cursor, page_id_order, batch_size, max_num_mentions)
       num_entities = get_num_entities(cursor)
       embed_len = 100
       entity_embed_weights = nn.Parameter(torch.Tensor(num_entities, embed_len))
@@ -83,21 +97,24 @@ def main():
       print('Training')
       trainer = Trainer(embedding_lookup=embedding_lookup,
                         model=encoder,
-                        dataset=dataloader,
+                        dataset=dataset,
+                        batch_sampler=batch_sampler,
                         num_epochs=num_epochs)
-      trainer.train(batch_size)
+      trainer.train()
   finally:
     db_connection.close()
 
 if __name__ == "__main__":
-  import pdb
-  import traceback
-  import sys
+  if DEBUG:
+    import pdb
+    import traceback
+    import sys
 
-  try:
+    try:
+      main()
+    except:
+      extype, value, tb = sys.exc_info()
+      traceback.print_exc()
+      pdb.post_mortem(tb)
+  else:
     main()
-  except:
-    extype, value, tb = sys.exc_info()
-    traceback.print_exc()
-    pdb.post_mortem(tb)
-  # main()
