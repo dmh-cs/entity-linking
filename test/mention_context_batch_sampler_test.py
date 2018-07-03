@@ -16,8 +16,7 @@ def test_mention_context_batch_sampler():
   batch_size = 5
   page_id_order = [2, 0, 1]
   mentions_in_page_order = _.mapcat(page_id_order, lambda page_id: mentions_by_page[page_id])
-  batch_sampler = MentionContextBatchSampler(cursor, page_id_order, batch_size)
-  batch_sampler._get_num_mentions = lambda self: len(mentions_in_page_order)
+  batch_sampler = MentionContextBatchSampler(cursor, page_id_order, batch_size, len(mentions_in_page_order))
   batches_seen = []
   for batch_num, batch_indexes in enumerate(batch_sampler):
     if batch_num == 0:

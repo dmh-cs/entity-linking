@@ -5,7 +5,7 @@ import math
 import random
 
 class MentionContextBatchSampler(Sampler):
-  def __init__(self, cursor, page_id_order, batch_size):
+  def __init__(self, cursor, page_id_order, batch_size, num_mentions):
     super(MentionContextBatchSampler, self).__init__([])
     self.cursor = cursor
     self.page_id_order = page_id_order
@@ -13,10 +13,10 @@ class MentionContextBatchSampler(Sampler):
     self.page_ctr = 0
     self.ids_from_last_page = set()
     self.ids = []
+    self.num_mentions = num_mentions
 
   def __len__(self):
-    num_mentions = self._get_num_mentions()
-    num_batches = math.ceil(num_mentions / self.batch_size)
+    num_batches = math.ceil(self.num_mentions / self.batch_size)
     return num_batches
 
   def __iter__(self):
@@ -50,7 +50,3 @@ class MentionContextBatchSampler(Sampler):
     self.ids = self.ids[:]
     shuffle(self.ids)
     return self.ids
-
-  def _get_num_mentions(self):
-    self.cursor.execute('select count(*) from mentions')
-    return self.cursor.fetchone()['count(*)']
