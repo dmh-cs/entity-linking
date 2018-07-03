@@ -24,9 +24,20 @@ def test_transform_raw_datasets():
   assert ctr == 1
 
 def test_get_mention_sentence_splits():
-  sentences = ['a b c', 'aa bb cc']
+  page_content = 'a b c aa bb cc'
+  sentence_spans = [(0, 5), (6, 14)]
   mention_info = {'mention': 'bb cc', 'offset': 9}
-  assert dt.get_mention_sentence_splits(sentences, mention_info) == [['aa', 'bb', 'cc'], ['bb', 'cc']]
+  assert dt.get_mention_sentence_splits(page_content,
+                                        sentence_spans,
+                                        mention_info) == [['aa', 'bb', 'cc'], ['bb', 'cc']]
+
+def test_get_mention_sentence_splits_with_merge():
+  page_content = 'a b c aa bb cc'
+  sentence_spans = [(0, 5), (6, 14)]
+  mention_info = {'mention': 'c aa', 'offset': 4}
+  assert dt.get_mention_sentence_splits(page_content,
+                                        sentence_spans,
+                                        mention_info) == [['a', 'b', 'c', 'aa'], ['c', 'aa', 'bb', 'cc']]
 
 
 def test_pad_and_embed_batch():

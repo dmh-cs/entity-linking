@@ -40,15 +40,23 @@ def transform_raw_datasets(entity_lookup, embedding_lookup, raw_datasets):
   return _.map_values(raw_datasets,
                       _.curry(_transform_raw_dataset)(entity_lookup, embedding_lookup))
 
-def _find_mention_sentence_span(sentence_spans, mention_info):
-  offset = mention_info['offset']
-  return _.find(sentence_spans, lambda start, end: offset >= start and offset <= end)
+def _find_mention_sentence_span(sentence_spans, mention_offset):
+  return _.find(sentence_spans, lambda span: mention_offset >= span[0] and mention_offset <= span[1])
+
+def _merge_sentences_across_mention(sentence_spans, mention_offset, mention_len):
+  mention_end = mention_offset + mention_len
+  span = _find_mention_sentence_span(sentence_spans, mention_offset)
+  span_index = sentence_spans.index(span)
+  while mention_end > span[1]:
+    next_span = sentence_spans[span_index + 1]
+    span = [span[0], next_span[1]]
+  return span
 
 def get_mention_sentence_splits(page_content, sentence_spans, mention_info):
-  sentence_span = _find_mention_sentence_span(sentence_spans, mention_info)
+  mention_len = len(mention_info['mention'])
+  sentence_span = _merge_sentences_across_mention(sentence_spans, mention_info['offset'], mention_len)
   sentence = page_content[sentence_span[0] : sentence_span[1]]
   mention_index = sentence.index(mention_info['mention'])
-  mention_len = len(mention_info['mention'])
   return [parse_for_tokens(sentence[:mention_index + mention_len]),
           parse_for_tokens(sentence[mention_index:])]
 
