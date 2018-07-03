@@ -62,7 +62,7 @@ def main():
                                       batch_size,
                                       num_entities,
                                       max_num_mentions)
-      batch_sampler = MentionContextBatchSampler(cursor, page_id_order, batch_size)
+      batch_sampler = MentionContextBatchSampler(cursor, page_id_order, batch_size, max_num_mentions)
       dataloader = DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate)
       num_entities = get_num_entities(cursor)
       embed_len = 100

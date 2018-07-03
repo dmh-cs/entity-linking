@@ -1,18 +1,32 @@
 from mention_context_dataset import MentionContextDataset
+import torch
+from unittest.mock import Mock
+from utils import coll_compare_keys_by
+import pydash as _
 
 def get_mock_cursor():
-  return None
+  cursor = Mock()
+  cursor.execute = lambda q, args: None
+  cursor.fetchone = lambda: {'count(*)': 5}
+  return cursor
+
+def compare_candidates_tensor(expected, result):
+  assert isinstance(result, torch.Tensor)
+  expected_candidates = set(expected.numpy())
+  result_candidates = set(result.numpy())
+  assert _.is_empty(expected_candidates - result_candidates)
+  for generated_candidate in result_candidates - expected_candidates:
+    assert generated_candidate not in expected_candidates
+  return True
 
 def test_mention_context_dataset():
   cursor = get_mock_cursor()
   page_id_order = [3, 1, 2]
   batch_size = 5
   num_mentions = 5
-  entity_candidates_lookup = {1: [1],
-                              0: [0, 1],
-                              3: [0, 1],
-                              4: [0, 1],
-                              2: [2]}
+  entity_candidates_lookup = {'aa': [1],
+                              'bb': [0, 1],
+                              'cc': [2]}
   entity_label_lookup = dict(zip(range(5), range(5)))
   num_entities = 5
   dataset = MentionContextDataset(cursor,
@@ -22,37 +36,48 @@ def test_mention_context_dataset():
                                   batch_size,
                                   num_entities,
                                   num_mentions)
-  dataset._num_candidates = 3
+  dataset._num_candidates = 2
   dataset._mention_infos = {0: {'mention': 'bb', 'offset': 9, 'page_id': 2, 'entity_id': 0, 'mention_id': 0},
                             1: {'mention': 'aa', 'offset': 6, 'page_id': 2, 'entity_id': 1, 'mention_id': 1},
                             2: {'mention': 'cc', 'offset': 0, 'page_id': 1, 'entity_id': 2, 'mention_id': 2},
                             3: {'mention': 'bb', 'offset': 3, 'page_id': 1, 'entity_id': 0, 'mention_id': 3},
                             4: {'mention': 'bb', 'offset': 3, 'page_id': 0, 'entity_id': 1, 'mention_id': 4}}
-  dataset._page_id_sentences_lookup = {2: ['a b c', 'aa bb'],
-                                       1: ['cc bb', 'c b a'],
-                                       0: ['dd bb', 'a b c']}
+  dataset._page_content_lookup = {2: 'a b c aa bb',
+                                  1: 'cc bb c b a',
+                                  0: 'dd bb a b c'}
+  dataset._sentence_spans_lookup = {2: [(0, 5), (6, 11)],
+                                    1: [(0, 5), (6, 11)],
+                                    0: [(0, 5), (6, 11)]}
   dataset._document_mention_lookup = {2: [0, 1],
                                       1: [1, 2],
                                       0: [1]}
+  dataset._mentions_per_page_ctr = {2: 2,
+                                    1: 2,
+                                    0: 1}
   expected_data = [{'sentence_splits': [['aa', 'bb'], ['bb']],
                     'label': 0,
-                    'document_mention_indices': [1],
-                    'candidates': [0, 1]},
+                    'document_mention_indices': [0, 1],
+                    'candidates': torch.tensor([0, 1])},
                    {'sentence_splits': [['aa'], ['aa', 'bb']],
                     'label': 1,
-                    'document_mention_indices': [1, 2],
-                    'candidates': [1]},
+                    'document_mention_indices': [0, 1],
+                    'candidates': torch.tensor([1])},
                    {'sentence_splits': [['cc'], ['cc', 'bb']],
                     'label': 2,
-                    'document_mention_indices': [0, 1],
-                    'candidates': [2]},
+                    'document_mention_indices': [1, 2],
+                    'candidates': torch.tensor([2])},
                    {'sentence_splits': [['cc', 'bb'], ['bb']],
                     'label': 0,
-                    'document_mention_indices': [1],
-                    'candidates': [0, 1]},
+                    'document_mention_indices': [1, 2],
+                    'candidates': torch.tensor([0, 1])},
                    {'sentence_splits': [['dd', 'bb'], ['bb']],
                     'label': 1,
-                    'document_mention_indices': [1, 2],
-                    'candidates': [0, 1]}]
-  dataset_values = list(dataset)
-  assert expected_data == dataset_values
+                    'document_mention_indices': [1],
+                    'candidates': torch.tensor([0, 1])}]
+  iterator = iter(dataset)
+  dataset_values = [next(iterator) for _ in range(len(dataset))]
+  comparison = {'sentence_splits': _.is_equal,
+                'label': _.is_equal,
+                'document_mention_indices': _.is_equal,
+                'candidates': compare_candidates_tensor}
+  assert coll_compare_keys_by(expected_data, dataset_values, comparison)
