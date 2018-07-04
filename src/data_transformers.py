@@ -10,16 +10,24 @@ def _tokenize_page(page):
   return {'entity_name': page['title'],
           'tokens': parse_text_for_tokens(page['content'])}
 
-def _tokens_to_embeddings(tokens, embedding_lookup, desc_len=100) -> torch.Tensor:
-  desc_vec = []
+def _tokens_to_embeddings(embedding_lookup, tokens):
+  text_embeddings = []
   for token in tokens:
     if token in embedding_lookup:
-      desc_vec.append(embedding_lookup[token])
+      text_embeddings.append(embedding_lookup[token])
+    elif token == 'MENTION_START_HERE':
+      text_embeddings.append(embedding_lookup['<MENTION_START_HERE>'])
+    elif token == 'MENTION_END_HERE':
+      text_embeddings.append(embedding_lookup['<MENTION_END_HERE>'])
     else:
-      desc_vec.append(embedding_lookup['<UNK>'])
-  if len(desc_vec) < desc_len:
-    desc_vec.extend([embedding_lookup['<PAD>'] for _ in range(desc_len - len(desc_vec))])
-  return torch.stack(desc_vec)
+      text_embeddings.append(embedding_lookup['<UNK>'])
+  return text_embeddings
+
+def _tokens_to_padded_embeddings(embedding_lookup, tokens, batch_max_len=100) -> torch.Tensor:
+  text_embeddings = _tokens_to_embeddings(embedding_lookup, tokens)
+  if len(text_embeddings) < batch_max_len:
+    text_embeddings.extend([embedding_lookup['<PAD>'] for _ in range(batch_max_len - len(text_embeddings))])
+  return torch.stack(text_embeddings)
 
 def _transform_raw_dataset(entity_lookup, embedding_lookup, raw_dataset):
   description_label_tuples = map(_.curry(transform_page, 3)(entity_lookup, embedding_lookup),
@@ -33,7 +41,7 @@ def transform_page(entity_lookup,
                    use_entire_page=False):
   tokenized_page = _tokenize_page(page)
   if use_entire_page: raise NotImplementedError('Using entire pages is not yet implemented.')
-  return (_tokens_to_embeddings(tokenized_page['tokens'][:num_tokens], embedding_lookup),
+  return (_tokens_to_padded_embeddings(embedding_lookup, tokenized_page['tokens'][:num_tokens]),
           entity_lookup[tokenized_page['entity_name']])
 
 def transform_raw_datasets(entity_lookup, embedding_lookup, raw_datasets):
@@ -62,9 +70,9 @@ def get_mention_sentence_splits(page_content, sentence_spans, mention_info):
 
 def _embed_sentence_splits(embedding_lookup, left_batch_len, right_batch_len, sentence_splits):
   flipped = reversed(sentence_splits[0])
-  embedded_flipped_left = _tokens_to_embeddings(flipped, embedding_lookup, left_batch_len)
+  embedded_flipped_left = _tokens_to_padded_embeddings(embedding_lookup, flipped, left_batch_len)
   return [torch.tensor(np.flip(embedded_flipped_left.numpy(), 0).tolist()),
-          _tokens_to_embeddings(sentence_splits[1], embedding_lookup, right_batch_len)]
+          _tokens_to_padded_embeddings(embedding_lookup, sentence_splits[1], right_batch_len)]
 
 def _get_left_right_max_len(sentence_splits_batch):
   try:
@@ -84,3 +92,16 @@ def pad_and_embed_batch(embedding_lookup, sentence_splits_batch):
                                            right_batch_len,
                                            sentence_splits))
   return embedded
+
+def _insert_mention_flags(page_content, mention_info):
+  mention_text = mention_info['mention']
+  start = mention_info['offset']
+  end = mention_info['offset'] + len(mention_text)
+  return page_content[:start] + 'MENTION_START_HERE ' + mention_text +  ' MENTION_END_HERE' + page_content[end:]
+
+def embed_page_content(embedding_lookup, page_mention_infos, page_content):
+  page_content_with_mention_flags = reduce(_insert_mention_flags,
+                                           page_mention_infos,
+                                           page_content)
+  tokens = parse_text_for_tokens(page_content_with_mention_flags)
+  return torch.stack(_tokens_to_embeddings(embedding_lookup, tokens))

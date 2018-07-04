@@ -9,11 +9,11 @@ class MentionContextEncoder(nn.Module):
                embed_len,
                context_embed_len,
                word_embed_len,
-               num_mentions,
                lstm_size,
                num_lstm_layers,
                dropout_keep_prob,
-               entity_embeds):
+               entity_embeds,
+               pad_vector):
     super(MentionContextEncoder, self).__init__()
     self.entity_embeds = entity_embeds
     self.local_context_encoder = LocalContextEncoder(dropout_keep_prob,
@@ -21,19 +21,22 @@ class MentionContextEncoder(nn.Module):
                                                      num_lstm_layers,
                                                      word_embed_len,
                                                      context_embed_len)
-    # self.document_context_encoder = DocumentContextEncoder(num_mentions, context_embed_len)
-    # self.projection = nn.Linear(2 * context_embed_len, embed_len)
-    self.projection = nn.Linear(context_embed_len, embed_len)
+    self.document_context_encoder = DocumentContextEncoder(dropout_keep_prob,
+                                                           lstm_size,
+                                                           num_lstm_layers,
+                                                           word_embed_len,
+                                                           context_embed_len,
+                                                           pad_vector)
+    self.projection = nn.Linear(2 * context_embed_len, embed_len)
     self.relu = nn.ReLU()
     self.criterion = nn.CrossEntropyLoss()
 
   def forward(self, data):
     sentence_splits = data[0]
-    document_mention_indices = data[1]
+    embedded_page_contents = data[1]
     local_context_embeds = self.local_context_encoder(sentence_splits)
-    # document_context_embeds = self.document_context_encoder(document_mention_indices)
-    # context_embeds = torch.cat((local_context_embeds, document_context_embeds), 1)
-    context_embeds = local_context_embeds
+    document_context_embeds = self.document_context_encoder(embedded_page_contents)
+    context_embeds = torch.cat((local_context_embeds, document_context_embeds), 1)
     return self.relu(self.projection(context_embeds))
 
   def loss(self, mention_embeds, candidate_entity_ids, labels_for_batch):

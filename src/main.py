@@ -55,6 +55,7 @@ def main():
       context_embed_len = 2 * embed_len
       print('Creating word embedding lookup')
       embedding_lookup = get_embedding_lookup('./glove.6B.100d.txt')
+      pad_vector = embedding_lookup['<PAD>']
       word_embed_len = 100
       print('Getting page id order')
       page_id_order = get_page_id_order(cursor)
@@ -63,6 +64,7 @@ def main():
                                               page_id_order,
                                               entity_candidates_lookup,
                                               entity_label_lookup,
+                                              embedding_lookup,
                                               batch_size,
                                               num_entities,
                                               max_num_mentions,
@@ -73,6 +75,7 @@ def main():
                                         page_id_order,
                                         entity_candidates_lookup,
                                         entity_label_lookup,
+                                        embedding_lookup,
                                         batch_size,
                                         num_entities,
                                         max_num_mentions,
@@ -89,11 +92,11 @@ def main():
       encoder = MentionContextEncoder(embed_len,
                                       context_embed_len,
                                       word_embed_len,
-                                      max_num_mentions,
                                       lstm_size,
                                       num_lstm_layers,
                                       dropout_keep_prob,
-                                      entity_embeds)
+                                      entity_embeds,
+                                      pad_vector)
       print('Training')
       trainer = Trainer(embedding_lookup=embedding_lookup,
                         model=encoder,

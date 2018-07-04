@@ -3,7 +3,12 @@ import torch.nn as nn
 
 
 class LocalContextEncoder(nn.Module):
-  def __init__(self, dropout_keep_prob, lstm_size, num_lstm_layers, word_embed_len, context_embed_len):
+  def __init__(self,
+               dropout_keep_prob,
+               lstm_size,
+               num_lstm_layers,
+               word_embed_len,
+               context_embed_len):
     super(LocalContextEncoder, self).__init__()
     self.num_lstm_layers = num_lstm_layers
     self.lstm_size = lstm_size

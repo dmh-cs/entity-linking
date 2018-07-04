@@ -4,7 +4,7 @@ from torchvision import transforms, utils
 import pydash as _
 import random
 
-from data_transformers import get_mention_sentence_splits
+from data_transformers import get_mention_sentence_splits, embed_page_content
 from parsers import parse_for_sentence_spans
 
 
@@ -14,6 +14,7 @@ class MentionContextDataset(Dataset):
                page_id_order,
                entity_candidates_lookup,
                entity_label_lookup,
+               embedding_lookup,
                batch_size,
                num_entities,
                num_mentions,
@@ -22,6 +23,7 @@ class MentionContextDataset(Dataset):
     self.page_id_order = page_id_order
     self.entity_candidates_lookup = _.map_values(entity_candidates_lookup, lambda val: torch.tensor(val))
     self.entity_label_lookup = entity_label_lookup
+    self.embedding_lookup = embedding_lookup
     self.cursor = cursor
     self.transform = transform
     self.batch_size = batch_size
@@ -30,7 +32,7 @@ class MentionContextDataset(Dataset):
     self.num_candidates = num_candidates
     self._sentence_spans_lookup = {}
     self._page_content_lookup = {}
-    self._document_mention_lookup = {}
+    self._embedded_page_content_lookup = {}
     self._mentions_per_page_ctr = {}
     self._mention_infos = {}
     self.page_ctr = 0
@@ -50,13 +52,13 @@ class MentionContextDataset(Dataset):
                                                              sentence_spans,
                                                              mention_info),
               'label': label,
-              'document_mention_indices': self._document_mention_lookup[mention_info['page_id']],
+              'embedded_page_content': self._embedded_page_content_lookup[mention_info['page_id']],
               'candidates': self._get_candidates(mention_info['mention'], label)}
     self._mentions_per_page_ctr[mention_info['page_id']] -= 1
     if self._mentions_per_page_ctr[mention_info['page_id']] == 0:
       self._sentence_spans_lookup.pop(mention_info['page_id'])
       self._page_content_lookup.pop(mention_info['page_id'])
-      self._document_mention_lookup.pop(mention_info['page_id'])
+      self._embedded_page_content_lookup.pop(mention_info['page_id'])
     if self.transform:
       sample = self.transform(sample)
     return sample
@@ -103,11 +105,15 @@ class MentionContextDataset(Dataset):
       lookup[page_id] = self.cursor.fetchone()['content']
     return lookup
 
-  def _get_batch_document_mention_lookup(self, page_ids):
+  def _get_batch_embedded_page_content_lookup(self, page_ids):
     lookup = {}
     for page_id in page_ids:
-      self.cursor.execute('select id from mentions where page_id = %s', page_id)
-      lookup[page_id] = [row['id'] for row in self.cursor.fetchall()]
+      page_mention_infos = filter(lambda mention_info: mention_info['page_id'] == page_id,
+                             self._mention_infos)
+      page_content = self._page_content_lookup[page_id]
+      lookup[page_id] = embed_page_content(self.embedding_lookup,
+                                           page_mention_infos,
+                                           page_content)
     return lookup
 
   def _next_page_id_batch(self):
@@ -128,4 +134,4 @@ class MentionContextDataset(Dataset):
     self._sentence_spans_lookup.update(self._get_batch_sentence_spans_lookup(closeby_page_ids))
     self._page_content_lookup.update(self._get_batch_page_content_lookup(closeby_page_ids))
     self._mention_infos.update(self._get_batch_mention_infos(closeby_page_ids))
-    self._document_mention_lookup.update(self._get_batch_document_mention_lookup(closeby_page_ids))
+    self._embedded_page_content_lookup.update(self._get_batch_embedded_page_content_lookup(closeby_page_ids))

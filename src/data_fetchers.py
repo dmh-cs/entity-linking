@@ -73,7 +73,9 @@ def get_entity_lookup():
 
 def get_embedding_lookup(path, embedding_dim=100):
   lookup = {'<PAD>': torch.rand(size=(embedding_dim,), dtype=torch.float32),
-            '<UNK>': torch.rand(size=(embedding_dim,), dtype=torch.float32)}
+            '<UNK>': torch.rand(size=(embedding_dim,), dtype=torch.float32),
+            '<MENTION_START_HERE>': torch.rand(size=(embedding_dim,), dtype=torch.float32),
+            '<MENTION_END_HERE>': torch.rand(size=(embedding_dim,), dtype=torch.float32)}
   with open(path) as f:
     while True:
       line = f.readline()

@@ -11,7 +11,7 @@ import utils as u
 def collate(batch):
   return {'sentence_splits': [sample['sentence_splits'] for sample in batch],
           'label': torch.tensor([sample['label'] for sample in batch]),
-          'document_mention_indices': [sample['document_mention_indices'] for sample in batch],
+          'embedded_page_content': [sample['embedded_page_content'] for sample in batch],
           'candidates': torch.stack([sample['candidates'] for sample in batch])}
 
 class Trainer:
@@ -50,13 +50,13 @@ class Trainer:
         embedded_sentence_splits = pad_and_embed_batch(self.embedding_lookup,
                                                        batch['sentence_splits'])
         context_embeds = self.model((embedded_sentence_splits,
-                                     batch['document_mention_indices']))
+                                     batch['embedded_page_content']))
         labels_for_batch = self._get_labels_for_batch(batch['label'], batch['candidates'])
         loss = self.model.loss(context_embeds, batch['candidates'], labels_for_batch)
         loss.backward()
         self.optimizer.step()
         if batch_num % 100 == 0:
           print('Classification error', self._classification_error(self.model.logits, labels_for_batch))
-          print('[epoch %d, batch %5d] loss: %.3f' % (epoch_num, batch_num, loss.item()))
+          print('[epoch %d, batch %d] loss: %.3f' % (epoch_num, batch_num, loss.item()))
 
     print('Finished Training')
