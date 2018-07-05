@@ -54,3 +54,15 @@ def test_pad_and_embed_batch():
       assert torch.equal(split, result[sentence_num][split_num])
       split_ctr += 1
   assert split_ctr == 4
+
+
+def test_embed_page_content():
+  embedding_lookup = _.map_values({'<PAD>': [-1],
+                                   '<UNK>': [0],
+                                   'MENTION_START_HERE': [-2], 'MENTION_END_HERE': [-3],
+                                   'a': [1], 'b': [2], 'c': [3], 'd': [4]},
+                                  torch.tensor)
+  page_mention_infos = [{'offset': 2, 'mention': 'b c'}]
+  page_content = 'a b c d'
+  embedded = torch.tensor([[1], [-2], [2], [3], [-3], [4]])
+  assert torch.equal(dt.embed_page_content(embedding_lookup, page_mention_infos, page_content), embedded)
