@@ -2,14 +2,14 @@ import data_transformers as dt
 import torch
 import pydash as _
 
-def test_transform_raw_datasets():
+def test_raw_datasets_to_desc_encoder_inputs():
   entity_lookup = {'a': 1, 'b':2}
   embedding_lookup = {'verb': torch.tensor([1, 2, 3]),
                       'word': torch.tensor([2, 3, 4]),
                       '<PAD>': torch.tensor([0, 0, 0]),
                       '<UNK>': torch.tensor([1, 1, 1])}
   raw_datasets = {'train': [{'title': 'a', 'content': 'verb verb word verb'}]}
-  datasets = dt.transform_raw_datasets(entity_lookup, embedding_lookup, raw_datasets)
+  datasets = dt.raw_datasets_to_desc_encoder_inputs(entity_lookup, embedding_lookup, raw_datasets)
   result = {'train': [(torch.tensor([[1, 2, 3],
                                      [1, 2, 3],
                                      [2, 3, 4],

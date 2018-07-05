@@ -3,7 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 import pydash as _
 
-from data_transformers import transform_page
+from data_transformers import page_to_desc_encoder_input
 
 def build_datasets(data_splits, entity_lookup, embedding_lookup, batch_size):
   datasets = {}
@@ -43,7 +43,7 @@ class DescriptionDataset(Dataset):
     return self.num_samples
 
   def __getitem__(self, idx):
-    description, db_id = transform_page(self.entity_lookup, self.embedding_lookup, self.data[idx])
+    description, db_id = page_to_desc_encoder_input(self.entity_lookup, self.embedding_lookup, self.data[idx])
     if db_id not in self.entity_id_lookup:
       self.entity_id_lookup[db_id] = self.num_classes
       self.num_classes += 1

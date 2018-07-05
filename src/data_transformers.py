@@ -29,12 +29,12 @@ def _tokens_to_padded_embeddings(embedding_lookup, tokens, batch_max_len=100) ->
     text_embeddings.extend([embedding_lookup['<PAD>'] for _ in range(batch_max_len - len(text_embeddings))])
   return torch.stack(text_embeddings)
 
-def _transform_raw_dataset(entity_lookup, embedding_lookup, raw_dataset):
-  description_label_tuples = map(_.curry(transform_page, 3)(entity_lookup, embedding_lookup),
+def _dataset_to_desc_encoder_inputs(entity_lookup, embedding_lookup, raw_dataset):
+  description_label_tuples = map(_.curry(page_to_desc_encoder_input, 3)(entity_lookup, embedding_lookup),
                                  raw_dataset)
   return map(list, zip(*description_label_tuples))
 
-def transform_page(entity_lookup,
+def page_to_desc_encoder_input(entity_lookup,
                    embedding_lookup,
                    page,
                    num_tokens=100,
@@ -44,9 +44,9 @@ def transform_page(entity_lookup,
   return (_tokens_to_padded_embeddings(embedding_lookup, tokenized_page['tokens'][:num_tokens]),
           entity_lookup[tokenized_page['entity_name']])
 
-def transform_raw_datasets(entity_lookup, embedding_lookup, raw_datasets):
+def raw_datasets_to_desc_encoder_inputs(entity_lookup, embedding_lookup, raw_datasets):
   return _.map_values(raw_datasets,
-                      _.curry(_transform_raw_dataset)(entity_lookup, embedding_lookup))
+                      _.curry(_dataset_to_desc_encoder_inputs)(entity_lookup, embedding_lookup))
 
 def _find_mention_sentence_span(sentence_spans, mention_offset):
   return _.find(sentence_spans, lambda span: mention_offset >= span[0] and mention_offset <= span[1])
