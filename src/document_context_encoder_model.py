@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 import torch.sparse as sparse
 import pydash as _
-
 from functools import reduce
+
+from data_transformers import pad_batch
 
 
 class DocumentContextEncoder(nn.Module):
@@ -30,17 +31,8 @@ class DocumentContextEncoder(nn.Module):
     self.projection = nn.Linear(2 * self.lstm_size, self.context_embed_len)
     self.relu = nn.ReLU()
 
-  def _pad_batch(self, embedded_page_contents):
-    padded = []
-    pad_to_len = max(map(len, embedded_page_contents))
-    to_stack = [torch.cat((elem,
-                           torch.tensor([self.pad_vector] * (pad_to_len - len(elem)))),
-                          0) for elem in embedded_page_contents]
-    return torch.stack(to_stack)
-
-
   def forward(self, embedded_page_contents):
-    batch = self._pad_batch(embedded_page_contents)
+    batch = pad_batch(self.pad_vector, embedded_page_contents)
     output, state_info = self.lstm(batch)
     last_hidden_state = state_info[0][-2:]
     last_hidden_state_stacked = torch.cat([layer_state for layer_state in last_hidden_state], 1)

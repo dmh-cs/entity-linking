@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 from trainer import Trainer
-from mention_context_encoder_model import MentionContextEncoder
+from joint_model import JointModel
 from data_fetchers import get_connection, get_entity_lookup, get_embedding_lookup
 from mention_context_dataset import MentionContextDataset
 from simple_mention_context_dataset import SimpleMentionContextDataset
@@ -37,9 +37,9 @@ def main():
     num_epochs = 1000
     if DEBUG:
       # max_num_mentions = 10000
-      max_num_mentions = 10000
+      max_num_mentions = 1000
       # batch_size = 1000
-      batch_size = 1000
+      batch_size = 2
     else:
       max_num_mentions = 10000000
       batch_size = 1000
@@ -89,14 +89,14 @@ def main():
       lstm_size = 100
       num_lstm_layers = 2
       dropout_keep_prob = 0.5
-      encoder = MentionContextEncoder(embed_len,
-                                      context_embed_len,
-                                      word_embed_len,
-                                      lstm_size,
-                                      num_lstm_layers,
-                                      dropout_keep_prob,
-                                      entity_embeds,
-                                      pad_vector)
+      encoder = JointModel(embed_len,
+                           context_embed_len,
+                           word_embed_len,
+                           lstm_size,
+                           num_lstm_layers,
+                           dropout_keep_prob,
+                           entity_embeds,
+                           pad_vector)
       print('Training')
       trainer = Trainer(embedding_lookup=embedding_lookup,
                         model=encoder,

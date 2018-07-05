@@ -43,7 +43,6 @@ class SimpleMentionContextDataset(MentionContextDataset):
                                                                        page_mention_infos,
                                                                        page_content)
 
-
   def __len__(self):
     return self.num_mentions
 

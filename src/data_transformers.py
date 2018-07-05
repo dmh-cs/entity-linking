@@ -6,9 +6,12 @@ from parsers import parse_text_for_tokens, parse_for_tokens
 import numpy as np
 
 
-def _tokenize_page(page):
-  return {'entity_name': page['title'],
-          'tokens': parse_text_for_tokens(page['content'])}
+def pad_batch(pad_vector, batch):
+  pad_to_len = max(map(len, batch))
+  to_stack = [torch.cat((elem,
+                         torch.stack([pad_vector] * (pad_to_len - len(elem)))),
+                        0) if pad_to_len != len(elem) else elem for elem in batch]
+  return torch.stack(to_stack)
 
 def _tokens_to_embeddings(embedding_lookup, tokens):
   text_embeddings = []
@@ -23,30 +26,11 @@ def _tokens_to_embeddings(embedding_lookup, tokens):
       text_embeddings.append(embedding_lookup['<UNK>'])
   return text_embeddings
 
-def _tokens_to_padded_embeddings(embedding_lookup, tokens, batch_max_len=100) -> torch.Tensor:
+def _tokens_to_padded_embeddings(embedding_lookup, tokens, batch_max_len) -> torch.Tensor:
   text_embeddings = _tokens_to_embeddings(embedding_lookup, tokens)
   if len(text_embeddings) < batch_max_len:
     text_embeddings.extend([embedding_lookup['<PAD>'] for _ in range(batch_max_len - len(text_embeddings))])
   return torch.stack(text_embeddings)
-
-def _dataset_to_desc_encoder_inputs(entity_lookup, embedding_lookup, raw_dataset):
-  description_label_tuples = map(_.curry(page_to_desc_encoder_input, 3)(entity_lookup, embedding_lookup),
-                                 raw_dataset)
-  return map(list, zip(*description_label_tuples))
-
-def page_to_desc_encoder_input(entity_lookup,
-                   embedding_lookup,
-                   page,
-                   num_tokens=100,
-                   use_entire_page=False):
-  tokenized_page = _tokenize_page(page)
-  if use_entire_page: raise NotImplementedError('Using entire pages is not yet implemented.')
-  return (_tokens_to_padded_embeddings(embedding_lookup, tokenized_page['tokens'][:num_tokens]),
-          entity_lookup[tokenized_page['entity_name']])
-
-def raw_datasets_to_desc_encoder_inputs(entity_lookup, embedding_lookup, raw_datasets):
-  return _.map_values(raw_datasets,
-                      _.curry(_dataset_to_desc_encoder_inputs)(entity_lookup, embedding_lookup))
 
 def _find_mention_sentence_span(sentence_spans, mention_offset):
   return _.find(sentence_spans, lambda span: mention_offset >= span[0] and mention_offset <= span[1])
