@@ -66,17 +66,16 @@ class MentionContextDataset(Dataset):
   def _get_candidates(self, mention, label):
     base_candidates = self.entity_candidates_lookup[mention]
     if len(base_candidates) < self.num_candidates:
-      indexes_to_keep = range(len(base_candidates))
+      num_candidates_to_generate = self.num_candidates - len(base_candidates)
+      random_candidates = random.sample(set(range(self.num_entities)) - set(base_candidates.tolist()),
+                                        num_candidates_to_generate)
+      return torch.cat((base_candidates,
+                        torch.tensor(random_candidates)), 0)
     else:
       label_index = int((base_candidates == label).nonzero().squeeze())
       indexes_to_sample = set(range(len(base_candidates))) - set([label_index])
       indexes_to_keep = random.sample(indexes_to_sample,
                                       self.num_candidates - 1) + [label_index]
-    num_candidates_to_generate = self.num_candidates - len(indexes_to_keep)
-    if num_candidates_to_generate != 0:
-      random_candidates = torch.tensor(random.sample(range(self.num_entities), num_candidates_to_generate))
-      return torch.cat((base_candidates[indexes_to_keep], random_candidates), 0)
-    else:
       return base_candidates[indexes_to_keep]
 
   def _get_mention_infos_by_page_id(self, page_id):
