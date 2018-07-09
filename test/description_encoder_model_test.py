@@ -8,10 +8,12 @@ def test_description_encoder_forward():
   num_entities = 20
   batch_size = 2
   desc_len = 9
+  pad_vector = torch.rand((word_embed_len, ))
   desc_enc = DescriptionEncoder(word_embed_len,
                                 torch.nn.Embedding(num_entities,
                                                    embed_len,
-                                                   _weight=torch.rand((num_entities, embed_len))))
+                                                   _weight=torch.rand((num_entities, embed_len))),
+                                pad_vector)
   descriptions = torch.rand((batch_size, word_embed_len, desc_len))
   desc_embeds = desc_enc(descriptions)
   assert desc_embeds.shape == torch.Size([2, embed_len])
@@ -22,10 +24,12 @@ def test_description_encoder_loss():
   num_entities = 20
   batch_size = 2
   desc_len = 9
+  pad_vector = torch.rand((word_embed_len, ))
   desc_enc = DescriptionEncoder(word_embed_len,
                                 torch.nn.Embedding(num_entities,
                                                    embed_len,
-                                                   _weight=torch.rand((num_entities, embed_len))))
+                                                   _weight=torch.rand((num_entities, embed_len))),
+                                pad_vector)
   descriptions = torch.rand((batch_size, word_embed_len, desc_len))
   desc_embeds = desc_enc(descriptions)
   labels_for_batch = torch.arange(batch_size, dtype=torch.long)
