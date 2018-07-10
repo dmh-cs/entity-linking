@@ -7,6 +7,7 @@ from trainer import Trainer
 from joint_model import JointModel
 from data_fetchers import get_connection, get_entity_lookup, get_embedding_lookup
 from mention_context_dataset import MentionContextDataset
+from simple_mention_context_dataset_by_entity_ids import SimpleMentionContextDatasetByEntityIds
 from simple_mention_context_dataset import SimpleMentionContextDataset
 from mention_context_batch_sampler import MentionContextBatchSampler
 import math
@@ -40,21 +41,22 @@ def main():
   try:
     num_epochs = 1000
     if DEBUG:
-      # max_num_mentions = 10000
-      max_num_mentions = 1000
+      max_num_mentions = 10000
       # batch_size = 1000
       batch_size = 2
     else:
       max_num_mentions = 10000000
       batch_size = 1000
-    num_candidates = 30
+    # num_candidates = 30
+    num_candidates = 10
     db_connection = get_connection()
     with db_connection.cursor() as cursor:
       print('Loading entity candidates lookup')
       lookups = load_entity_candidates_and_label_lookup(LOOKUPS_PATH)
       entity_candidates_lookup = lookups['entity_candidates']
       entity_label_lookup = lookups['entity_labels']
-      num_entities = len(entity_label_lookup)
+      # num_entities = len(entity_label_lookup)
+      num_entities = 10
       embed_len = 100
       context_embed_len = 2 * embed_len
       print('Creating word embedding lookup')
@@ -67,8 +69,9 @@ def main():
       page_id_order_train = page_id_order[:num_train_pages]
       page_id_order_test = page_id_order[num_train_pages:]
       if DEBUG:
-        dataset = SimpleMentionContextDataset(cursor,
-                                              page_id_order,
+        # dataset = SimpleMentionContextDataset(cursor,
+        dataset = SimpleMentionContextDatasetByEntityIds(cursor,
+                                              page_id_order_train,
                                               entity_candidates_lookup,
                                               entity_label_lookup,
                                               embedding_lookup,
@@ -79,7 +82,7 @@ def main():
         batch_sampler = BatchSampler(RandomSampler(dataset), batch_size, True)
       else:
         dataset = MentionContextDataset(cursor,
-                                        page_id_order,
+                                        page_id_order_train,
                                         entity_candidates_lookup,
                                         entity_label_lookup,
                                         embedding_lookup,
@@ -87,7 +90,7 @@ def main():
                                         num_entities,
                                         max_num_mentions,
                                         num_candidates)
-        batch_sampler = MentionContextBatchSampler(cursor, page_id_order, batch_size, max_num_mentions)
+        batch_sampler = MentionContextBatchSampler(cursor, page_id_order_train, batch_size, max_num_mentions)
       num_entities = get_num_entities(cursor)
       embed_len = 100
       entity_embed_weights = nn.Parameter(torch.Tensor(num_entities, embed_len))
