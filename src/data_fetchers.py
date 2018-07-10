@@ -3,7 +3,6 @@ import pymysql.cursors
 import numpy as np
 import torch
 from dotenv import load_dotenv
-from pathlib import Path
 import pydash as _
 from functools import reduce
 
