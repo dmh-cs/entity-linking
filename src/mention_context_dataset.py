@@ -108,11 +108,12 @@ class MentionContextDataset(Dataset):
     lookup = {}
     for page_id in page_ids:
       page_mention_infos = filter(lambda mention_info: mention_info['page_id'] == page_id,
-                             self._mention_infos)
+                                  self._mention_infos.values())
       page_content = self._page_content_lookup[page_id]
-      lookup[page_id] = embed_page_content(self.embedding_lookup,
-                                           page_mention_infos,
-                                           page_content)
+      if not _.is_empty(page_content):
+        lookup[page_id] = embed_page_content(self.embedding_lookup,
+                                             page_mention_infos,
+                                             page_content)
     return lookup
 
   def _next_page_id_batch(self):
