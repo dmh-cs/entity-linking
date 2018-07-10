@@ -40,11 +40,24 @@ class SimpleMentionContextDatasetByEntityIds(MentionContextDataset):
         page_content = self.cursor.fetchone()['content']
         page_mention_infos = [mention for mention in mention_infos if mention['page_id'] == page_id]
         self._page_content_lookup[page_id] = page_content
-        self._embedded_page_content_lookup[page_id] = embed_page_content(self.embedding_lookup,
-                                                                         page_mention_infos,
-                                                                         page_content)
+        if not _.is_empty(page_content):
+          self._embedded_page_content_lookup[page_id] = embed_page_content(self.embedding_lookup,
+                                                                           page_mention_infos,
+                                                                           page_content)
     self._sentence_spans_lookup = _.map_values(self._page_content_lookup, parse_for_sentence_spans)
     self._mention_infos = self._mention_infos[:num_mentions]
+
+  def _get_batch_embedded_page_content_lookup(self, page_ids):
+    lookup = {}
+    for page_id in page_ids:
+      page_mention_infos = filter(lambda mention_info: mention_info['page_id'] == page_id,
+                                  self._mention_infos)
+      page_content = self._page_content_lookup[page_id]
+      if not _.is_empty(page_content):
+        lookup[page_id] = embed_page_content(self.embedding_lookup,
+                                             page_mention_infos,
+                                             page_content)
+    return lookup
 
   def __len__(self):
     return len(self._mention_infos)
