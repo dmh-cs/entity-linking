@@ -108,16 +108,13 @@ def main():
     db_connection.close()
 
 if __name__ == "__main__":
-  if DEBUG:
-    import pdb
-    import traceback
-    import sys
+  import pdb
+  import traceback
+  import sys
 
-    try:
-      main()
-    except:
-      extype, value, tb = sys.exc_info()
-      traceback.print_exc()
-      pdb.post_mortem(tb)
-  else:
+  try:
     main()
+  except:
+    extype, value, tb = sys.exc_info()
+    traceback.print_exc()
+    pdb.post_mortem(tb)
