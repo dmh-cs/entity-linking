@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 import torch
 import torch.nn as nn
 from torch.utils.data.sampler import BatchSampler, RandomSampler
@@ -33,6 +35,8 @@ def get_num_entities(cursor):
   return cursor.fetchone()['count(*)']
 
 def main():
+  load_dotenv(dotenv_path='.env')
+  LOOKUPS_PATH = os.getenv("LOOKUPS_PATH")
   try:
     num_epochs = 1000
     if DEBUG:
@@ -47,7 +51,7 @@ def main():
     db_connection = get_connection()
     with db_connection.cursor() as cursor:
       print('Loading entity candidates lookup')
-      lookups = load_entity_candidates_and_label_lookup()
+      lookups = load_entity_candidates_and_label_lookup(LOOKUPS_PATH)
       entity_candidates_lookup = lookups['entity_candidates']
       entity_label_lookup = lookups['entity_labels']
       num_entities = len(entity_label_lookup)
