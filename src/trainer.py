@@ -14,7 +14,7 @@ def collate(batch):
           'embedded_page_content': [sample['embedded_page_content'] for sample in batch],
           'candidates': torch.stack([sample['candidates'] for sample in batch])}
 
-class Trainer:
+class Trainer(object):
   def __init__(self,
                embedding_lookup,
                model: nn.Module,
@@ -64,5 +64,4 @@ class Trainer:
                 self._classification_error(self.model.desc_encoder.logits,
                                            labels_for_batch))
           print('[epoch %d, batch %d] loss: %.3f' % (epoch_num, batch_num, loss.item()))
-
     print('Finished Training')
