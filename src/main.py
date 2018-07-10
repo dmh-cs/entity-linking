@@ -63,6 +63,9 @@ def main():
       word_embed_len = 100
       print('Getting page id order')
       page_id_order = get_page_id_order(cursor)
+      num_train_pages = int(len(page_id_order) * 0.8)
+      page_id_order_train = page_id_order[:num_train_pages]
+      page_id_order_test = page_id_order[num_train_pages:]
       if DEBUG:
         dataset = SimpleMentionContextDataset(cursor,
                                               page_id_order,
