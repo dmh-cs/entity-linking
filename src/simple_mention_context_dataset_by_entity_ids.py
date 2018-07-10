@@ -29,7 +29,7 @@ class SimpleMentionContextDatasetByEntityIds(MentionContextDataset):
     self._sentence_spans_lookup = {}
     self._embedded_page_content_lookup = {}
     self._mention_infos = []
-    entity_ids = self.entity_label_lookup.keys()
+    entity_ids = list(self.entity_label_lookup.keys())[:self.num_entities]
     for entity_id in entity_ids:
       self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where entity_id = %s', entity_id)
       mention_infos = self.cursor.fetchall()
