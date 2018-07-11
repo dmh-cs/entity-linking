@@ -1,3 +1,5 @@
+import torch.nn as nn
+
 import pydash as _
 from functools import reduce
 import torch
@@ -26,10 +28,13 @@ def _tokens_to_embeddings(embedding_lookup, tokens):
       text_embeddings.append(embedding_lookup['<UNK>'])
   return text_embeddings
 
-def _tokens_to_padded_embeddings(embedding_lookup, tokens, batch_max_len) -> torch.Tensor:
+def _tokens_to_padded_embeddings(embedding_lookup, tokens, batch_max_len, left_pad=False) -> torch.Tensor:
   text_embeddings = _tokens_to_embeddings(embedding_lookup, tokens)
   if len(text_embeddings) < batch_max_len:
-    text_embeddings.extend([embedding_lookup['<PAD>'] for _ in range(batch_max_len - len(text_embeddings))])
+    if left_pad:
+      [embedding_lookup['<PAD>'] for _ in range(batch_max_len - len(text_embeddings))].extend(text_embeddings)
+    else:
+      text_embeddings.extend([embedding_lookup['<PAD>'] for _ in range(batch_max_len - len(text_embeddings))])
   return torch.stack(text_embeddings)
 
 def _find_mention_sentence_span(sentence_spans, mention_offset):
@@ -53,9 +58,7 @@ def get_mention_sentence_splits(page_content, sentence_spans, mention_info):
           parse_for_tokens(sentence[mention_index:])]
 
 def _embed_sentence_splits(embedding_lookup, left_batch_len, right_batch_len, sentence_splits):
-  flipped = reversed(sentence_splits[0])
-  embedded_flipped_left = _tokens_to_padded_embeddings(embedding_lookup, flipped, left_batch_len)
-  return [torch.tensor(np.flip(embedded_flipped_left.numpy(), 0).tolist()),
+  return [_tokens_to_padded_embeddings(embedding_lookup, sentence_splits[0], left_batch_len, left_pad=True),
           _tokens_to_padded_embeddings(embedding_lookup, sentence_splits[1], right_batch_len)]
 
 def _get_left_right_max_len(sentence_splits_batch):
@@ -67,15 +70,14 @@ def _get_left_right_max_len(sentence_splits_batch):
     raise
   return max(map(len, left_batch)), max(map(len, right_batch))
 
-def pad_and_embed_batch(embedding_lookup, sentence_splits_batch):
-  embedded = []
-  left_batch_len, right_batch_len = _get_left_right_max_len(sentence_splits_batch)
+def embed_and_pack_batch(embedding_lookup, sentence_splits_batch):
+  left_batch = []
+  right_batch = []
   for sentence_splits in sentence_splits_batch:
-    embedded.append(_embed_sentence_splits(embedding_lookup,
-                                           left_batch_len,
-                                           right_batch_len,
-                                           sentence_splits))
-  return embedded
+    left_batch.append(torch.stack(_tokens_to_embeddings(embedding_lookup, sentence_splits[0])))
+    right_batch.append(torch.stack(_tokens_to_embeddings(embedding_lookup, sentence_splits[1])))
+  return (nn.utils.rnn.pack_sequence(sorted(left_batch, key=len, reverse=True)),
+          nn.utils.rnn.pack_sequence(sorted(right_batch, key=len, reverse=True)))
 
 def _insert_mention_flags(page_content, mention_info):
   mention_text = mention_info['mention']

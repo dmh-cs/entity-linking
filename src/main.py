@@ -36,15 +36,15 @@ def get_num_entities(cursor):
   cursor.execute('select count(*) from entities')
   return cursor.fetchone()['count(*)']
 
-def main():
+def main(device):
   load_dotenv(dotenv_path='.env')
   LOOKUPS_PATH = os.getenv("LOOKUPS_PATH")
   try:
     num_epochs = 30
     if DEBUG:
-      max_num_mentions = 10000
+      max_num_mentions = 100000
       # batch_size = 1000
-      batch_size = 2
+      batch_size = 100
     else:
       max_num_mentions = 10000000
       batch_size = 1000
@@ -57,11 +57,12 @@ def main():
       entity_candidates_lookup = lookups['entity_candidates']
       entity_label_lookup = lookups['entity_labels']
       # num_entities = len(entity_label_lookup)
-      num_entities = 10
+      num_entities = 1000
       embed_len = 100
       context_embed_len = 2 * embed_len
       print('Creating word embedding lookup')
-      embedding_lookup = get_embedding_lookup('./glove.6B.100d.txt')
+      embedding_lookup = get_embedding_lookup('./glove.6B.100d.txt',
+                                              device=device)
       pad_vector = embedding_lookup['<PAD>']
       word_embed_len = 100
       print('Getting page id order')
@@ -110,7 +111,8 @@ def main():
                            entity_embeds,
                            pad_vector)
       print('Training')
-      trainer = Trainer(embedding_lookup=embedding_lookup,
+      trainer = Trainer(device=device,
+                        embedding_lookup=embedding_lookup,
                         model=encoder,
                         dataset=train_dataset,
                         batch_sampler=batch_sampler,
@@ -126,7 +128,11 @@ def main():
                                                             max_num_mentions,
                                                             num_candidates,
                                                             False)
-      tester = Tester(test_dataset, encoder, entity_embeds, embedding_lookup)
+      tester = Tester(dataset=test_dataset,
+                      model=encoder,
+                      entity_embeds=entity_embeds,
+                      word_embeddings_lookup=embedding_lookup,
+                      device=device)
       print(tester.test())
   finally:
     db_connection.close()
@@ -137,7 +143,8 @@ if __name__ == "__main__":
   import sys
 
   try:
-    main()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    main(device)
   except:
     extype, value, tb = sys.exc_info()
     traceback.print_exc()

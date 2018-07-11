@@ -18,23 +18,6 @@ def test_get_mention_sentence_splits_with_merge():
                                         sentence_spans,
                                         mention_info) == [['a', 'b', 'c', 'aa'], ['c', 'aa', 'bb', 'cc']]
 
-
-def test_pad_and_embed_batch():
-  embedding_lookup = _.map_values({'<PAD>': [-1], '<UNK>': [0], 'a': [1], 'b': [2], 'c': [3], 'd': [4]},
-                                  torch.tensor)
-  sentence_splits = [[['a', 'b', 'c'], ['c', 'd']],
-                     [['b', 'a'], ['a', 'd', 'd', '.']]]
-  padded_and_embedded = [[torch.tensor([[1], [2], [3]]), torch.tensor([[3], [4], [-1], [-1]])],
-                         [torch.tensor([[-1], [2], [1]]), torch.tensor([[1], [4], [4], [0]])]]
-  result = dt.pad_and_embed_batch(embedding_lookup, sentence_splits)
-  split_ctr = 0
-  for sentence_num, sentence in enumerate(padded_and_embedded):
-    for split_num, split in enumerate(sentence):
-      assert torch.equal(split, result[sentence_num][split_num])
-      split_ctr += 1
-  assert split_ctr == 4
-
-
 def test_embed_page_content():
   embedding_lookup = _.map_values({'<PAD>': [-1],
                                    '<UNK>': [0],

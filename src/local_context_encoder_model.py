@@ -29,10 +29,9 @@ class LocalContextEncoder(nn.Module):
     self.relu = nn.ReLU()
 
   def forward(self, sentence_splits):
-    mention_left_sequences = torch.stack([split[0] for split in sentence_splits])
-    mention_right_sequences = torch.stack([split[1] for split in sentence_splits])
-    left_output, left_state_info = self.left_lstm(mention_left_sequences)
-    right_output, right_state_info = self.right_lstm(mention_right_sequences)
+    left_splits, right_splits = sentence_splits
+    left_output, left_state_info = self.left_lstm(left_splits)
+    right_output, right_state_info = self.right_lstm(right_splits)
     left_last_hidden_state = left_state_info[0][-1]
     right_last_hidden_state = right_state_info[0][-1]
     sentence_embed = torch.cat((left_last_hidden_state, right_last_hidden_state),

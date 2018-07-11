@@ -4,9 +4,9 @@ import torch.nn as nn
 import torch.optim as optim
 import pydash as _
 import itertools
-from data_transformers import pad_and_embed_batch
+from data_transformers import embed_and_pack_batch
 
-import utils as u
+from utils import tensors_to_device
 
 def collate(batch):
   return {'sentence_splits': [sample['sentence_splits'] for sample in batch],
@@ -16,12 +16,14 @@ def collate(batch):
 
 class Trainer(object):
   def __init__(self,
+               device,
                embedding_lookup,
                model: nn.Module,
                dataset,
                batch_sampler,
                num_epochs):
-    self.model = model
+    self.device = device
+    self.model = model.to(self.device)
     self.dataset = dataset
     self.batch_sampler = batch_sampler
     self.optimizer = self._create_optimizer('adam')
@@ -46,10 +48,11 @@ class Trainer(object):
                               batch_sampler=self.batch_sampler,
                               collate_fn=collate)
       for batch_num, batch in enumerate(dataloader):
+        batch = tensors_to_device(batch, self.device)
         self.optimizer.zero_grad()
-        embedded_sentence_splits = pad_and_embed_batch(self.embedding_lookup,
-                                                       batch['sentence_splits'])
-        encoded = self.model((embedded_sentence_splits,
+        left_splits, right_splits = embed_and_pack_batch(self.embedding_lookup,
+                                                         batch['sentence_splits'])
+        encoded = self.model(((left_splits, right_splits),
                               batch['embedded_page_content']))
         labels_for_batch = self._get_labels_for_batch(batch['label'], batch['candidates'])
         loss = self.model.loss(encoded, batch['candidates'], labels_for_batch)

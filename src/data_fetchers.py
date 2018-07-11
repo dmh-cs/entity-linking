@@ -70,17 +70,20 @@ def get_entity_lookup():
   finally:
     connection.close()
 
-def get_embedding_lookup(path, embedding_dim=100):
-  lookup = {'<PAD>': torch.rand(size=(embedding_dim,), dtype=torch.float32),
-            '<UNK>': torch.rand(size=(embedding_dim,), dtype=torch.float32),
-            '<MENTION_START_HERE>': torch.rand(size=(embedding_dim,), dtype=torch.float32),
-            '<MENTION_END_HERE>': torch.rand(size=(embedding_dim,), dtype=torch.float32)}
+def get_embedding_lookup(path, embedding_dim=100, device=None):
+  if device is None: raise ValueError('Specify a device')
+  lookup = {'<PAD>': torch.zeros(size=(embedding_dim,), dtype=torch.float32, device=device),
+            '<UNK>': torch.rand(size=(embedding_dim,), dtype=torch.float32, device=device),
+            '<MENTION_START_HERE>': torch.rand(size=(embedding_dim,), dtype=torch.float32, device=device),
+            '<MENTION_END_HERE>': torch.rand(size=(embedding_dim,), dtype=torch.float32, device=device)}
   with open(path) as f:
     while True:
       line = f.readline()
       if line and len(line) > 0:
         split_line = line.strip().split(' ')
-        lookup[split_line[0]] = torch.tensor(np.array(split_line[1:], dtype=np.float32), dtype=torch.float32)
+        lookup[split_line[0]] = torch.tensor(np.array(split_line[1:], dtype=np.float32),
+                                             dtype=torch.float32,
+                                             device=device)
       else:
         break
   return lookup
