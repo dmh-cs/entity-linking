@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 from trainer import Trainer
+from tester import Tester
 from joint_model import JointModel
 from data_fetchers import get_connection, get_entity_lookup, get_embedding_lookup
 from mention_context_dataset import MentionContextDataset
@@ -39,7 +40,7 @@ def main():
   load_dotenv(dotenv_path='.env')
   LOOKUPS_PATH = os.getenv("LOOKUPS_PATH")
   try:
-    num_epochs = 1000
+    num_epochs = 30
     if DEBUG:
       max_num_mentions = 10000
       # batch_size = 1000
@@ -70,7 +71,19 @@ def main():
       page_id_order_test = page_id_order[num_train_pages:]
       if DEBUG:
         # dataset = SimpleMentionContextDataset(cursor,
-        dataset = SimpleMentionContextDatasetByEntityIds(cursor,
+        train_dataset = SimpleMentionContextDatasetByEntityIds(cursor,
+                                                         page_id_order_train,
+                                                         entity_candidates_lookup,
+                                                         entity_label_lookup,
+                                                         embedding_lookup,
+                                                         batch_size,
+                                                         num_entities,
+                                                         max_num_mentions,
+                                                         num_candidates,
+                                                         True)
+        batch_sampler = BatchSampler(RandomSampler(train_dataset), batch_size, True)
+      else:
+        train_dataset = MentionContextDataset(cursor,
                                               page_id_order_train,
                                               entity_candidates_lookup,
                                               entity_label_lookup,
@@ -79,23 +92,12 @@ def main():
                                               num_entities,
                                               max_num_mentions,
                                               num_candidates)
-        batch_sampler = BatchSampler(RandomSampler(dataset), batch_size, True)
-      else:
-        dataset = MentionContextDataset(cursor,
-                                        page_id_order_train,
-                                        entity_candidates_lookup,
-                                        entity_label_lookup,
-                                        embedding_lookup,
-                                        batch_size,
-                                        num_entities,
-                                        max_num_mentions,
-                                        num_candidates)
         batch_sampler = MentionContextBatchSampler(cursor, page_id_order_train, batch_size, max_num_mentions)
-      num_entities = get_num_entities(cursor)
+      max_num_entities = get_num_entities(cursor)
       embed_len = 100
-      entity_embed_weights = nn.Parameter(torch.Tensor(num_entities, embed_len))
+      entity_embed_weights = nn.Parameter(torch.Tensor(max_num_entities, embed_len))
       entity_embed_weights.data.normal_(0, 1.0/math.sqrt(embed_len))
-      entity_embeds = nn.Embedding(num_entities, embed_len, _weight=entity_embed_weights)
+      entity_embeds = nn.Embedding(max_num_entities, embed_len, _weight=entity_embed_weights)
       lstm_size = 100
       num_lstm_layers = 2
       dropout_keep_prob = 0.5
@@ -110,10 +112,22 @@ def main():
       print('Training')
       trainer = Trainer(embedding_lookup=embedding_lookup,
                         model=encoder,
-                        dataset=dataset,
+                        dataset=train_dataset,
                         batch_sampler=batch_sampler,
                         num_epochs=num_epochs)
       trainer.train()
+      test_dataset = SimpleMentionContextDatasetByEntityIds(cursor,
+                                                            page_id_order_train,
+                                                            entity_candidates_lookup,
+                                                            entity_label_lookup,
+                                                            embedding_lookup,
+                                                            batch_size,
+                                                            num_entities,
+                                                            max_num_mentions,
+                                                            num_candidates,
+                                                            False)
+      tester = Tester(test_dataset, encoder, entity_embeds, embedding_lookup)
+      print(tester.test())
   finally:
     db_connection.close()
 

@@ -13,7 +13,8 @@ class SimpleMentionContextDatasetByEntityIds(MentionContextDataset):
                batch_size,
                num_entities,
                num_mentions,
-               num_candidates):
+               num_candidates,
+               train=True):
     super(SimpleMentionContextDatasetByEntityIds, self).__init__(cursor,
                                                                  page_id_order,
                                                                  entity_candidates_lookup,
@@ -32,7 +33,11 @@ class SimpleMentionContextDatasetByEntityIds(MentionContextDataset):
     entity_ids = list(self.entity_label_lookup.keys())[:self.num_entities]
     for entity_id in entity_ids:
       self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where entity_id = %s', entity_id)
-      mention_infos = self.cursor.fetchall()
+      mention_infos = _.sort_by(self.cursor.fetchall(), 'mention_id')
+      if train:
+        mention_infos = mention_infos[:int(0.8 * len(mention_infos))]
+      else:
+        mention_infos = mention_infos[int(0.8 * len(mention_infos)):]
       self._mention_infos.extend(mention_infos)
       page_ids = [mention['page_id'] for mention in mention_infos]
       for page_id in page_ids:
