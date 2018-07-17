@@ -5,6 +5,7 @@ import torch
 from dotenv import load_dotenv
 import pydash as _
 from functools import reduce
+import random
 
 import utils as u
 
@@ -87,3 +88,25 @@ def get_embedding_lookup(path, embedding_dim=100, device=None):
       else:
         break
   return lookup
+
+def get_candidates(entity_candidates_lookup,
+                   num_entities,
+                   num_candidates,
+                   mention,
+                   label):
+  base_candidates = entity_candidates_lookup[mention]
+  if len(base_candidates) < num_candidates:
+    num_candidates_to_generate = num_candidates - len(base_candidates)
+    random_candidates = random.sample(set(range(num_entities)) - set(base_candidates.tolist()),
+                                      num_candidates_to_generate)
+    candidates = torch.cat((base_candidates,
+                           torch.tensor(random_candidates)), 0)
+  else:
+    label_index = int((base_candidates == label).nonzero().squeeze())
+    indexes_to_sample = set(range(len(base_candidates))) - set([label_index])
+    indexes_to_keep = random.sample(indexes_to_sample,
+                                    num_candidates - 1) + [label_index]
+    candidates = base_candidates[indexes_to_keep]
+  order = list(range(num_candidates))
+  random.shuffle(order)
+  return candidates[order]
