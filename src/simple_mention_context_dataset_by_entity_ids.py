@@ -1,36 +1,31 @@
+from torch.utils.data import Dataset, DataLoader
 from mention_context_dataset import MentionContextDataset
 from data_transformers import get_mention_sentence_splits, embed_page_content
+from data_fetchers import get_candidates
 from parsers import parse_for_sentence_spans
+import torch
 import pydash as _
 
-class SimpleMentionContextDatasetByEntityIds(MentionContextDataset):
+class SimpleMentionContextDatasetByEntityIds(Dataset):
   def __init__(self,
                cursor,
-               page_id_order,
                entity_candidates_lookup,
                entity_label_lookup,
                embedding_lookup,
-               batch_size,
-               num_entities,
-               num_mentions,
                num_candidates,
+               entity_ids,
                train=True):
-    super(SimpleMentionContextDatasetByEntityIds, self).__init__(cursor,
-                                                                 page_id_order,
-                                                                 entity_candidates_lookup,
-                                                                 entity_label_lookup,
-                                                                 embedding_lookup,
-                                                                 batch_size,
-                                                                 num_entities,
-                                                                 num_mentions,
-                                                                 num_candidates,
-                                                                 transform=None)
+    self.cursor = cursor
+    self.entity_candidates_lookup = _.map_values(entity_candidates_lookup, torch.tensor)
+    self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
     self.embedding_lookup = embedding_lookup
+    self.num_candidates = num_candidates
+    self.num_entities = len(entity_ids)
     self._page_content_lookup = {}
     self._sentence_spans_lookup = {}
     self._embedded_page_content_lookup = {}
     self._mention_infos = []
-    entity_ids = list(self.entity_label_lookup.keys())[:self.num_entities]
+    print('Getting', len(entity_ids), 'entities and their info')
     for entity_id in entity_ids:
       self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where entity_id = %s', entity_id)
       mention_infos = _.sort_by(self.cursor.fetchall(), 'mention_id')
@@ -41,6 +36,8 @@ class SimpleMentionContextDatasetByEntityIds(MentionContextDataset):
       self._mention_infos.extend(mention_infos)
       page_ids = [mention['page_id'] for mention in mention_infos]
       for page_id in page_ids:
+        if page_id in self._embedded_page_content_lookup:
+          continue
         self.cursor.execute('select * from pages where id = %s', page_id)
         page_content = self.cursor.fetchone()['content']
         page_mention_infos = [mention for mention in mention_infos if mention['page_id'] == page_id]
