@@ -23,6 +23,7 @@ class Trainer(object):
                batch_sampler,
                num_epochs):
     self.device = device
+    self.model = nn.DataParallel(model)
     self.model = model.to(self.device)
     self.dataset = dataset
     self.batch_sampler = batch_sampler
