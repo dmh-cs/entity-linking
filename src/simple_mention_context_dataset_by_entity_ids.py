@@ -50,7 +50,13 @@ class SimpleMentionContextDatasetByEntityIds(MentionContextDataset):
                                                                            page_mention_infos,
                                                                            page_content)
     self._sentence_spans_lookup = _.map_values(self._page_content_lookup, parse_for_sentence_spans)
-    self._mention_infos = self._mention_infos[:num_mentions]
+
+  def _get_candidates(self, mention, label):
+    return get_candidates(self.entity_candidates_lookup,
+                          self.num_entities,
+                          self.num_candidates,
+                          mention,
+                          label)
 
   def _get_batch_embedded_page_content_lookup(self, page_ids):
     lookup = {}

@@ -5,6 +5,7 @@ import pydash as _
 import random
 
 from data_transformers import get_mention_sentence_splits, embed_page_content
+from data_fetchers import get_candidates
 from parsers import parse_for_sentence_spans
 
 
@@ -21,8 +22,8 @@ class MentionContextDataset(Dataset):
                num_candidates,
                transform=None):
     self.page_id_order = page_id_order
-    self.entity_candidates_lookup = _.map_values(entity_candidates_lookup, lambda val: torch.tensor(val))
-    self.entity_label_lookup = entity_label_lookup
+    self.entity_candidates_lookup = _.map_values(entity_candidates_lookup, torch.tensor)
+    self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
     self.embedding_lookup = embedding_lookup
     self.cursor = cursor
     self.transform = transform
@@ -36,6 +37,13 @@ class MentionContextDataset(Dataset):
     self._mentions_per_page_ctr = {}
     self._mention_infos = {}
     self.page_ctr = 0
+
+  def _get_candidates(self, mention, label):
+    return get_candidates(self.entity_candidates_lookup,
+                          self.num_entities,
+                          self.num_candidates,
+                          mention,
+                          label)
 
   def __len__(self):
     return self.num_mentions
@@ -62,21 +70,6 @@ class MentionContextDataset(Dataset):
     if self.transform:
       sample = self.transform(sample)
     return sample
-
-  def _get_candidates(self, mention, label):
-    base_candidates = self.entity_candidates_lookup[mention]
-    if len(base_candidates) < self.num_candidates:
-      num_candidates_to_generate = self.num_candidates - len(base_candidates)
-      random_candidates = random.sample(set(range(self.num_entities)) - set(base_candidates.tolist()),
-                                        num_candidates_to_generate)
-      return torch.cat((base_candidates,
-                        torch.tensor(random_candidates)), 0)
-    else:
-      label_index = int((base_candidates == label).nonzero().squeeze())
-      indexes_to_sample = set(range(len(base_candidates))) - set([label_index])
-      indexes_to_keep = random.sample(indexes_to_sample,
-                                      self.num_candidates - 1) + [label_index]
-      return base_candidates[indexes_to_keep]
 
   def _get_mention_infos_by_page_id(self, page_id):
     self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id = %s', page_id)
