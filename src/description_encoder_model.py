@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+from toolz import compose
+import pydash as _
 
 from data_transformers import pad_batch
 
@@ -20,8 +22,15 @@ class DescriptionEncoder(nn.Module):
 
   def forward(self, embedded_page_contents):
     desc_embeds = pad_batch(self.pad_vector,
-                            [embeds[:100] for embeds in embedded_page_contents])
-    return torch.squeeze(self.global_avg_pooling(self.dropout(self.relu(self.conv(desc_embeds)))))
+                            [embeds[:100] for embeds in embedded_page_contents],
+                            min_len=100)
+    fn = compose(torch.squeeze,
+                 self.global_avg_pooling,
+                 self.dropout,
+                 self.relu,
+                 self.conv,
+                 _.partial_right(torch.transpose, 1, 2))
+    return fn(desc_embeds)
 
   def loss(self, desc_embeds, candidate_entity_ids, labels_for_batch):
     self.logits = torch.sum(torch.mul(torch.unsqueeze(desc_embeds, 1),
