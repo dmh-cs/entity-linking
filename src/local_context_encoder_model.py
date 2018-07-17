@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from data_transformers import get_splits_and_order
 
 
 class LocalContextEncoder(nn.Module):
@@ -29,11 +30,14 @@ class LocalContextEncoder(nn.Module):
     self.relu = nn.ReLU()
 
   def forward(self, sentence_splits):
-    left_splits, right_splits = sentence_splits
+    left_splits, left_order = get_splits_and_order(sentence_splits[0])
+    right_splits, right_order = get_splits_and_order(sentence_splits[1])
     left_output, left_state_info = self.left_lstm(left_splits)
     right_output, right_state_info = self.right_lstm(right_splits)
     left_last_hidden_state = left_state_info[0][-1]
     right_last_hidden_state = right_state_info[0][-1]
-    sentence_embed = torch.cat((left_last_hidden_state, right_last_hidden_state),
+    unsorted_left = left_last_hidden_state[left_order]
+    unsorted_right = right_last_hidden_state[right_order]
+    sentence_embed = torch.cat((unsorted_left, unsorted_right),
                                dim=1)
     return self.relu(self.projection(sentence_embed))

@@ -6,13 +6,21 @@ import torch
 import torch.sparse as sparse
 from parsers import parse_text_for_tokens, parse_for_tokens
 import numpy as np
+from utils import sort_index
 
 
-def pad_batch(pad_vector, batch):
-  pad_to_len = max(map(len, batch))
-  to_stack = [torch.cat((elem,
-                         torch.stack([pad_vector] * (pad_to_len - len(elem)))),
-                        0) if pad_to_len != len(elem) else elem for elem in batch]
+def pad_batch(pad_vector, batch, min_len=0):
+  elem_pad_dim = 0
+  pad_to_len = max(min_len, max(map(len, batch)))
+  to_stack = []
+  for elem in batch:
+    dim_len = elem.shape[elem_pad_dim]
+    if pad_to_len != dim_len:
+      pad = torch.stack([pad_vector] * (pad_to_len - dim_len))
+      to_stack.append(torch.cat((elem, pad),
+                                elem_pad_dim))
+    else:
+      to_stack.append(elem)
   return torch.stack(to_stack)
 
 def _tokens_to_embeddings(embedding_lookup, tokens):
@@ -70,14 +78,23 @@ def _get_left_right_max_len(sentence_splits_batch):
     raise
   return max(map(len, left_batch)), max(map(len, right_batch))
 
+def get_splits_and_order(packed):
+  return packed['embeddings'], packed['order']
+
 def embed_and_pack_batch(embedding_lookup, sentence_splits_batch):
+  left_order = sort_index(sentence_splits_batch, key=lambda split: len(split[0]), reverse=True)
+  right_order = sort_index(sentence_splits_batch, key=lambda split: len(split[1]), reverse=True)
   left_batch = []
   right_batch = []
-  for sentence_splits in sentence_splits_batch:
-    left_batch.append(torch.stack(_tokens_to_embeddings(embedding_lookup, sentence_splits[0])))
-    right_batch.append(torch.stack(_tokens_to_embeddings(embedding_lookup, sentence_splits[1])))
-  return (nn.utils.rnn.pack_sequence(sorted(left_batch, key=len, reverse=True)),
-          nn.utils.rnn.pack_sequence(sorted(right_batch, key=len, reverse=True)))
+  for left_index, right_index in zip(left_order, right_order):
+    split_left = sentence_splits_batch[left_index]
+    split_right = sentence_splits_batch[right_index]
+    left_batch.append(torch.stack(_tokens_to_embeddings(embedding_lookup,
+                                                        split_left[0])))
+    right_batch.append(torch.stack(_tokens_to_embeddings(embedding_lookup,
+                                                         split_right[1])))
+  return ({'embeddings': nn.utils.rnn.pack_sequence(left_batch), 'order': left_order},
+          {'embeddings': nn.utils.rnn.pack_sequence(right_batch), 'order': right_order})
 
 def _insert_mention_flags(page_content, mention_info):
   mention_text = mention_info['mention']

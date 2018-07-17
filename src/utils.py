@@ -1,5 +1,5 @@
 import torch
-import pydash
+import pydash as _
 
 def build_cursor_generator(cursor, buff_len=1000):
   while True:
@@ -28,3 +28,8 @@ def coll_compare_keys_by(coll1, coll2, comp_with):
 
 def tensors_to_device(obj, device):
   return {key: val.to(device) if isinstance(val, torch.Tensor) else val for key, val in obj.items()}
+
+def sort_index(coll, key=_.identity, reverse=False):
+  return [index for index, _ in sorted(enumerate(coll),
+                                       key=lambda elem: key(elem[1]),
+                                       reverse=reverse)]
