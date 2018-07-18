@@ -74,9 +74,9 @@ def get_entity_lookup():
 def get_embedding_lookup(path, embedding_dim=100, device=None):
   if device is None: raise ValueError('Specify a device')
   lookup = {'<PAD>': torch.zeros(size=(embedding_dim,), dtype=torch.float32, device=device),
-            '<UNK>': torch.rand(size=(embedding_dim,), dtype=torch.float32, device=device),
-            '<MENTION_START_HERE>': torch.rand(size=(embedding_dim,), dtype=torch.float32, device=device),
-            '<MENTION_END_HERE>': torch.rand(size=(embedding_dim,), dtype=torch.float32, device=device)}
+            '<UNK>': torch.randn(size=(embedding_dim,), dtype=torch.float32, device=device),
+            '<MENTION_START_HERE>': torch.randn(size=(embedding_dim,), dtype=torch.float32, device=device),
+            '<MENTION_END_HERE>': torch.randn(size=(embedding_dim,), dtype=torch.float32, device=device)}
   with open(path) as f:
     while True:
       line = f.readline()
