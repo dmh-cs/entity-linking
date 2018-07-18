@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
 from sklearn.metrics import confusion_matrix, accuracy_score
+from torch.utils.data import DataLoader
 
 from data_transformers import embed_and_pack_batch
-from utils import tensors_to_device
+from utils import tensors_to_device, collate
 
 class Tester(object):
   def __init__(self, dataset, model, entity_embeds, embedding_lookup, device, batch_sampler=None):
@@ -21,16 +22,18 @@ class Tester(object):
   def test(self):
     acc = 0
     n = 0
-    for elem in self.dataset:
-      elem = tensors_to_device(elem, self.device)
+    dataloader = DataLoader(dataset=self.dataset,
+                            batch_sampler=self.batch_sampler,
+                            collate_fn=collate)
+    for batch in dataloader:
+      batch = tensors_to_device(batch, self.device)
       left_splits, right_splits = embed_and_pack_batch(self.embedding_lookup,
-                                                       [elem['sentence_splits']])
-      _, mention_embeds = self.model(((left_splits, right_splits),
-                                      torch.unsqueeze(elem['embedded_page_content'], 0)))
-      labels_for_batch = self._get_labels_for_batch(torch.unsqueeze(elem['label'], 0),
-                                                    torch.unsqueeze(elem['candidates'], 0))
+                                                       batch['sentence_splits'])
+      mention_embeds = self.model((left_splits, right_splits))
+      labels_for_batch = self._get_labels_for_batch(batch['label'],
+                                                    batch['candidates'])
       logits = torch.sum(torch.mul(torch.unsqueeze(mention_embeds, 1),
-                                   self.entity_embeds(torch.unsqueeze(elem['candidates'], 0))),
+                                   self.entity_embeds(batch['candidates'])),
                          2)
       predictions = torch.argmax(logits, dim=1)
       acc += (labels_for_batch == predictions).sum()
