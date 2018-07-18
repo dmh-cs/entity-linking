@@ -4,10 +4,15 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 from torch.utils.data import DataLoader
 
 from data_transformers import embed_and_pack_batch
-from utils import tensors_to_device, collate
+import utils as u
+
+def collate(batch):
+  return {'sentence_splits': [sample['sentence_splits'] for sample in batch],
+          'label': torch.tensor([sample['label'] for sample in batch]),
+          'candidates': torch.stack([sample['candidates'] for sample in batch])}
 
 class Tester(object):
-  def __init__(self, dataset, model, entity_embeds, embedding_lookup, device, batch_sampler=None):
+  def __init__(self, dataset, model, entity_embeds, embedding_lookup, device, batch_sampler):
     self.dataset = dataset
     self.model = nn.DataParallel(model)
     self.model = model.to(device)
@@ -26,7 +31,7 @@ class Tester(object):
                             batch_sampler=self.batch_sampler,
                             collate_fn=collate)
     for batch in dataloader:
-      batch = tensors_to_device(batch, self.device)
+      batch = u.tensors_to_device(batch, self.device)
       left_splits, right_splits = embed_and_pack_batch(self.embedding_lookup,
                                                        batch['sentence_splits'])
       mention_embeds = self.model((left_splits, right_splits))

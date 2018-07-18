@@ -33,9 +33,3 @@ def sort_index(coll, key=_.identity, reverse=False):
   return [index for index, _ in sorted(enumerate(coll),
                                        key=lambda elem: key(elem[1]),
                                        reverse=reverse)]
-
-def collate(batch):
-  return {'sentence_splits': [sample['sentence_splits'] for sample in batch],
-          'label': torch.tensor([sample['label'] for sample in batch]),
-          'embedded_page_content': [sample['embedded_page_content'] for sample in batch],
-          'candidates': torch.stack([sample['candidates'] for sample in batch])}
