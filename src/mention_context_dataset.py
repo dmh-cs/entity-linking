@@ -103,7 +103,7 @@ class MentionContextDataset(Dataset):
       page_mention_infos = filter(lambda mention_info: mention_info['page_id'] == page_id,
                                   self._mention_infos.values())
       page_content = self._page_content_lookup[page_id]
-      if not _.is_empty(page_content):
+      if len(page_content.strip()) > 5:
         lookup[page_id] = embed_page_content(self.embedding_lookup,
                                              page_mention_infos,
                                              page_content)
