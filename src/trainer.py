@@ -6,13 +6,7 @@ import pydash as _
 import itertools
 from data_transformers import embed_and_pack_batch
 
-from utils import tensors_to_device
-
-def collate(batch):
-  return {'sentence_splits': [sample['sentence_splits'] for sample in batch],
-          'label': torch.tensor([sample['label'] for sample in batch]),
-          'embedded_page_content': [sample['embedded_page_content'] for sample in batch],
-          'candidates': torch.stack([sample['candidates'] for sample in batch])}
+from utils import tensors_to_device, collate
 
 class Trainer(object):
   def __init__(self,
