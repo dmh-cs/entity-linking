@@ -52,9 +52,12 @@ def _merge_sentences_across_mention(sentence_spans, mention_offset, mention_len)
   mention_end = mention_offset + mention_len
   span = _find_mention_sentence_span(sentence_spans, mention_offset)
   span_index = sentence_spans.index(span)
-  while mention_end > span[1]:
-    next_span = sentence_spans[span_index + 1]
-    span = [span[0], next_span[1]]
+  end_offset = span[1]
+  while mention_end > end_offset:
+    span_index += 1
+    next_span = sentence_spans[span_index]
+    end_offset = next_span[1]
+  span = [span[0], end_offset]
   return span
 
 def get_mention_sentence_splits(page_content, sentence_spans, mention_info):
