@@ -6,13 +6,14 @@ from data_transformers import embed_and_pack_batch
 from utils import tensors_to_device
 
 class Tester(object):
-  def __init__(self, dataset, model, entity_embeds, embedding_lookup, device):
+  def __init__(self, dataset, model, entity_embeds, embedding_lookup, device, batch_sampler=None):
     self.dataset = dataset
     self.model = nn.DataParallel(model)
     self.model = model.to(device)
     self.entity_embeds = entity_embeds
     self.embedding_lookup = embedding_lookup
     self.device = device
+    self.batch_sampler = batch_sampler
 
   def _get_labels_for_batch(self, labels, candidates):
     return (torch.unsqueeze(labels, 1) == candidates).nonzero()[:, 1]
