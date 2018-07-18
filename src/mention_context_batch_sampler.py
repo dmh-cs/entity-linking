@@ -14,39 +14,43 @@ class MentionContextBatchSampler(Sampler):
     self.ids_from_last_page = set()
     self.ids = []
     self.num_mentions = num_mentions
+    self.seen_items = []
 
   def __len__(self):
     num_batches = math.ceil(self.num_mentions / self.batch_size)
     return num_batches
 
   def __iter__(self):
-    while self.page_ctr < len(self.page_id_order):
+    while self.page_ctr < len(self.page_id_order) or not _.is_empty(self.ids_from_last_page):
       yield self._get_next_batch()
 
   def _get_next_batch(self):
-    self.ids = []
+    ids = []
     if len(self.ids_from_last_page) > self.batch_size:
-      self.ids = random.sample(list(self.ids_from_last_page), self.batch_size)
-      self.ids_from_last_page = self.ids_from_last_page - set(self.ids)
-      shuffle(self.ids)
-      return self.ids
+      ids = random.sample(list(self.ids_from_last_page), self.batch_size)
+      self.ids_from_last_page = self.ids_from_last_page - set(ids)
+      shuffle(ids)
+      return ids
     else:
       if not _.is_empty(self.ids_from_last_page):
-        self.page_ctr += 1
-        self.ids = list(self.ids_from_last_page)
+        ids = list(self.ids_from_last_page)
         self.ids_from_last_page = set()
-    for page_id in self.page_id_order[self.page_ctr:]:
-      self.cursor.execute('select id from mentions where page_id = %s', page_id)
-      page_mention_ids = [row['id'] for row in self.cursor.fetchall()]
-      self.ids.extend(page_mention_ids)
-      if len(self.ids) >= self.batch_size:
-        self.ids = self.ids[:self.batch_size]
-        self.ids_from_last_page = set(page_mention_ids) - set(self.ids)
-        shuffle(self.ids)
-        return self.ids
-      else:
-        self.ids_from_last_page = set()
+        if self.page_ctr > len(self.page_id_order):
+          return ids
+      for page_id in self.page_id_order[self.page_ctr:]:
         self.page_ctr += 1
-    self.ids = self.ids[:]
-    shuffle(self.ids)
-    return self.ids
+        assert page_id not in self.seen_items
+        self.seen_items.append(page_id)
+        self.cursor.execute('select id from mentions where page_id = %s', page_id)
+        page_mention_ids = [row['id'] for row in self.cursor.fetchall()]
+        ids.extend(page_mention_ids)
+        if len(ids) >= self.batch_size:
+          self.ids_from_last_page = set(ids[self.batch_size:])
+          ids = ids[:self.batch_size]
+          shuffle(ids)
+          return ids
+        else:
+          self.ids_from_last_page = set()
+      ids = ids[:]
+      shuffle(ids)
+      return ids
