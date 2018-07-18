@@ -36,15 +36,6 @@ def _tokens_to_embeddings(embedding_lookup, tokens):
       text_embeddings.append(embedding_lookup['<UNK>'])
   return text_embeddings
 
-def _tokens_to_padded_embeddings(embedding_lookup, tokens, batch_max_len, left_pad=False) -> torch.Tensor:
-  text_embeddings = _tokens_to_embeddings(embedding_lookup, tokens)
-  if len(text_embeddings) < batch_max_len:
-    if left_pad:
-      [embedding_lookup['<PAD>'] for _ in range(batch_max_len - len(text_embeddings))].extend(text_embeddings)
-    else:
-      text_embeddings.extend([embedding_lookup['<PAD>'] for _ in range(batch_max_len - len(text_embeddings))])
-  return torch.stack(text_embeddings)
-
 def _find_mention_sentence_span(sentence_spans, mention_offset):
   return _.find(sentence_spans, lambda span: mention_offset >= span[0] and mention_offset <= span[1])
 
@@ -67,19 +58,6 @@ def get_mention_sentence_splits(page_content, sentence_spans, mention_info):
   mention_index = sentence.index(mention_info['mention'])
   return [parse_for_tokens(sentence[:mention_index + mention_len]),
           parse_for_tokens(sentence[mention_index:])]
-
-def _embed_sentence_splits(embedding_lookup, left_batch_len, right_batch_len, sentence_splits):
-  return [_tokens_to_padded_embeddings(embedding_lookup, sentence_splits[0], left_batch_len, left_pad=True),
-          _tokens_to_padded_embeddings(embedding_lookup, sentence_splits[1], right_batch_len)]
-
-def _get_left_right_max_len(sentence_splits_batch):
-  try:
-    left_batch = [sentence_splits[0] for sentence_splits in sentence_splits_batch]
-    right_batch = [sentence_splits[1] for sentence_splits in sentence_splits_batch]
-  except:
-    print(sentence_splits_batch)
-    raise
-  return max(map(len, left_batch)), max(map(len, right_batch))
 
 def get_splits_and_order(packed):
   return packed['embeddings'], packed['order']
