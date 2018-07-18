@@ -10,3 +10,4 @@ node_modules
 *.pickle
 /glove.6B.100d.txt
 /.coverage
+/.pytest_cache
