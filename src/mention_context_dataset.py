@@ -19,14 +19,12 @@ class MentionContextDataset(Dataset):
                batch_size,
                num_entities,
                num_mentions,
-               num_candidates,
-               transform=None):
+               num_candidates):
     self.page_id_order = page_id_order
     self.entity_candidates_lookup = _.map_values(entity_candidates_lookup, torch.tensor)
     self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
     self.embedding_lookup = embedding_lookup
     self.cursor = cursor
-    self.transform = transform
     self.batch_size = batch_size
     self.num_mentions = num_mentions
     self.num_entities = num_entities
@@ -67,8 +65,6 @@ class MentionContextDataset(Dataset):
       self._sentence_spans_lookup.pop(mention_info['page_id'])
       self._page_content_lookup.pop(mention_info['page_id'])
       self._embedded_page_content_lookup.pop(mention_info['page_id'])
-    if self.transform:
-      sample = self.transform(sample)
     return sample
 
   def _get_mention_infos_by_page_id(self, page_id):
