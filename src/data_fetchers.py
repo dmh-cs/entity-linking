@@ -89,6 +89,15 @@ def get_embedding_lookup(path, embedding_dim=100, device=None):
         break
   return lookup
 
+def get_random_indexes(max_value, exclude, num_to_generate):
+  result = []
+  while len(result) < num_to_generate:
+    val = random.randint(0, max_value - 1)
+    while val in exclude:
+      val = random.randint(0, max_value - 1)
+    result.append(val)
+  return result
+
 def get_candidates(entity_candidates_lookup,
                    num_entities,
                    num_candidates,
@@ -97,15 +106,17 @@ def get_candidates(entity_candidates_lookup,
   base_candidates = entity_candidates_lookup[mention]
   if len(base_candidates) < num_candidates:
     num_candidates_to_generate = num_candidates - len(base_candidates)
-    random_candidates = random.sample(set(range(num_entities)) - set(base_candidates.tolist()),
-                                      num_candidates_to_generate)
+    random_candidates = get_random_indexes(num_entities,
+                                           base_candidates.tolist(),
+                                           num_candidates_to_generate)
     candidates = torch.cat((base_candidates,
                            torch.tensor(random_candidates)), 0)
   else:
     label_index = int((base_candidates == label).nonzero().squeeze())
-    indexes_to_sample = set(range(len(base_candidates))) - set([label_index])
-    indexes_to_keep = random.sample(indexes_to_sample,
-                                    num_candidates - 1) + [label_index]
+    random_candidates = get_random_indexes(len(base_candidates),
+                                           [label_index],
+                                           num_candidates - 1)
+    indexes_to_keep = random_candidates + [label_index]
     candidates = base_candidates[indexes_to_keep]
   order = list(range(num_candidates))
   random.shuffle(order)
