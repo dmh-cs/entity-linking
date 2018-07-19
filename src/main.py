@@ -128,7 +128,7 @@ def main(device):
         batch_sampler = MentionContextBatchSampler(cursor, page_id_order_test, batch_size, max_num_mentions)
       tester = Tester(dataset=test_dataset,
                       batch_sampler=batch_sampler,
-                      model=encoder.mention_context_encoder.local_context_encoder,
+                      model=encoder.module.mention_context_encoder,
                       entity_embeds=entity_embeds,
                       embedding_lookup=embedding_lookup,
                       device=device)
