@@ -11,11 +11,11 @@ import utils as u
 
 import tester as t
 
-mock_call = Mock.__call__
 
-@pytest.fixture(scope="module")
-def mock_restore():
-  yield None
+@pytest.fixture()
+def myMock():
+  mock_call = Mock.__call__
+  yield Mock
   Mock.__call__ = mock_call
 
 def get_mock_model(vector_to_return):
@@ -24,7 +24,7 @@ def get_mock_model(vector_to_return):
   Mock.__call__ = lambda self, x: torch.unsqueeze(vector_to_return, 0)
   return model
 
-def test_tester(monkeypatch, mock_restore):
+def test_tester(monkeypatch, myMock):
   dataset = [{'label': 0, 'sentence_splits': [['a', 'b', 'c'], ['c', 'd']], 'candidates': torch.tensor([0, 1])},
              {'label': 2, 'sentence_splits': [['a', 'b', 'c'], ['c', 'd']], 'candidates': torch.tensor([2, 1])},
              {'label': 1, 'sentence_splits': [['a', 'b', 'c'], ['c', 'd']], 'candidates': torch.tensor([3, 1])}]
