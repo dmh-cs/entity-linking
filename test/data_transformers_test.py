@@ -62,3 +62,9 @@ def test_embed_and_pack_batch():
   assert torch.equal(result[0]['embeddings'].batch_sizes,
                      nn.utils.rnn.pack_sequence(right).batch_sizes)
   assert result[1]['order'] == [1, 0]
+
+def test__find_mention_sentence_span():
+  sentence_spans = [(0, 3), (4, 8), (8, 12), (13, 19)]
+  mention_offset = 10
+  span = dt._find_mention_sentence_span(sentence_spans, mention_offset)
+  assert span == (8, 12)

@@ -36,8 +36,20 @@ def _tokens_to_embeddings(embedding_lookup, tokens):
       text_embeddings.append(embedding_lookup['<UNK>'])
   return text_embeddings
 
+def _satisfies(span, offset):
+  return offset >= span[0] and offset <= span[1]
+
+def _search(spans, offset):
+  if len(spans) == 1 and not _satisfies(spans[0], offset):
+    return None
+  index = int(len(spans) / 2)
+  if _satisfies(spans[index], offset):
+    return spans[index]
+  else:
+    return _search(spans[:index], offset) or _search(spans[index:], offset)
+
 def _find_mention_sentence_span(sentence_spans, mention_offset):
-  return _.find(sentence_spans, lambda span: mention_offset >= span[0] and mention_offset <= span[1])
+  return _search(sentence_spans, mention_offset)
 
 def _merge_sentences_across_mention(sentence_spans, mention_offset, mention_len):
   mention_end = mention_offset + mention_len
