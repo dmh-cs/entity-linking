@@ -138,7 +138,7 @@ def main(device):
     db_connection.close()
 
 if __name__ == "__main__":
-  import pdb
+  import ipdb
   import traceback
   import sys
 
@@ -148,4 +148,4 @@ if __name__ == "__main__":
   except:
     extype, value, tb = sys.exc_info()
     traceback.print_exc()
-    pdb.post_mortem(tb)
+    ipdb.post_mortem(tb)
