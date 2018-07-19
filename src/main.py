@@ -16,8 +16,11 @@ import pickle
 from random import shuffle
 import pydash as _
 
+LOAD_MODEL = True
 DEBUG = True
 USE_SIMPLE = False
+LIMIT_NUM_ENTITIES = False
+if not USE_SIMPLE: assert not LIMIT_NUM_ENTITIES, 'Can only limit num of entities when using simple dataset'
 
 def load_entity_candidates_and_label_lookup(path='../entity-linking-preprocessing/lookups.pkl'):
   with open(path, 'rb') as lookup_file:
@@ -45,9 +48,11 @@ def main(device):
       lookups = load_entity_candidates_and_label_lookup(LOOKUPS_PATH)
       entity_candidates_lookup = lookups['entity_candidates']
       entity_label_lookup = lookups['entity_labels']
-      # num_entities = len(entity_label_lookup)
-      num_entities = 100
       embed_len = 100
+      if LIMIT_NUM_ENTITIES:
+        max_num_entities = 100
+      else:
+        max_num_entities = get_num_entities(cursor)
       context_embed_len = 2 * embed_len
       print('Creating word embedding lookup')
       embedding_lookup = get_embedding_lookup('./glove.6B.100d.txt',
@@ -60,28 +65,6 @@ def main(device):
       num_train_pages = int(len(page_id_order) * 0.8)
       page_id_order_train = page_id_order[:num_train_pages]
       page_id_order_test = page_id_order[num_train_pages:]
-      if USE_SIMPLE:
-        entity_ids = list(sorted(entity_label_lookup.keys()))[:num_entities]
-        train_dataset = SimpleMentionContextDatasetByEntityIds(cursor,
-                                                               entity_candidates_lookup,
-                                                               entity_label_lookup,
-                                                               embedding_lookup,
-                                                               num_candidates,
-                                                               entity_ids,
-                                                               True)
-        batch_sampler = BatchSampler(RandomSampler(train_dataset), batch_size, True)
-      else:
-        train_dataset = MentionContextDataset(cursor,
-                                              page_id_order_train,
-                                              entity_candidates_lookup,
-                                              entity_label_lookup,
-                                              embedding_lookup,
-                                              batch_size,
-                                              num_entities,
-                                              max_num_mentions,
-                                              num_candidates)
-        batch_sampler = MentionContextBatchSampler(cursor, page_id_order_train, batch_size, max_num_mentions)
-      max_num_entities = get_num_entities(cursor)
       embed_len = 100
       entity_embed_weights = nn.Parameter(torch.Tensor(max_num_entities, embed_len))
       entity_embed_weights.data.normal_(0, 1.0/math.sqrt(embed_len))
@@ -97,15 +80,41 @@ def main(device):
                            dropout_keep_prob,
                            entity_embeds,
                            pad_vector)
-      print('Training')
-      trainer = Trainer(device=device,
-                        embedding_lookup=embedding_lookup,
-                        model=encoder,
-                        dataset=train_dataset,
-                        batch_sampler=batch_sampler,
-                        num_epochs=num_epochs)
-      trainer.train()
-      # encoder.load_state_dict(torch.load('./model'))
+      if not LOAD_MODEL:
+        if USE_SIMPLE:
+          entity_ids = list(sorted(entity_label_lookup.keys()))[:max_num_entities]
+          train_dataset = SimpleMentionContextDatasetByEntityIds(cursor,
+                                                                 entity_candidates_lookup,
+                                                                 entity_label_lookup,
+                                                                 embedding_lookup,
+                                                                 num_candidates,
+                                                                 entity_ids,
+                                                                 True)
+          batch_sampler = BatchSampler(RandomSampler(train_dataset), batch_size, True)
+        else:
+          train_dataset = MentionContextDataset(cursor,
+                                                page_id_order_train,
+                                                entity_candidates_lookup,
+                                                entity_label_lookup,
+                                                embedding_lookup,
+                                                batch_size,
+                                                max_num_entities,
+                                                max_num_mentions,
+                                                num_candidates)
+          batch_sampler = MentionContextBatchSampler(cursor, page_id_order_train, batch_size, max_num_mentions)
+        print('Training')
+        trainer = Trainer(device=device,
+                          embedding_lookup=embedding_lookup,
+                          model=encoder,
+                          dataset=train_dataset,
+                          batch_sampler=batch_sampler,
+                          num_epochs=num_epochs)
+        trainer.train()
+      else:
+        encoder.load_state_dict(torch.load('./model'))
+        encoder = nn.DataParallel(encoder)
+        encoder = encoder.to(device)
+      print('Testing')
       if USE_SIMPLE:
         test_dataset = SimpleMentionContextDatasetByEntityIds(cursor,
                                                               entity_candidates_lookup,
@@ -122,7 +131,7 @@ def main(device):
                                              entity_label_lookup,
                                              embedding_lookup,
                                              batch_size,
-                                             num_entities,
+                                             max_num_entities,
                                              max_num_mentions,
                                              num_candidates)
         batch_sampler = MentionContextBatchSampler(cursor, page_id_order_test, batch_size, max_num_mentions)
@@ -132,7 +141,8 @@ def main(device):
                       entity_embeds=entity_embeds,
                       embedding_lookup=embedding_lookup,
                       device=device)
-      torch.save(encoder.state_dict(), './model')
+      if not LOAD_MODEL:
+        torch.save(encoder.state_dict(), './model')
       print(tester.test())
   finally:
     db_connection.close()
