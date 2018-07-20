@@ -8,3 +8,4 @@ pytorch==0.4.0
 torchvision==0.2.1
 toolz==0.9.0
 ipdb==0.11
+pyrsistent==0.14.4
