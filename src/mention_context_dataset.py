@@ -106,7 +106,7 @@ class MentionContextDataset(Dataset):
   def _next_page_id_batch(self):
     num_mentions_in_batch = 0
     page_ids = []
-    while num_mentions_in_batch < self.batch_size:
+    while num_mentions_in_batch < self.batch_size and self.page_ctr < len(self.page_id_order):
       page_id_to_add = self.page_id_order[self.page_ctr]
       self.cursor.execute('select count(*) from mentions where page_id = %s', page_id_to_add)
       num_mentions_in_batch += self.cursor.fetchone()['count(*)']
