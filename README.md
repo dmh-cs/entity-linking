@@ -12,6 +12,7 @@ DBUSER= # mysql username
 DBPASS= # mysql password
 DBHOST=localhost
 LOOKUPS_PATH= # path to candidates lookup
+PAGE_ID_ORDER_PATH= # path to page id order pickle file
 ```
 - Fetch the nltk requirements:
 ``` python
