@@ -18,7 +18,6 @@ class MentionContextDataset(Dataset):
                embedding_lookup,
                batch_size,
                num_entities,
-               num_mentions,
                num_candidates):
     self.page_id_order = page_id_order
     self.entity_candidates_lookup = _.map_values(entity_candidates_lookup, torch.tensor)
@@ -26,7 +25,6 @@ class MentionContextDataset(Dataset):
     self.embedding_lookup = embedding_lookup
     self.cursor = cursor
     self.batch_size = batch_size
-    self.num_mentions = num_mentions
     self.num_entities = num_entities
     self.num_candidates = num_candidates
     self._sentence_spans_lookup = {}
@@ -44,7 +42,7 @@ class MentionContextDataset(Dataset):
                           label)
 
   def __len__(self):
-    return self.num_mentions
+    raise NotImplementedError
 
   def __getitem__(self, idx):
     if idx not in self._mention_infos:

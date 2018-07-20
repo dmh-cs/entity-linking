@@ -23,7 +23,6 @@ def test_mention_context_dataset():
   cursor = get_mock_cursor()
   page_id_order = [3, 1, 2]
   batch_size = 5
-  num_mentions = 5
   entity_candidates_lookup = {'aa': [1],
                               'bb': [0, 1],
                               'cc': [2]}
@@ -42,7 +41,6 @@ def test_mention_context_dataset():
                                   embedding_lookup,
                                   batch_size,
                                   num_entities,
-                                  num_mentions,
                                   num_candidates)
   dataset._mention_infos = {0: {'mention': 'bb', 'offset': 9, 'page_id': 2, 'entity_id': 0, 'mention_id': 0},
                             1: {'mention': 'aa', 'offset': 6, 'page_id': 2, 'entity_id': 1, 'mention_id': 1},
