@@ -12,8 +12,8 @@ def main():
   load_dotenv(dotenv_path='.env')
   train_params = m(load_model=False)
   model_params = m()
-  paths = m(lookups_path=os.getenv("LOOKUPS_PATH"),
-            page_id_order_path=os.getenv("PAGE_ID_ORDER_PATH"))
+  paths = m(lookups=os.getenv("LOOKUPS_PATH"),
+            page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
   runner = Runner(device=device,
                   paths=paths,
                   train_params=train_params,
