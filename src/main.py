@@ -1,4 +1,6 @@
+import getopt
 import os
+import sys
 
 from dotenv import load_dotenv
 from pyrsistent import m
@@ -10,7 +12,9 @@ from runner import Runner
 def main():
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   load_dotenv(dotenv_path='.env')
-  train_params = m(load_model=False)
+  flags = [_.head(arg) for arg in getopt.getopt(_.tail(sys.argv), '', ['load_model'])[0]]
+  load_model = '--load_model' in flags
+  train_params = m(load_model=load_model)
   model_params = m()
   paths = m(lookups=os.getenv("LOOKUPS_PATH"),
             page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
