@@ -22,7 +22,13 @@ class Tester(object):
     self.batch_sampler = batch_sampler
 
   def _get_labels_for_batch(self, labels, candidates):
-    return (torch.unsqueeze(labels, 1) == candidates).nonzero()[:, 1]
+    batch_labels = []
+    for label, row_candidates in zip(labels, candidates):
+      if label not in row_candidates:
+        batch_labels.append(-1)
+      else:
+        batch_labels.append(int((row_candidates == label).nonzero().squeeze()))
+    return torch.tensor(batch_labels)
 
   def test(self):
     acc = 0

@@ -80,7 +80,7 @@ def test_mention_context_dataset():
                     'embedded_page_content': [1],
                     'candidates': torch.tensor([0, 1])}]
   iterator = iter(dataset)
-  dataset_values = [next(iterator) for _ in range(len(dataset))]
+  dataset_values = [next(iterator) for _ in range(len(expected_data))]
   comparison = {'sentence_splits': _.is_equal,
                 'label': _.is_equal,
                 'embedded_page_content': _.is_equal,
