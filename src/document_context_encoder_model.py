@@ -1,8 +1,6 @@
+import pydash as _
 import torch
 import torch.nn as nn
-import torch.sparse as sparse
-import pydash as _
-from functools import reduce
 
 from data_transformers import pad_batch
 

@@ -1,12 +1,11 @@
-import torch.nn as nn
+from functools import reduce
 
 import pydash as _
-from functools import reduce
 import torch
-import torch.sparse as sparse
-from parsers import parse_text_for_tokens, parse_for_tokens
-import numpy as np
+import torch.nn as nn
+
 from utils import sort_index
+from parsers import parse_text_for_tokens, parse_for_tokens
 
 
 def pad_batch(pad_vector, batch, min_len=0):

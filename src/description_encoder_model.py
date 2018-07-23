@@ -1,7 +1,7 @@
-import torch
-import torch.nn as nn
 from toolz import compose
 import pydash as _
+import torch
+import torch.nn as nn
 
 from data_transformers import pad_batch
 

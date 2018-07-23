@@ -1,21 +1,21 @@
-import pickle
 from typing import Optional
 import math
+import pickle
 
+from pyrsistent import m
+from torch.utils.data.sampler import BatchSampler, RandomSampler
 import pydash as _
 import torch
 import torch.nn as nn
-from torch.utils.data.sampler import BatchSampler, RandomSampler
-from pyrsistent import m
 
-from logger import Logger
 from data_fetchers import get_connection, get_embedding_lookup
 from joint_model import JointModel
-from simple_mention_context_dataset_by_entity_ids import SimpleMentionContextDatasetByEntityIds
-from mention_context_dataset import MentionContextDataset
+from logger import Logger
 from mention_context_batch_sampler import MentionContextBatchSampler
-from trainer import Trainer
+from mention_context_dataset import MentionContextDataset
+from simple_mention_context_dataset_by_entity_ids import SimpleMentionContextDatasetByEntityIds
 from tester import Tester
+from trainer import Trainer
 
 def load_entity_candidates_and_label_lookup(path, train_size):
   with open(path, 'rb') as lookup_file:

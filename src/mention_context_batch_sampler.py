@@ -1,8 +1,9 @@
 from random import shuffle
+import random
+
 from torch.utils.data.sampler import Sampler
 import pydash as _
-import math
-import random
+
 
 class MentionContextBatchSampler(Sampler):
   def __init__(self, cursor, page_id_order, batch_size):

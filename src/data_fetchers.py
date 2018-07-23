@@ -1,11 +1,11 @@
 import os
-import pymysql.cursors
-import numpy as np
-import torch
-from dotenv import load_dotenv
-import pydash as _
-from functools import reduce
 import random
+
+from dotenv import load_dotenv
+import numpy as np
+import pydash as _
+import pymysql.cursors
+import torch
 
 import utils as u
 

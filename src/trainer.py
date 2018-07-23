@@ -2,8 +2,9 @@ from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
 import pydash as _
-import itertools
+
 from data_transformers import embed_and_pack_batch
 
 from utils import tensors_to_device

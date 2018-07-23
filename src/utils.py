@@ -1,4 +1,5 @@
 import torch
+
 import pydash as _
 
 def build_cursor_generator(cursor, buff_len=1000):

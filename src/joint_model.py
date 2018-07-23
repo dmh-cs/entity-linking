@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 
 from description_encoder_model import DescriptionEncoder

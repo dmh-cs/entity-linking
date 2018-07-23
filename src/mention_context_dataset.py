@@ -1,8 +1,7 @@
+from torch.utils.data import Dataset
 import torch
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
+
 import pydash as _
-import random
 
 from data_transformers import get_mention_sentence_splits, embed_page_content
 from data_fetchers import get_candidates

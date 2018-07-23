@@ -1,10 +1,9 @@
-from torch.utils.data import Dataset, DataLoader
-from mention_context_dataset import MentionContextDataset
-from data_transformers import get_mention_sentence_splits, embed_page_content
 from data_fetchers import get_candidates
+from data_transformers import get_mention_sentence_splits, embed_page_content
 from parsers import parse_for_sentence_spans
-import torch
+from torch.utils.data import Dataset
 import pydash as _
+import torch
 
 class SimpleMentionContextDatasetByEntityIds(Dataset):
   def __init__(self,

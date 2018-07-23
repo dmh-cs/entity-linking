@@ -1,7 +1,6 @@
+from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
-from sklearn.metrics import confusion_matrix, accuracy_score
-from torch.utils.data import DataLoader
 
 from data_transformers import embed_and_pack_batch
 import utils as u
