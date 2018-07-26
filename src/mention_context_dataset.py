@@ -95,12 +95,15 @@ class MentionContextDataset(Dataset):
   def _get_batch_entity_page_mentions_lookup(self, page_ids):
     lookup = {}
     for page_id in page_ids:
-      page_mention_infos = filter(lambda mention_info: mention_info['page_id'] == page_id,
-                                  self._mention_infos.values())
+      page_mention_infos = list(filter(lambda mention_info: mention_info['page_id'] == page_id,
+                                       self._mention_infos.values()))
       content = ' '.join([mention_info['mention'] for mention_info in page_mention_infos])
-      lookup[page_id] = embed_page_content(self.embedding_lookup,
-                                           content,
-                                           page_mention_infos)
+      if _.is_empty(page_mention_infos):
+        lookup[page_id] = torch.tensor([])
+      else:
+        lookup[page_id] = embed_page_content(self.embedding_lookup,
+                                             content,
+                                             page_mention_infos)
     return lookup
 
   def _get_batch_embedded_page_content_lookup(self, page_ids):
