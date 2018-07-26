@@ -21,8 +21,8 @@ class MentionContextEncoder(nn.Module):
                                                      num_lstm_layers,
                                                      word_embed_len,
                                                      context_embed_len)
-    self.document_context_encoder = DocumentContextEncoder(dropout_keep_prob,
-                                                           lstm_size,
+    # self.document_context_encoder = DocumentContextEncoder(lstm_size,
+    self.document_context_encoder = DocumentContextEncoder(20,
                                                            word_embed_len,
                                                            context_embed_len,
                                                            pad_vector)
