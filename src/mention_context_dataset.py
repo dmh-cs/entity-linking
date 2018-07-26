@@ -46,7 +46,6 @@ class MentionContextDataset(Dataset):
 
   def __getitem__(self, idx):
     if idx not in self._mention_infos:
-      print(idx, 'not in cache')
       self._next_batch()
     mention_info = self._mention_infos.pop(idx)
     sentence_spans = self._sentence_spans_lookup[mention_info['page_id']]

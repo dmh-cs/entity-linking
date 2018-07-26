@@ -39,7 +39,8 @@ def get_num_entities():
     db_connection.close()
 
 default_paths = m(lookups='../entity-linking-preprocessing/lookups.pkl',
-                  page_id_order='../entity-linking-preprocessing/page_id_order.pkl')
+                  page_id_order='../entity-linking-preprocessing/page_id_order.pkl',
+                  model='./model')
 
 default_train_params = m(batch_size=50,
                          debug=False,
@@ -202,7 +203,7 @@ class Runner(object):
         self.log.status('Testing')
         tester = self._get_tester(cursor, encoder)
         if not self.run_params.load_model:
-          torch.save(encoder.state_dict(), './model')
+          torch.save(encoder.state_dict(), self.paths.model)
         self.log.report(tester.test())
     finally:
       db_connection.close()

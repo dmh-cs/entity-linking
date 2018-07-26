@@ -12,13 +12,16 @@ from runner import Runner
 def main():
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   load_dotenv(dotenv_path='.env')
-  flags = [_.head(arg) for arg in getopt.getopt(_.tail(sys.argv), '', ['load_model'])[0]]
-  load_model = '--load_model' in flags
-  train_params = m(load_model=load_model)
-  run_params = m(load_model=load_model)
+  args = getopt.getopt(_.tail(sys.argv), '', ['load_model', 'model_path='])[0]
+  flags = [_.head(arg) for arg in args]
+  model_path_pair = _.find(args, lambda pair: 'model_path' in pair[0])
+  train_params = m()
+  run_params = m(load_model='--load_model' in flags)
   model_params = m()
   paths = m(lookups=os.getenv("LOOKUPS_PATH"),
             page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
+  if model_path_pair:
+    paths = paths.set('model', model_path_pair[1])
   runner = Runner(device=device,
                   paths=paths,
                   train_params=train_params,
