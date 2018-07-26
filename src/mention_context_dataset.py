@@ -125,9 +125,7 @@ class MentionContextDataset(Dataset):
     return page_ids
 
   def _next_batch(self):
-    print('getting batch')
     closeby_page_ids = self._next_page_id_batch()
-    print(closeby_page_ids)
     self._sentence_spans_lookup.update(self._get_batch_sentence_spans_lookup(closeby_page_ids))
     self._page_content_lookup.update(self._get_batch_page_content_lookup(closeby_page_ids))
     self._mention_infos.update(self._get_batch_mention_infos(closeby_page_ids))

@@ -23,13 +23,14 @@ class Tester(object):
     self.batch_sampler = batch_sampler
 
   def _get_labels_for_batch(self, labels, candidates):
+    device = labels.device
     batch_labels = []
     for label, row_candidates in zip(labels, candidates):
       if label not in row_candidates:
         batch_labels.append(-1)
       else:
         batch_labels.append(int((row_candidates == label).nonzero().squeeze()))
-    return torch.tensor(batch_labels)
+    return torch.tensor(batch_labels, device=device)
 
   def test(self):
     acc = 0
@@ -37,7 +38,7 @@ class Tester(object):
     dataloader = DataLoader(dataset=self.dataset,
                             batch_sampler=self.batch_sampler,
                             collate_fn=collate)
-    for batch in dataloader:
+    for batch_num, batch in enumerate(dataloader):
       batch = u.tensors_to_device(batch, self.device)
       left_splits, right_splits = embed_and_pack_batch(self.embedding_lookup,
                                                        batch['sentence_splits'])
@@ -52,4 +53,6 @@ class Tester(object):
       predictions = torch.argmax(logits, dim=1)
       acc += (labels_for_batch == predictions).sum()
       n += 1
+      if batch_num % 100 == 0:
+        print(acc, n * len(predictions))
     return acc, n
