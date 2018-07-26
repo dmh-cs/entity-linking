@@ -78,6 +78,8 @@ def get_embedding_lookup(path, embedding_dim=100, device=None):
   return lookup
 
 def get_random_indexes(max_value, exclude, num_to_generate):
+  if max_value < num_to_generate:
+    raise ValueError
   result = []
   while len(result) < num_to_generate:
     val = random.randint(0, max_value - 1)
