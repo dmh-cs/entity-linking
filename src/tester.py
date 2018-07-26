@@ -37,7 +37,7 @@ class Tester(object):
     dataloader = DataLoader(dataset=self.dataset,
                             batch_sampler=self.batch_sampler,
                             collate_fn=collate)
-    for batch in dataloader:
+    for batch_num, batch in enumerate(dataloader):
       batch = u.tensors_to_device(batch, self.device)
       left_splits, right_splits = embed_and_pack_batch(self.embedding_lookup,
                                                        batch['sentence_splits'])
@@ -51,4 +51,6 @@ class Tester(object):
       predictions = torch.argmax(logits, dim=1)
       acc += (labels_for_batch == predictions).sum()
       n += 1
+      if batch_num % 100 == 0:
+        print(acc, n * len(predictions))
     return acc, n
