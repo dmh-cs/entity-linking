@@ -4,6 +4,7 @@ import sys
 
 from dotenv import load_dotenv
 from pyrsistent import m
+import datmo
 import pydash as _
 import torch
 
@@ -18,6 +19,7 @@ def main():
   train_params = m()
   run_params = m(load_model='--load_model' in flags)
   model_params = m()
+  params = train_params.update(run_params).update(model_params)
   paths = m(lookups=os.getenv("LOOKUPS_PATH"),
             page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
   if model_path_pair:
@@ -27,7 +29,10 @@ def main():
                   train_params=train_params,
                   model_params=model_params,
                   run_params=run_params)
-  runner.run()
+  stats = runner.run()
+  datmo.snapshot.create(filepaths=paths.values(),
+                        config=params,
+                        stats=stats)
 
 
 if __name__ == "__main__":

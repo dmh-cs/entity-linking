@@ -177,6 +177,10 @@ class Runner(object):
                   embedding_lookup=self.lookups.embedding,
                   device=self.device)
 
+  def calc_stats(self, results):
+    acc = results[0] / (results[1] * self.train_params.batch_size)
+    return {'acc': acc}
+
   def run(self):
     self.load_caches()
     pad_vector = self.lookups.embedding['<PAD>']
@@ -204,6 +208,8 @@ class Runner(object):
         tester = self._get_tester(cursor, encoder)
         if not self.run_params.load_model:
           torch.save(encoder.state_dict(), self.paths.model)
-        self.log.report(tester.test())
+        results = tester.test()
+        self.log.report(results)
+        return self.calc_stats(results)
     finally:
       db_connection.close()
