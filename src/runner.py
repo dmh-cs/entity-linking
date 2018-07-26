@@ -53,7 +53,8 @@ default_model_params = m(embed_len=100,
                          word_embed_len=100,
                          num_candidates=10,
                          word_embedding_set='glove',
-                         lstm_size=100,
+                         local_encoder_lstm_size=100,
+                         document_encoder_lstm_size=40,
                          num_lstm_layers=2)
 
 default_run_params = m(load_model=False)
@@ -191,7 +192,8 @@ class Runner(object):
         encoder = JointModel(self.model_params.embed_len,
                              self.model_params.context_embed_len,
                              self.model_params.word_embed_len,
-                             self.model_params.lstm_size,
+                             self.model_params.local_encoder_lstm_size,
+                             self.model_params.document_encoder_lstm_size,
                              self.model_params.num_lstm_layers,
                              self.train_params.dropout_keep_prob,
                              self.entity_embeds,
