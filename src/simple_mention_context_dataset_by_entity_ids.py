@@ -23,6 +23,7 @@ class SimpleMentionContextDatasetByEntityIds(Dataset):
     self._page_content_lookup = {}
     self._sentence_spans_lookup = {}
     self._embedded_page_content_lookup = {}
+    self._entity_page_mentions_lookup = {}
     self._mention_infos = []
     print('Getting', len(entity_ids), 'entities and their info')
     for entity_id in entity_ids:
@@ -39,11 +40,9 @@ class SimpleMentionContextDatasetByEntityIds(Dataset):
           continue
         self.cursor.execute('select * from pages where id = %s', page_id)
         page_content = self.cursor.fetchone()['content']
-        page_mention_infos = [mention for mention in mention_infos if mention['page_id'] == page_id]
         self._page_content_lookup[page_id] = page_content
         if not _.is_empty(page_content):
           self._embedded_page_content_lookup[page_id] = embed_page_content(self.embedding_lookup,
-                                                                           page_mention_infos,
                                                                            page_content)
     self._sentence_spans_lookup = _.map_values(self._page_content_lookup, parse_for_sentence_spans)
 
@@ -54,17 +53,13 @@ class SimpleMentionContextDatasetByEntityIds(Dataset):
                           mention,
                           label)
 
-  def _get_batch_embedded_page_content_lookup(self, page_ids):
-    lookup = {}
-    for page_id in page_ids:
-      page_mention_infos = filter(lambda mention_info: mention_info['page_id'] == page_id,
-                                  self._mention_infos)
-      page_content = self._page_content_lookup[page_id]
-      if len(page_content.strip()) > 5:
-        lookup[page_id] = embed_page_content(self.embedding_lookup,
-                                             page_mention_infos,
-                                             page_content)
-    return lookup
+  def _embed_mentions(self, page_id):
+    page_mention_infos = filter(lambda mention_info: mention_info['page_id'] == page_id,
+                                self._mention_infos)
+    content = ' '.join([mention_info['mention'] for mention_info in page_mention_infos])
+    return embed_page_content(self.embedding_lookup,
+                              content,
+                              page_mention_infos)
 
   def __len__(self):
     return len(self._mention_infos)
@@ -79,5 +74,6 @@ class SimpleMentionContextDatasetByEntityIds(Dataset):
                                                              mention_info),
               'label': label,
               'embedded_page_content': self._embedded_page_content_lookup[mention_info['page_id']],
+              'entity_page_mentions': self._embed_mentions(mention_info['page_id']),
               'candidates': self._get_candidates(mention_info['mention'], label)}
     return sample

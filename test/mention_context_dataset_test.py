@@ -56,33 +56,42 @@ def test_mention_context_dataset():
   dataset._embedded_page_content_lookup = {2: [0, 1],
                                            1: [1, 2],
                                            0: [1]}
+  dataset._entity_page_mentions_lookup = {2: [[0]],
+                                          1: [[1]],
+                                          0: [[1]]}
   dataset._mentions_per_page_ctr = {2: 2,
                                     1: 2,
                                     0: 1}
   expected_data = [{'sentence_splits': [['aa', 'bb'], ['bb']],
                     'label': 0,
                     'embedded_page_content': [0, 1],
+                    'entity_page_mentions': [[0]],
                     'candidates': torch.tensor([0, 1])},
                    {'sentence_splits': [['aa'], ['aa', 'bb']],
                     'label': 1,
                     'embedded_page_content': [0, 1],
+                    'entity_page_mentions': [[0]],
                     'candidates': torch.tensor([1])},
                    {'sentence_splits': [['cc'], ['cc', 'bb']],
                     'label': 2,
                     'embedded_page_content': [1, 2],
+                    'entity_page_mentions': [[1]],
                     'candidates': torch.tensor([2])},
                    {'sentence_splits': [['cc', 'bb'], ['bb']],
                     'label': 0,
                     'embedded_page_content': [1, 2],
+                    'entity_page_mentions': [[1]],
                     'candidates': torch.tensor([0, 1])},
                    {'sentence_splits': [['dd', 'bb'], ['bb']],
                     'label': 1,
                     'embedded_page_content': [1],
+                    'entity_page_mentions': [[1]],
                     'candidates': torch.tensor([0, 1])}]
   iterator = iter(dataset)
   dataset_values = [next(iterator) for _ in range(len(expected_data))]
   comparison = {'sentence_splits': _.is_equal,
                 'label': _.is_equal,
                 'embedded_page_content': _.is_equal,
+                'entity_page_mentions': _.is_equal,
                 'candidates': compare_candidates_tensor}
   assert coll_compare_keys_by(expected_data, dataset_values, comparison)

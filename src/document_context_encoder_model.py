@@ -22,8 +22,8 @@ class DocumentContextEncoder(nn.Module):
     self.projection = nn.Linear(self.lstm_size, self.context_embed_len)
     self.relu = nn.ReLU()
 
-  def forward(self, embedded_page_contents):
-    batch = pad_batch(self.pad_vector, embedded_page_contents)
+  def forward(self, entity_page_mentions):
+    batch = pad_batch(self.pad_vector, entity_page_mentions)
     output, state_info = self.lstm(batch)
     last_hidden_state = state_info[0][-2:]
     last_hidden_state_stacked = torch.cat([layer_state for layer_state in last_hidden_state], 1)

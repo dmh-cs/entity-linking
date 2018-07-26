@@ -9,6 +9,7 @@ def collate(batch):
   return {'sentence_splits': [sample['sentence_splits'] for sample in batch],
           'label': torch.tensor([sample['label'] for sample in batch]),
           'embedded_page_content': [sample['embedded_page_content'] for sample in batch],
+          'entity_page_mentions': [sample['entity_page_mentions'] for sample in batch],
           'candidates': torch.stack([sample['candidates'] for sample in batch])}
 
 class Tester(object):
@@ -42,7 +43,8 @@ class Tester(object):
       left_splits, right_splits = embed_and_pack_batch(self.embedding_lookup,
                                                        batch['sentence_splits'])
       mention_embeds = self.model(((left_splits, right_splits),
-                                   batch['embedded_page_content']))
+                                   batch['embedded_page_content'],
+                                   batch['entity_page_mentions']))
       labels_for_batch = self._get_labels_for_batch(batch['label'],
                                                     batch['candidates'])
       logits = torch.sum(torch.mul(torch.unsqueeze(mention_embeds, 1),
