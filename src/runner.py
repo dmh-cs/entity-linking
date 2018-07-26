@@ -170,11 +170,11 @@ class Runner(object):
       test_dataset = self._get_dataset(cursor, is_test=True)
       batch_sampler = self._get_sampler(cursor, is_test=True)
     return Tester(dataset=test_dataset,
-                        batch_sampler=batch_sampler,
-                        model=model.module.mention_context_encoder,
-                        entity_embeds=self.entity_embeds,
-                        embedding_lookup=self.lookups.embedding,
-                        device=self.device)
+                  batch_sampler=batch_sampler,
+                  model=model.mention_context_encoder,
+                  entity_embeds=self.entity_embeds,
+                  embedding_lookup=self.lookups.embedding,
+                  device=self.device)
 
   def run(self):
     self.load_caches()

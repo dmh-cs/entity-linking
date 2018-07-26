@@ -28,7 +28,7 @@ def test_embed_page_content():
   page_mention_infos = [{'offset': 2, 'mention': 'b c'}]
   page_content = 'a b c d'
   embedded = torch.tensor([[1], [-2], [2], [3], [-3], [4]])
-  assert torch.equal(dt.embed_page_content(embedding_lookup, page_mention_infos, page_content), embedded)
+  assert torch.equal(dt.embed_page_content(embedding_lookup, page_content, page_mention_infos), embedded)
 
 def test_pad_batch():
   pad_vector = torch.tensor([0])

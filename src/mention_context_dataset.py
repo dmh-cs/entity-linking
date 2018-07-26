@@ -29,6 +29,7 @@ class MentionContextDataset(Dataset):
     self._sentence_spans_lookup = {}
     self._page_content_lookup = {}
     self._embedded_page_content_lookup = {}
+    self._entity_page_mentions_lookup = {}
     self._mentions_per_page_ctr = {}
     self._mention_infos = {}
     self.page_ctr = 0
@@ -56,12 +57,14 @@ class MentionContextDataset(Dataset):
                                                              mention_info),
               'label': label,
               'embedded_page_content': self._embedded_page_content_lookup[mention_info['page_id']],
+              'entity_page_mentions': self._entity_page_mentions_lookup[mention_info['page_id']],
               'candidates': self._get_candidates(mention_info['mention'], label)}
     self._mentions_per_page_ctr[mention_info['page_id']] -= 1
     if self._mentions_per_page_ctr[mention_info['page_id']] == 0:
       self._sentence_spans_lookup.pop(mention_info['page_id'])
       self._page_content_lookup.pop(mention_info['page_id'])
       self._embedded_page_content_lookup.pop(mention_info['page_id'])
+      self._entity_page_mentions_lookup.pop(mention_info['page_id'])
     return sample
 
   def _get_mention_infos_by_page_id(self, page_id):
@@ -90,15 +93,23 @@ class MentionContextDataset(Dataset):
       lookup[page_id] = self.cursor.fetchone()['content']
     return lookup
 
-  def _get_batch_embedded_page_content_lookup(self, page_ids):
+  def _get_batch_entity_page_mentions_lookup(self, page_ids):
     lookup = {}
     for page_id in page_ids:
       page_mention_infos = filter(lambda mention_info: mention_info['page_id'] == page_id,
                                   self._mention_infos.values())
+      content = ' '.join([mention_info['mention'] for mention_info in page_mention_infos])
+      lookup[page_id] = embed_page_content(self.embedding_lookup,
+                                           content,
+                                           page_mention_infos)
+    return lookup
+
+  def _get_batch_embedded_page_content_lookup(self, page_ids):
+    lookup = {}
+    for page_id in page_ids:
       page_content = self._page_content_lookup[page_id]
       if len(page_content.strip()) > 5:
         lookup[page_id] = embed_page_content(self.embedding_lookup,
-                                             page_mention_infos,
                                              page_content)
     return lookup
 
@@ -120,4 +131,5 @@ class MentionContextDataset(Dataset):
     self._sentence_spans_lookup.update(self._get_batch_sentence_spans_lookup(closeby_page_ids))
     self._page_content_lookup.update(self._get_batch_page_content_lookup(closeby_page_ids))
     self._mention_infos.update(self._get_batch_mention_infos(closeby_page_ids))
+    self._entity_page_mentions_lookup.update(self._get_batch_entity_page_mentions_lookup(closeby_page_ids))
     self._embedded_page_content_lookup.update(self._get_batch_embedded_page_content_lookup(closeby_page_ids))

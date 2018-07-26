@@ -94,7 +94,7 @@ def _insert_mention_flags(page_content, mention_info):
   end = mention_info['offset'] + len(mention_text)
   return page_content[:start] + 'MENTION_START_HERE ' + mention_text +  ' MENTION_END_HERE' + page_content[end:]
 
-def embed_page_content(embedding_lookup, page_mention_infos, page_content):
+def embed_page_content(embedding_lookup, page_content, page_mention_infos=[]):
   page_content_with_mention_flags = reduce(_insert_mention_flags,
                                            page_mention_infos,
                                            page_content)

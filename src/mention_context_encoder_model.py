@@ -21,8 +21,7 @@ class MentionContextEncoder(nn.Module):
                                                      num_lstm_layers,
                                                      word_embed_len,
                                                      context_embed_len)
-    self.document_context_encoder = DocumentContextEncoder(dropout_keep_prob,
-                                                           lstm_size,
+    self.document_context_encoder = DocumentContextEncoder(lstm_size,
                                                            word_embed_len,
                                                            context_embed_len,
                                                            pad_vector)
@@ -32,9 +31,9 @@ class MentionContextEncoder(nn.Module):
 
   def forward(self, data):
     sentence_splits = data[0]
-    embedded_page_contents = data[1]
+    entity_page_mentions = data[2]
     local_context_embeds = self.local_context_encoder(sentence_splits)
-    document_context_embeds = self.document_context_encoder(embedded_page_contents)
+    document_context_embeds = self.document_context_encoder(entity_page_mentions)
     context_embeds = torch.cat((local_context_embeds, document_context_embeds), 1)
     return self.relu(self.projection(context_embeds))
 

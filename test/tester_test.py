@@ -28,15 +28,18 @@ def test_tester(monkeypatch, myMock):
   dataset = [{'label': 0,
               'sentence_splits': [['a', 'b', 'c'], ['c', 'd']],
               'candidates': torch.tensor([0, 1]),
-              'embedded_page_content': torch.tensor([[1], [-2], [2], [3], [-3], [4]])},
+              'embedded_page_content': torch.tensor([[1], [-2], [2], [3], [-3], [4]]),
+              'entity_page_mentions': torch.tensor([[1], [-2], [0], [3], [0], [4]])},
              {'label': 2,
               'sentence_splits': [['a', 'b', 'c'], ['c', 'd']],
               'candidates': torch.tensor([2, 1]),
-              'embedded_page_content': torch.tensor([[1], [-2], [2], [3], [-3], [4]])},
+              'embedded_page_content': torch.tensor([[1], [-2], [2], [3], [-3], [4]]),
+              'entity_page_mentions': torch.tensor([[1], [-2], [0], [3], [0], [4]]),},
              {'label': 1,
               'sentence_splits': [['a', 'b', 'c'], ['c', 'd']],
               'candidates': torch.tensor([3, 1]),
-              'embedded_page_content': torch.tensor([[1], [-2], [2], [3], [-3], [4]])}]
+              'embedded_page_content': torch.tensor([[1], [-2], [2], [3], [-3], [4]]),
+              'entity_page_mentions': torch.tensor([[1], [-2], [0], [3], [0], [4]]),}]
   num_entities = 10
   embed_len = 200
   batch_size = 3
