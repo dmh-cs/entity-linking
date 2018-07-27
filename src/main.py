@@ -4,7 +4,6 @@ import sys
 
 from dotenv import load_dotenv
 from pyrsistent import m
-import datmo
 import pydash as _
 import torch
 
@@ -28,12 +27,7 @@ def main():
                   train_params=train_params,
                   model_params=model_params,
                   run_params=run_params)
-  stats = runner.run()
-  params = runner.train_params.update(runner.run_params).update(runner.model_params)
-  datmo.snapshot.create(paths=paths.values(),
-                        config=dict(params),
-                        stats=dict(_.map_values(stats, float)),
-                        message=input('Snapshot description:'))
+  runner.run()
 
 
 if __name__ == "__main__":

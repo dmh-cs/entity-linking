@@ -13,7 +13,14 @@ def collate(batch):
           'candidates': torch.stack([sample['candidates'] for sample in batch])}
 
 class Tester(object):
-  def __init__(self, dataset, model, entity_embeds, embedding_lookup, device, batch_sampler):
+  def __init__(self,
+               dataset,
+               model,
+               entity_embeds,
+               embedding_lookup,
+               device,
+               batch_sampler,
+               experiment):
     self.dataset = dataset
     self.model = nn.DataParallel(model)
     self.model = model.to(device)
@@ -21,6 +28,7 @@ class Tester(object):
     self.embedding_lookup = embedding_lookup
     self.device = device
     self.batch_sampler = batch_sampler
+    self.experiment = experiment
 
   def _get_labels_for_batch(self, labels, candidates):
     device = labels.device
@@ -51,8 +59,12 @@ class Tester(object):
                                    self.entity_embeds(batch['candidates'])),
                          2)
       predictions = torch.argmax(logits, dim=1)
-      acc += (labels_for_batch == predictions).sum()
+      acc += int((labels_for_batch == predictions).sum())
       n += 1
+      batch_size = len(predictions)
+      self.experiment.log_multiple_metrics({'accuracy': acc / (n * batch_size),
+                                            'TP': acc,
+                                            'num_samples': n * batch_size})
       if batch_num % 100 == 0:
-        print(acc, n * len(predictions))
+        print(acc, n * batch_size)
     return acc, n

@@ -2,6 +2,7 @@ from typing import Optional
 import math
 import pickle
 
+from comet_ml import Experiment
 from pyrsistent import m
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 import pydash as _
@@ -66,6 +67,7 @@ class Runner(object):
                train_params=default_train_params,
                model_params=default_model_params,
                run_params=default_run_params):
+    self.experiment  = Experiment(api_key="4ttwav4VlxnDZq1m96NH2UKuW")
     self.log = Logger()
     self.train_params = m().update(default_train_params).update(train_params)
     self.model_params = m().update(default_model_params).update(model_params)
@@ -85,6 +87,8 @@ class Runner(object):
     self.entity_embeds: Optional[nn.Embedding] = None
     if not self.train_params.use_simple_dataloader and hasattr(self.model_params, 'num_entities'):
       raise NotImplementedError('Can only restrict num of entities when using simple dataloader')
+    params = self.train_params.update(self.run_params).update(self.model_params)
+    self.experiment.log_multiple_params(params)
 
   def _get_word_embedding_path(self):
     if self.model_params.word_embedding_set.lower() == 'glove' and self.model_params.word_embed_len == 100:
@@ -160,7 +164,8 @@ class Runner(object):
                    model=model,
                    dataset=train_dataset,
                    batch_sampler=batch_sampler,
-                   num_epochs=self.train_params.num_epochs)
+                   num_epochs=self.train_params.num_epochs,
+                   experiment=self.experiment)
 
   def _get_tester(self, cursor, model):
     if self.train_params.use_simple_dataloader:
@@ -176,7 +181,8 @@ class Runner(object):
                   model=model.mention_context_encoder,
                   entity_embeds=self.entity_embeds,
                   embedding_lookup=self.lookups.embedding,
-                  device=self.device)
+                  device=self.device,
+                  experiment=self.experiment)
 
   def calc_stats(self, results):
     acc = float(results[0]) / (float(results[1]) * self.train_params.batch_size)
@@ -199,19 +205,21 @@ class Runner(object):
                              self.entity_embeds,
                              pad_vector)
         if not self.run_params.load_model:
-          self.log.status('Training')
-          trainer = self._get_trainer(cursor, encoder)
-          trainer.train()
+          with self.experiment.train():
+            self.log.status('Training')
+            trainer = self._get_trainer(cursor, encoder)
+            trainer.train()
+            torch.save(encoder.state_dict(), self.paths.model)
         else:
           encoder.load_state_dict(torch.load('./model'))
           encoder = nn.DataParallel(encoder)
           encoder = encoder.to(self.device).module
-        self.log.status('Testing')
-        tester = self._get_tester(cursor, encoder)
-        if not self.run_params.load_model:
-          torch.save(encoder.state_dict(), self.paths.model)
-        results = tester.test()
-        self.log.report(results)
-        return self.calc_stats(results)
+        with self.experiment.test():
+          self.log.status('Testing')
+          tester = self._get_tester(cursor, encoder)
+          results = tester.test()
+          stats = self.calc_stats(results)
+          self.log.report(stats)
+          self.experiment.log_multiple_metrics(stats)
     finally:
       db_connection.close()
