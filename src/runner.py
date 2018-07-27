@@ -42,14 +42,12 @@ def get_num_entities():
 default_paths = m(lookups='../entity-linking-preprocessing/lookups.pkl',
                   page_id_order='../entity-linking-preprocessing/page_id_order.pkl',
                   model='./model')
-
 default_train_params = m(batch_size=50,
                          debug=False,
                          use_simple_dataloader=False,
                          num_epochs=1,
                          train_size=0.8,
                          dropout_keep_prob=0.5)
-
 default_model_params = m(embed_len=100,
                          word_embed_len=100,
                          num_candidates=10,
@@ -58,8 +56,8 @@ default_model_params = m(embed_len=100,
                          document_encoder_lstm_size=40,
                          num_lstm_layers=2,
                          ablation=['prior', 'mention_context', 'document_context'])
-
 default_run_params = m(load_model=False)
+default_params = default_train_params.update(default_run_params).update(default_model_params)
 
 class Runner(object):
   def __init__(self,
@@ -67,13 +65,16 @@ class Runner(object):
                paths=default_paths,
                train_params=default_train_params,
                model_params=default_model_params,
-               run_params=default_run_params):
+               run_params=default_run_params,
+               name=''):
     self.experiment  = Experiment(api_key="4ttwav4VlxnDZq1m96NH2UKuW")
+    self.experiment.set_name(name)
     self.log = Logger()
     self.train_params = m().update(default_train_params).update(train_params)
     self.model_params = m().update(default_model_params).update(model_params)
     self.run_params = m().update(default_run_params).update(run_params)
     self.paths = m().update(default_paths).update(paths)
+    self._log_params()
     self.lookups = m()
     self.device = device
     self.model_params = self.model_params.set('context_embed_len',
@@ -88,8 +89,14 @@ class Runner(object):
     self.entity_embeds: Optional[nn.Embedding] = None
     if not self.train_params.use_simple_dataloader and hasattr(self.model_params, 'num_entities'):
       raise NotImplementedError('Can only restrict num of entities when using simple dataloader')
+
+  def _log_params(self):
     params = self.train_params.update(self.run_params).update(self.model_params)
     self.experiment.log_multiple_params(params)
+    self.experiment.log_parameter('params', str(self._get_this_runs_params(params)))
+
+  def _get_this_runs_params(self, params):
+    return _.difference(list(params.items()), list(default_params.items()))
 
   def _get_word_embedding_path(self):
     if self.model_params.word_embedding_set.lower() == 'glove' and self.model_params.word_embed_len == 100:
@@ -207,9 +214,9 @@ class Runner(object):
             self.log.status('Training')
             trainer = self._get_trainer(cursor, encoder)
             trainer.train()
-            torch.save(encoder.state_dict(), self.paths.model)
+            torch.save(encoder.state_dict(), './model_' + str(self.experiment.run_id))
         else:
-          encoder.load_state_dict(torch.load('./model'))
+          encoder.load_state_dict(torch.load(self.paths.model))
           encoder = nn.DataParallel(encoder)
           encoder = encoder.to(self.device).module
         with self.experiment.test():
