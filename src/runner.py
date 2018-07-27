@@ -205,7 +205,7 @@ class Runner(object):
         else:
           encoder.load_state_dict(torch.load('./model'))
           encoder = nn.DataParallel(encoder)
-          encoder = encoder.to(self.device)
+          encoder = encoder.to(self.device).module
         self.log.status('Testing')
         tester = self._get_tester(cursor, encoder)
         if not self.run_params.load_model:
