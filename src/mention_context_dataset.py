@@ -70,8 +70,9 @@ class MentionContextDataset(Dataset):
     return sample
 
   def _get_p_prior(self, mention, candidates):
+    if mention not in self.entity_candidates_prior:
+      return torch.zeros(len(candidates))
     entity_counts = self.entity_candidates_prior[mention]
-    print(candidates.tolist())
     candidate_counts = [entity_counts[entity] if entity in entity_counts else 0 for entity in candidates.tolist()]
     return torch.tensor(candidate_counts, dtype=torch.float) / sum(candidate_counts)
 

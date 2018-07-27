@@ -186,10 +186,6 @@ class Runner(object):
                   experiment=self.experiment,
                   ablation=self.model_params.ablation)
 
-  def calc_stats(self, results):
-    acc = float(results[0]) / (float(results[1]) * self.train_params.batch_size)
-    return {'acc': acc}
-
   def run(self):
     self.load_caches()
     pad_vector = self.lookups.embedding['<PAD>']
@@ -219,9 +215,6 @@ class Runner(object):
         with self.experiment.test():
           self.log.status('Testing')
           tester = self._get_tester(cursor, encoder)
-          results = tester.test()
-          stats = self.calc_stats(results)
-          self.log.report(stats)
-          self.experiment.log_multiple_metrics(stats)
+          tester.test()
     finally:
       db_connection.close()
