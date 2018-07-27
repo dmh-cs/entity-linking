@@ -179,7 +179,7 @@ class Runner(object):
                   device=self.device)
 
   def calc_stats(self, results):
-    acc = results[0] / (results[1] * self.train_params.batch_size)
+    acc = float(results[0]) / (float(results[1]) * self.train_params.batch_size)
     return {'acc': acc}
 
   def run(self):

@@ -19,7 +19,6 @@ def main():
   train_params = m()
   run_params = m(load_model='--load_model' in flags)
   model_params = m()
-  params = train_params.update(run_params).update(model_params)
   paths = m(lookups=os.getenv("LOOKUPS_PATH"),
             page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
   if model_path_pair:
@@ -30,9 +29,11 @@ def main():
                   model_params=model_params,
                   run_params=run_params)
   stats = runner.run()
-  datmo.snapshot.create(filepaths=paths.values(),
-                        config=params,
-                        stats=stats)
+  params = runner.train_params.update(runner.run_params).update(runner.model_params)
+  datmo.snapshot.create(paths=paths.values(),
+                        config=dict(params),
+                        stats=dict(_.map_values(stats, float)),
+                        message=input('Snapshot description:'))
 
 
 if __name__ == "__main__":
