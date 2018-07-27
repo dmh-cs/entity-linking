@@ -55,7 +55,7 @@ default_model_params = m(embed_len=100,
                          local_encoder_lstm_size=100,
                          document_encoder_lstm_size=40,
                          num_lstm_layers=2,
-                         ablation=['prior', 'mention_context', 'document_context'])
+                         ablation=['prior', 'local_context', 'global_context'])
 default_run_params = m(load_model=False)
 default_params = default_train_params.update(default_run_params).update(default_model_params)
 
