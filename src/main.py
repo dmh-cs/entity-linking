@@ -1,6 +1,7 @@
 import getopt
 import os
 import sys
+import warnings
 
 from dotenv import load_dotenv
 from pyrsistent import m
@@ -23,6 +24,8 @@ args_with_values = [{'name': 'model_path', 'for': 'path', 'type': str},
                     {'name': 'word_embedding_set', 'for': 'model_param', 'type': str}]
 
 def main():
+  if os.system('git status --untracked-files=no --porcelain') is not None:
+    warnings.warn('git tree dirty! git hash will not correspond to the codebase!')
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   load_dotenv(dotenv_path='.env')
   args = getopt.getopt(_.tail(sys.argv), '', ['load_model'] + [arg['name'] + '=' for arg in args_with_values])[0]
