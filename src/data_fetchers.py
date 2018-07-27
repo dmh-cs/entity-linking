@@ -88,16 +88,16 @@ def get_random_indexes(max_value, exclude, num_to_generate):
     result.append(val)
   return result
 
-def get_candidates(entity_candidates_lookup,
+def get_candidates(entity_candidates_prior,
                    num_entities,
                    num_candidates,
                    mention,
                    label):
-  device = next(iter(entity_candidates_lookup.values())).device
-  if entity_candidates_lookup.get(mention) is None:
-    base_candidates = torch.tensor([], dtype=torch.long, device=device)
+  if entity_candidates_prior.get(mention) is None:
+    base_candidates = torch.tensor([], dtype=torch.long)
   else:
-    base_candidates = entity_candidates_lookup.get(mention)
+    base_candidates = torch.tensor(list(entity_candidates_prior[mention].keys()),
+                                   dtype=torch.long)
   if len(base_candidates) < num_candidates:
     num_candidates_to_generate = num_candidates - len(base_candidates)
     random_candidates = get_random_indexes(num_entities,

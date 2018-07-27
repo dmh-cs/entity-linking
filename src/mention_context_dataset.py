@@ -12,14 +12,14 @@ class MentionContextDataset(Dataset):
   def __init__(self,
                cursor,
                page_id_order,
-               entity_candidates_lookup,
+               entity_candidates_prior,
                entity_label_lookup,
                embedding_lookup,
                batch_size,
                num_entities,
                num_candidates):
     self.page_id_order = page_id_order
-    self.entity_candidates_lookup = _.map_values(entity_candidates_lookup, torch.tensor)
+    self.entity_candidates_prior = entity_candidates_prior
     self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
     self.embedding_lookup = embedding_lookup
     self.cursor = cursor
@@ -35,7 +35,7 @@ class MentionContextDataset(Dataset):
     self.page_ctr = 0
 
   def _get_candidates(self, mention, label):
-    return get_candidates(self.entity_candidates_lookup,
+    return get_candidates(self.entity_candidates_prior,
                           self.num_entities,
                           self.num_candidates,
                           mention,
@@ -51,13 +51,16 @@ class MentionContextDataset(Dataset):
     sentence_spans = self._sentence_spans_lookup[mention_info['page_id']]
     page_content = self._page_content_lookup[mention_info['page_id']]
     label = self.entity_label_lookup[mention_info['entity_id']]
+    candidates = self._get_candidates(mention_info['mention'], label)
+    p_prior = self._get_p_prior(mention_info['mention'], candidates)
     sample = {'sentence_splits': get_mention_sentence_splits(page_content,
                                                              sentence_spans,
                                                              mention_info),
               'label': label,
               'embedded_page_content': self._embedded_page_content_lookup[mention_info['page_id']],
               'entity_page_mentions': self._entity_page_mentions_lookup[mention_info['page_id']],
-              'candidates': self._get_candidates(mention_info['mention'], label)}
+              'p_prior': p_prior,
+              'candidates': candidates}
     self._mentions_per_page_ctr[mention_info['page_id']] -= 1
     if self._mentions_per_page_ctr[mention_info['page_id']] == 0:
       self._sentence_spans_lookup.pop(mention_info['page_id'])
@@ -65,6 +68,12 @@ class MentionContextDataset(Dataset):
       self._embedded_page_content_lookup.pop(mention_info['page_id'])
       self._entity_page_mentions_lookup.pop(mention_info['page_id'])
     return sample
+
+  def _get_p_prior(self, mention, candidates):
+    entity_counts = self.entity_candidates_prior[mention]
+    print(candidates.tolist())
+    candidate_counts = [entity_counts[entity] if entity in entity_counts else 0 for entity in candidates.tolist()]
+    return torch.tensor(candidate_counts, dtype=torch.float) / sum(candidate_counts)
 
   def _get_mention_infos_by_page_id(self, page_id):
     self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id = %s', page_id)

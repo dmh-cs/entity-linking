@@ -2,15 +2,16 @@ from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
 
-from data_transformers import embed_and_pack_batch
 import utils as u
+from inference import predict
 
 def collate(batch):
   return {'sentence_splits': [sample['sentence_splits'] for sample in batch],
           'label': torch.tensor([sample['label'] for sample in batch]),
           'embedded_page_content': [sample['embedded_page_content'] for sample in batch],
           'entity_page_mentions': [sample['entity_page_mentions'] for sample in batch],
-          'candidates': torch.stack([sample['candidates'] for sample in batch])}
+          'candidates': torch.stack([sample['candidates'] for sample in batch]),
+          'p_prior': torch.stack([sample['p_prior'] for sample in batch])}
 
 class Tester(object):
   def __init__(self,
@@ -20,7 +21,8 @@ class Tester(object):
                embedding_lookup,
                device,
                batch_sampler,
-               experiment):
+               experiment,
+               ablation):
     self.dataset = dataset
     self.model = nn.DataParallel(model)
     self.model = model.to(device)
@@ -29,6 +31,7 @@ class Tester(object):
     self.device = device
     self.batch_sampler = batch_sampler
     self.experiment = experiment
+    self.ablation = ablation
 
   def _get_labels_for_batch(self, labels, candidates):
     device = labels.device
@@ -48,17 +51,14 @@ class Tester(object):
                             collate_fn=collate)
     for batch_num, batch in enumerate(dataloader):
       batch = u.tensors_to_device(batch, self.device)
-      left_splits, right_splits = embed_and_pack_batch(self.embedding_lookup,
-                                                       batch['sentence_splits'])
-      mention_embeds = self.model(((left_splits, right_splits),
-                                   batch['embedded_page_content'],
-                                   batch['entity_page_mentions']))
       labels_for_batch = self._get_labels_for_batch(batch['label'],
                                                     batch['candidates'])
-      logits = torch.sum(torch.mul(torch.unsqueeze(mention_embeds, 1),
-                                   self.entity_embeds(batch['candidates'])),
-                         2)
-      predictions = torch.argmax(logits, dim=1)
+      predictions = predict(embedding_lookup=self.embedding_lookup,
+                            entity_embeds=self.entity_embeds,
+                            p_prior=batch['p_prior'],
+                            model=self.model,
+                            batch=batch,
+                            ablation=self.ablation)
       acc += int((labels_for_batch == predictions).sum())
       n += 1
       batch_size = len(predictions)

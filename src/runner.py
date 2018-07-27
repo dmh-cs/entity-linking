@@ -21,7 +21,7 @@ from trainer import Trainer
 def load_entity_candidates_and_label_lookup(path, train_size):
   with open(path, 'rb') as lookup_file:
     data = pickle.load(lookup_file)
-    assert data['train_size'] == train_size, 'The lookup at path ' + path + ' uses train size of ' + \
+    assert data['train_size'] == train_size, 'The prior at path ' + path + ' uses train size of ' + \
       str(data['train_size']) + '. Please run `create_candidate_and_entity_lookups.py` with a train size of ' +\
       str(train_size)
     return data['lookups']
@@ -56,7 +56,8 @@ default_model_params = m(embed_len=100,
                          word_embedding_set='glove',
                          local_encoder_lstm_size=100,
                          document_encoder_lstm_size=40,
-                         num_lstm_layers=2)
+                         num_lstm_layers=2,
+                         ablation=['prior', 'mention_context', 'document_context'])
 
 default_run_params = m(load_model=False)
 
@@ -104,7 +105,7 @@ class Runner(object):
     self.log.status('Loading entity candidates lookup')
     lookups = load_entity_candidates_and_label_lookup(self.paths.lookups, self.train_params.train_size)
     self.log.status('Loading word embedding lookup')
-    self.lookups = self.lookups.update({'entity_candidates': lookups['entity_candidates'],
+    self.lookups = self.lookups.update({'entity_candidates_prior': lookups['entity_candidates_prior'],
                                         'entity_labels': lookups['entity_labels'],
                                         'embedding': get_embedding_lookup(self.paths.word_embedding,
                                                                           device=self.device)})
@@ -126,7 +127,7 @@ class Runner(object):
 
   def _get_simple_dataset(self, cursor, is_test):
     return SimpleMentionContextDatasetByEntityIds(cursor,
-                                                  self.lookups.entity_candidates,
+                                                  self.lookups.entity_candidates_prior,
                                                   self.lookups.entity_labels,
                                                   self.lookups.embedding,
                                                   self.model_params.num_candidates,
@@ -137,7 +138,7 @@ class Runner(object):
     page_ids = self.page_id_order_test if is_test else self.page_id_order_train
     return MentionContextDataset(cursor,
                                  page_ids,
-                                 self.lookups.entity_candidates,
+                                 self.lookups.entity_candidates_prior,
                                  self.lookups.entity_labels,
                                  self.lookups.embedding,
                                  self.train_params.batch_size,
@@ -182,7 +183,8 @@ class Runner(object):
                   entity_embeds=self.entity_embeds,
                   embedding_lookup=self.lookups.embedding,
                   device=self.device,
-                  experiment=self.experiment)
+                  experiment=self.experiment,
+                  ablation=self.model_params.ablation)
 
   def calc_stats(self, results):
     acc = float(results[0]) / (float(results[1]) * self.train_params.batch_size)

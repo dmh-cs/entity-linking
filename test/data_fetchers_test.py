@@ -20,12 +20,12 @@ def test_get_random_indexes_too_long():
   assert caught
 
 def test_get_candidates():
-  entity_candidates_lookup = _.map_values({'a': [1], 'b': [2], 'c': [3]}, torch.tensor)
+  entity_candidates_prior = {'a': {1: 20}, 'b': {2: 12}, 'c': {3: 3}}
   num_entities = 300
   num_candidates = 300
   mention = 'b'
   label = 2
-  candidates = df.get_candidates(entity_candidates_lookup,
+  candidates = df.get_candidates(entity_candidates_prior,
                                  num_entities,
                                  num_candidates,
                                  mention,

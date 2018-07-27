@@ -23,9 +23,9 @@ def test_mention_context_dataset():
   cursor = get_mock_cursor()
   page_id_order = [3, 1, 2]
   batch_size = 5
-  entity_candidates_lookup = {'aa': [1],
-                              'bb': [0, 1],
-                              'cc': [2]}
+  entity_candidates_prior = {'aa': {1: 20},
+                             'bb': {0: 10, 1: 2},
+                             'cc': {2: 3}}
   entity_label_lookup = dict(zip(range(5), range(5)))
   embedding_dim = 1
   embedding_lookup = {'<PAD>': torch.tensor([0]),
@@ -36,7 +36,7 @@ def test_mention_context_dataset():
   num_candidates = 2
   dataset = MentionContextDataset(cursor,
                                   page_id_order,
-                                  entity_candidates_lookup,
+                                  entity_candidates_prior,
                                   entity_label_lookup,
                                   embedding_lookup,
                                   batch_size,
@@ -66,32 +66,38 @@ def test_mention_context_dataset():
                     'label': 0,
                     'embedded_page_content': [0, 1],
                     'entity_page_mentions': [[0]],
-                    'candidates': torch.tensor([0, 1])},
+                    'candidates': torch.tensor([0, 1]),
+                    'p_prior': torch.tensor([10/12, 2/12])},
                    {'sentence_splits': [['aa'], ['aa', 'bb']],
                     'label': 1,
                     'embedded_page_content': [0, 1],
                     'entity_page_mentions': [[0]],
-                    'candidates': torch.tensor([1])},
+                    'candidates': torch.tensor([1]),
+                    'p_prior': torch.tensor([1.0])},
                    {'sentence_splits': [['cc'], ['cc', 'bb']],
                     'label': 2,
                     'embedded_page_content': [1, 2],
                     'entity_page_mentions': [[1]],
-                    'candidates': torch.tensor([2])},
+                    'candidates': torch.tensor([2]),
+                    'p_prior': torch.tensor([1.0])},
                    {'sentence_splits': [['cc', 'bb'], ['bb']],
                     'label': 0,
                     'embedded_page_content': [1, 2],
                     'entity_page_mentions': [[1]],
-                    'candidates': torch.tensor([0, 1])},
+                    'candidates': torch.tensor([0, 1]),
+                    'p_prior': torch.tensor([10/12, 2/12])},
                    {'sentence_splits': [['dd', 'bb'], ['bb']],
                     'label': 1,
                     'embedded_page_content': [1],
                     'entity_page_mentions': [[1]],
-                    'candidates': torch.tensor([0, 1])}]
+                    'candidates': torch.tensor([0, 1]),
+                    'p_prior': torch.tensor([10/12, 2/12])}]
   iterator = iter(dataset)
   dataset_values = [next(iterator) for _ in range(len(expected_data))]
   comparison = {'sentence_splits': _.is_equal,
                 'label': _.is_equal,
                 'embedded_page_content': _.is_equal,
                 'entity_page_mentions': _.is_equal,
-                'candidates': compare_candidates_tensor}
+                'candidates': compare_candidates_tensor,
+                'p_prior': lambda a, b: len(a) == len(_.intersection(a.tolist(), b.tolist()))}
   assert coll_compare_keys_by(expected_data, dataset_values, comparison)

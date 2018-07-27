@@ -1,10 +1,11 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, create_autospec
 import pytest
 import string
 
 import pydash as _
 import torch
 from torch.utils.data.sampler import BatchSampler, RandomSampler
+from comet_ml import Experiment
 
 import torch.nn as nn
 import utils as u
@@ -29,17 +30,20 @@ def test_tester(monkeypatch, myMock):
               'sentence_splits': [['a', 'b', 'c'], ['c', 'd']],
               'candidates': torch.tensor([0, 1]),
               'embedded_page_content': torch.tensor([[1], [-2], [2], [3], [-3], [4]]),
-              'entity_page_mentions': torch.tensor([[1], [-2], [0], [3], [0], [4]])},
+              'entity_page_mentions': torch.tensor([[1], [-2], [0], [3], [0], [4]]),
+              'p_prior': torch.tensor([0.1, 0.9])},
              {'label': 2,
               'sentence_splits': [['a', 'b', 'c'], ['c', 'd']],
               'candidates': torch.tensor([2, 1]),
               'embedded_page_content': torch.tensor([[1], [-2], [2], [3], [-3], [4]]),
-              'entity_page_mentions': torch.tensor([[1], [-2], [0], [3], [0], [4]]),},
+              'entity_page_mentions': torch.tensor([[1], [-2], [0], [3], [0], [4]]),
+              'p_prior': torch.tensor([0.1, 0.9])},
              {'label': 1,
               'sentence_splits': [['a', 'b', 'c'], ['c', 'd']],
               'candidates': torch.tensor([3, 1]),
               'embedded_page_content': torch.tensor([[1], [-2], [2], [3], [-3], [4]]),
-              'entity_page_mentions': torch.tensor([[1], [-2], [0], [3], [0], [4]]),}]
+              'entity_page_mentions': torch.tensor([[1], [-2], [0], [3], [0], [4]]),
+              'p_prior': torch.tensor([0.1, 0.9])}]
   num_entities = 10
   embed_len = 200
   batch_size = 3
@@ -52,6 +56,7 @@ def test_tester(monkeypatch, myMock):
   model = get_mock_model(vector_to_return)
   device = None
   batch_sampler = BatchSampler(RandomSampler(dataset), batch_size, True)
+  mock_experiment = create_autospec(Experiment, instance=True)
   with monkeypatch.context() as m:
     m.setattr(nn, 'DataParallel', _.identity)
     m.setattr(u, 'tensors_to_device', lambda batch, device: batch)
@@ -60,7 +65,9 @@ def test_tester(monkeypatch, myMock):
                       model=model,
                       entity_embeds=entity_embeds,
                       embedding_lookup=embedding_lookup,
-                      device=device)
+                      device=device,
+                      experiment=mock_experiment,
+                      ablation=['prior', 'mention_context', 'document_context'])
     assert tester.test() == (torch.tensor(1), 1)
     labels_for_batch = tester._get_labels_for_batch(torch.tensor([elem['label'] for elem in dataset]),
                                                     torch.tensor([[1, 0], [4, 5], [1, 0]]))
