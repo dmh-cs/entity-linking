@@ -24,7 +24,7 @@ args_with_values = [{'name': 'model_path', 'for': 'path', 'type': str},
                     {'name': 'word_embedding_set', 'for': 'model_param', 'type': str}]
 
 def main():
-  if os.system('git status --untracked-files=no --porcelain') is not None:
+  if os.system('git status --untracked-files=no --porcelain') != '':
     warnings.warn('git tree dirty! git hash will not correspond to the codebase!')
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   load_dotenv(dotenv_path='.env')
