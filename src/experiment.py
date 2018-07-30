@@ -70,5 +70,5 @@ class Experiment(object):
     self.epoch_num = epoch_num
     self.log.status('epoch ' + str(epoch_num))
 
-  def log_epoch_end(self):
+  def log_epoch_end(self, epoch_num):
     pass
