@@ -47,7 +47,7 @@ class Trainer(object):
 
   def train(self):
     for epoch_num in range(self.num_epochs):
-      self.experiment.log_current_epoch(epoch_num)
+      self.experiment.update_epoch(epoch_num)
       dataloader = DataLoader(dataset=self.dataset,
                               batch_sampler=self.batch_sampler,
                               collate_fn=collate)
@@ -68,8 +68,7 @@ class Trainer(object):
                                                            labels_for_batch)
         document_context_error = self._classification_error(self.model.desc_encoder.logits,
                                                             labels_for_batch)
-        self.experiment.log_multiple_metrics({'mention_context_error': mention_context_error,
+        self.experiment.record_metrics({'mention_context_error': mention_context_error,
                                               'document_context_error': document_context_error,
                                               'loss': loss.item()},
-                                             step=batch_num)
-      self.experiment.log_epoch_end(epoch_num)
+                                             batch_num=batch_num)

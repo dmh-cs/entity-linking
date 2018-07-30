@@ -62,7 +62,7 @@ class Tester(object):
       acc += int((labels_for_batch == predictions).sum())
       n += 1
       batch_size = len(predictions)
-      self.experiment.log_multiple_metrics({'accuracy': acc / (n * batch_size),
+      self.experiment.record_metrics({'accuracy': acc / (n * batch_size),
                                             'TP': acc,
                                             'num_samples': n * batch_size})
       if batch_num % 100 == 0:

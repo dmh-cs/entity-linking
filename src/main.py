@@ -20,7 +20,7 @@ args_with_values = [{'name': 'batch_size', 'for': 'train_param', 'type': int},
                     {'name': 'document_encoder_lstm_size', 'for': 'model_param', 'type': int},
                     {'name': 'num_lstm_layers', 'for': 'model_param', 'type': int},
                     {'name': 'word_embedding_set', 'for': 'model_param', 'type': str},
-                    {'name': 'ablation', 'for': 'model_params', 'type': lambda string: string.split(',')}]
+                    {'name': 'ablation', 'for': 'model_param', 'type': lambda string: string.split(',')}]
 
 def main():
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
