@@ -1,3 +1,4 @@
+from typing import TextIO, List
 import hashlib
 import os
 import warnings
@@ -9,35 +10,50 @@ from logger import Logger
 from utils import append_create
 
 class ExperimentContext(object):
-  def __init__(self):
-    pass
+  def __init__(self, separator: str, file_handle: TextIO, fields: List[str]):
+    self.file_handle = file_handle
+    self.fields = fields
+    self.separator = separator
 
   def __enter__(self):
-    pass
+    self.file_handle.write(self.separator.join(sorted(self.fields)))
 
   def __exit__(self, *args):
-    pass
+    os.close(self.file_handle)
 
 class Experiment(object):
   def __init__(self, params):
+    self.separator = '|'
+    self.training = None
     self.dirty_worktree = False
     if os.popen('git status --untracked-files=no --porcelain').read() != '':
       self.dirty_worktree = True
       warnings.warn('git tree dirty! git hash will not correspond to the codebase!')
     self.log = Logger()
     self.name = None
-    self.is_train = None
-    self.is_test = None
     self.epoch_num = None
     self.params = params
     self.log.table(_.map_values(self.params, lambda val: [str(val)]),
                    'params')
     self.metrics = {}
+    self.file_handle = open(self.log_path, 'a+')
     with open('params_' + self.model_name, 'w+') as f:
       obj = _.map_values(self.params, lambda val: [str(val)])
       keys = sorted(list(obj.keys()))
       vals = list(zip(*[obj[key] for key in keys]))
       f.write(tabulate(vals, headers=keys, tablefmt='orgtbl'))
+
+  @property
+  def train_or_test(self):
+    assert self.training is not None
+    if self.training:
+      return 'train'
+    else:
+      return 'test'
+
+  @property
+  def log_path(self):
+    return './results_' + self.train_or_test + '_' + self.model_name
 
   @property
   def model_name(self):
@@ -48,6 +64,7 @@ class Experiment(object):
   def log_multiple_metrics(self, metrics, step=None):
     metric_names = sorted(list(metrics.keys()))
     self.log.report(*[metrics[name] for name in metric_names])
+    self.file_handle.write(self.separator.join([str(metrics[name]) for name in metric_names]) + '\n')
 
   def log_metric(self, name, val):
     append_create(self.metrics, name, val)
@@ -56,15 +73,13 @@ class Experiment(object):
   def set_name(self, name):
     self.name = name
 
-  def train(self):
-    self.is_train = True
-    self.is_test = False
-    return ExperimentContext()
+  def train(self, fields):
+    self.training = True
+    return ExperimentContext(self.separator, self.file_handle, fields)
 
-  def test(self):
-    self.is_train = False
-    self.is_test = True
-    return ExperimentContext()
+  def test(self, fields):
+    self.training = False
+    return ExperimentContext(self.separator, self.file_handle, fields)
 
   def log_current_epoch(self, epoch_num):
     self.epoch_num = epoch_num

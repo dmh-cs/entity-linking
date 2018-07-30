@@ -199,17 +199,16 @@ class Runner(object):
                              self.entity_embeds,
                              pad_vector)
         if not self.run_params.load_model:
-          with self.experiment.train():
+          with self.experiment.train(['mention_context_error', 'document_context_error', 'loss']):
             self.log.status('Training')
             trainer = self._get_trainer(cursor, encoder)
             trainer.train()
             torch.save(encoder.state_dict(), './' + self.experiment.model_name)
         else:
-          print(self.experiment.model_name)
           encoder.load_state_dict(torch.load('./' + self.experiment.model_name))
           encoder = nn.DataParallel(encoder)
           encoder = encoder.to(self.device).module
-        with self.experiment.test():
+        with self.experiment.test(['accuracy', 'TP', 'num_samples']):
           self.log.status('Testing')
           tester = self._get_tester(cursor, encoder)
           tester.test()

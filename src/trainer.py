@@ -36,7 +36,6 @@ class Trainer(object):
     self.experiment = experiment
 
   def _create_optimizer(self, optimizer: str, params=None):
-    print("Creating optimizer '{}' for model:\n{} with params {}".format(optimizer, self.model, params or {}))
     return optim.Adam(self.model.parameters())
 
   def _classification_error(self, logits, labels):
@@ -48,7 +47,6 @@ class Trainer(object):
 
   def train(self):
     for epoch_num in range(self.num_epochs):
-      print("Epoch", epoch_num)
       self.experiment.log_current_epoch(epoch_num)
       dataloader = DataLoader(dataset=self.dataset,
                               batch_sampler=self.batch_sampler,
@@ -70,12 +68,8 @@ class Trainer(object):
                                                            labels_for_batch)
         document_context_error = self._classification_error(self.model.desc_encoder.logits,
                                                             labels_for_batch)
-        print('Classification error', mention_context_error)
-        print('Classification error', document_context_error)
-        print('[epoch %d, batch %d] loss: %.3f' % (epoch_num, batch_num, loss.item()))
         self.experiment.log_multiple_metrics({'mention_context_error': mention_context_error,
                                               'document_context_error': document_context_error,
                                               'loss': loss.item()},
                                              step=batch_num)
       self.experiment.log_epoch_end(epoch_num)
-    print('Finished Training')
