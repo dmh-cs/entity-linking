@@ -1,6 +1,6 @@
 class Experiment(object):
   def __init__(self):
-    self.log = lambda *args: print('|'.join(args))
+    self.log = lambda *args: print('|'.join([str(arg) for arg in args]))
     self.name = None
     self.is_train = None
     self.is_test = None
