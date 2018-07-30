@@ -21,7 +21,8 @@ args_with_values = [{'name': 'model_path', 'for': 'path', 'type': str},
                     {'name': 'local_encoder_lstm_size', 'for': 'model_param', 'type': int},
                     {'name': 'document_encoder_lstm_size', 'for': 'model_param', 'type': int},
                     {'name': 'num_lstm_layers', 'for': 'model_param', 'type': int},
-                    {'name': 'word_embedding_set', 'for': 'model_param', 'type': str}]
+                    {'name': 'word_embedding_set', 'for': 'model_param', 'type': str},
+                    {'name': 'ablation', 'for': 'model_params', 'type': lambda string: string.split(',')}]
 
 def main():
   dirty_worktree = False
@@ -34,7 +35,7 @@ def main():
   flags = [_.head(arg) for arg in args]
   train_params = m()
   run_params = m(load_model='--load_model' in flags)
-  model_params = m(ablation=['prior', 'local_context', 'document_context'])
+  model_params = m()
   paths = m(lookups=os.getenv("LOOKUPS_PATH"),
             page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
   for arg in args_with_values:
