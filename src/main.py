@@ -24,7 +24,9 @@ args_with_values = [{'name': 'model_path', 'for': 'path', 'type': str},
                     {'name': 'word_embedding_set', 'for': 'model_param', 'type': str}]
 
 def main():
+  dirty_worktree = False
   if os.popen('git status --untracked-files=no --porcelain').read() != '':
+    dirty_worktree = True
     warnings.warn('git tree dirty! git hash will not correspond to the codebase!')
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   load_dotenv(dotenv_path='.env')
@@ -32,7 +34,7 @@ def main():
   flags = [_.head(arg) for arg in args]
   train_params = m()
   run_params = m(load_model='--load_model' in flags)
-  model_params = m(ablation=['local_context'])
+  model_params = m(ablation=['prior', 'local_context', 'document_context'])
   paths = m(lookups=os.getenv("LOOKUPS_PATH"),
             page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
   for arg in args_with_values:
@@ -54,6 +56,7 @@ def main():
                   model_params=model_params,
                   run_params=run_params,
                   name=name)
+  runner.experiment.log_parameter('dirty_worktree', dirty_worktree)
   runner.run()
 
 
