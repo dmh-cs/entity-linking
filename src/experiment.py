@@ -1,5 +1,6 @@
 from typing import TextIO, List
 import hashlib
+import os
 import warnings
 
 import pydash as _
@@ -32,7 +33,7 @@ class Experiment(object):
     self.file_handle = None
     self._repo = Repo('./')
     self.dirty_worktree = False
-    if self._repo.is_dirty():
+    if os.popen('git status --untracked-files=no --porcelain').read() != '':
       self.dirty_worktree = True
       warnings.warn('git tree dirty! git hash will not correspond to the codebase!')
 
@@ -81,5 +82,5 @@ class Experiment(object):
       for name, val in self.params.items():
         f.write(name + self.separator + str(val) + '\n')
       f.write('commit hash' + self.separator + str(master.commit.hexsha) + '\n')
-      f.write('commit msg' + self.separator + str(master.commit.message) + '\n')
+      f.write('commit msg' + self.separator + str(master.commit.message))
       f.write('dirty worktree?' + self.separator + str(self.dirty_worktree) + '\n')
