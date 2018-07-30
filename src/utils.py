@@ -34,3 +34,9 @@ def sort_index(coll, key=_.identity, reverse=False):
   return [index for index, _ in sorted(enumerate(coll),
                                        key=lambda elem: key(elem[1]),
                                        reverse=reverse)]
+
+def append_create(obj, key, val):
+  if key in obj:
+    obj[key].append(val)
+  else:
+    obj[key] = [val]

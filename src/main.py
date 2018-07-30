@@ -1,7 +1,6 @@
 import getopt
 import os
 import sys
-import warnings
 
 from dotenv import load_dotenv
 from pyrsistent import m
@@ -10,8 +9,7 @@ import torch
 
 from runner import Runner
 
-args_with_values = [{'name': 'model_path', 'for': 'path', 'type': str},
-                    {'name': 'batch_size', 'for': 'train_param', 'type': int},
+args_with_values = [{'name': 'batch_size', 'for': 'train_param', 'type': int},
                     {'name': 'num_epochs', 'for': 'train_param', 'type': int},
                     {'name': 'train_size', 'for': 'train_param', 'type': int},
                     {'name': 'dropout_keep_prob', 'for': 'train_param', 'type': float},
@@ -25,10 +23,6 @@ args_with_values = [{'name': 'model_path', 'for': 'path', 'type': str},
                     {'name': 'ablation', 'for': 'model_params', 'type': lambda string: string.split(',')}]
 
 def main():
-  dirty_worktree = False
-  if os.popen('git status --untracked-files=no --porcelain').read() != '':
-    dirty_worktree = True
-    warnings.warn('git tree dirty! git hash will not correspond to the codebase!')
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   load_dotenv(dotenv_path='.env')
   args = getopt.getopt(_.tail(sys.argv), '', ['load_model'] + [arg['name'] + '=' for arg in args_with_values])[0]
@@ -55,9 +49,7 @@ def main():
                   paths=paths,
                   train_params=train_params,
                   model_params=model_params,
-                  run_params=run_params,
-                  name=name)
-  runner.experiment.log_parameter('dirty_worktree', dirty_worktree)
+                  run_params=run_params)
   runner.run()
 
 

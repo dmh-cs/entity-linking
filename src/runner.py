@@ -11,7 +11,6 @@ import torch.nn as nn
 
 from data_fetchers import get_connection, get_embedding_lookup
 from joint_model import JointModel
-from logger import Logger
 from mention_context_batch_sampler import MentionContextBatchSampler
 from mention_context_dataset import MentionContextDataset
 from simple_mention_context_dataset_by_entity_ids import SimpleMentionContextDatasetByEntityIds
@@ -40,8 +39,7 @@ def get_num_entities():
     db_connection.close()
 
 default_paths = m(lookups='../entity-linking-preprocessing/lookups.pkl',
-                  page_id_order='../entity-linking-preprocessing/page_id_order.pkl',
-                  model='./model')
+                  page_id_order='../entity-linking-preprocessing/page_id_order.pkl')
 default_train_params = m(batch_size=100,
                          debug=False,
                          use_simple_dataloader=False,
@@ -49,7 +47,7 @@ default_train_params = m(batch_size=100,
                          train_size=0.8,
                          dropout_keep_prob=0.4)
 default_model_params = m(embed_len=100,
-                         word_embed_len=300,
+                         word_embed_len=100,
                          num_candidates=30,
                          word_embedding_set='glove',
                          local_encoder_lstm_size=100,
@@ -65,16 +63,13 @@ class Runner(object):
                paths=default_paths,
                train_params=default_train_params,
                model_params=default_model_params,
-               run_params=default_run_params,
-               name=''):
-    self.experiment = Experiment()
-    self.experiment.set_name(name)
-    self.log = Logger()
+               run_params=default_run_params):
     self.train_params = m().update(default_train_params).update(train_params)
     self.model_params = m().update(default_model_params).update(model_params)
     self.run_params = m().update(default_run_params).update(run_params)
     self.paths = m().update(default_paths).update(paths)
-    self._log_params()
+    self.experiment = Experiment(self.train_params.update(self.run_params).update(self.model_params))
+    self.log = self.experiment.log
     self.lookups = m()
     self.device = device
     self.model_params = self.model_params.set('context_embed_len',
@@ -89,14 +84,6 @@ class Runner(object):
     self.entity_embeds: Optional[nn.Embedding] = None
     if not self.train_params.use_simple_dataloader and hasattr(self.model_params, 'num_entities'):
       raise NotImplementedError('Can only restrict num of entities when using simple dataloader')
-
-  def _log_params(self):
-    params = self.train_params.update(self.run_params).update(self.model_params)
-    self.experiment.log_multiple_params(params)
-    self.experiment.log_parameter('params', str(self._get_this_runs_params(params)))
-
-  def _get_this_runs_params(self, params):
-    return _.difference(list(params.items()), list(default_params.items()))
 
   def _get_word_embedding_path(self):
     if self.model_params.word_embedding_set.lower() == 'glove' and self.model_params.word_embed_len == 100:
@@ -216,9 +203,10 @@ class Runner(object):
             self.log.status('Training')
             trainer = self._get_trainer(cursor, encoder)
             trainer.train()
-            torch.save(encoder.state_dict(), './model_' + str(self.experiment.run_id))
+            torch.save(encoder.state_dict(), './' + self.experiment.model_name)
         else:
-          encoder.load_state_dict(torch.load(self.paths.model))
+          print(self.experiment.model_name)
+          encoder.load_state_dict(torch.load('./' + self.experiment.model_name))
           encoder = nn.DataParallel(encoder)
           encoder = encoder.to(self.device).module
         with self.experiment.test():
