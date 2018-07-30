@@ -2,7 +2,7 @@ from typing import Optional
 import math
 import pickle
 
-from comet_ml import Experiment
+from experiment import Experiment
 from pyrsistent import m
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 import pydash as _
@@ -67,7 +67,7 @@ class Runner(object):
                model_params=default_model_params,
                run_params=default_run_params,
                name=''):
-    self.experiment = Experiment(api_key="4ttwav4VlxnDZq1m96NH2UKuW", project_name='EL')
+    self.experiment = Experiment()
     self.experiment.set_name(name)
     self.log = Logger()
     self.train_params = m().update(default_train_params).update(train_params)
