@@ -18,9 +18,9 @@ class Experiment(object):
 
   def log_multiple_params(self, params):
     for name, val in params.items():
-      self.log_param(name, val)
+      self.log_parameter(name, val)
 
-  def log_param(self, name, val):
+  def log_parameter(self, name, val):
     self.log(name, val)
 
   def train(self):
