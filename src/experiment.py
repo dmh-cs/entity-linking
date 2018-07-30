@@ -41,7 +41,7 @@ class Experiment(object):
 
   @property
   def model_name(self):
-    param_names = sorted(list(self.params.keys()))
+    param_names = sorted([key for key in self.params.keys() if key != 'load_model'])
     param_strings = [name + '=' + str(self.params[name]) for name in param_names]
     return 'model_' + hashlib.sha256(str.encode('_'.join(param_strings))).hexdigest()
 
