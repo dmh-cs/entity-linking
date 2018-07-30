@@ -42,20 +42,20 @@ def get_num_entities():
 default_paths = m(lookups='../entity-linking-preprocessing/lookups.pkl',
                   page_id_order='../entity-linking-preprocessing/page_id_order.pkl',
                   model='./model')
-default_train_params = m(batch_size=50,
+default_train_params = m(batch_size=100,
                          debug=False,
                          use_simple_dataloader=False,
                          num_epochs=1,
                          train_size=0.8,
-                         dropout_keep_prob=0.5)
+                         dropout_keep_prob=0.4)
 default_model_params = m(embed_len=100,
-                         word_embed_len=100,
-                         num_candidates=10,
+                         word_embed_len=300,
+                         num_candidates=30,
                          word_embedding_set='glove',
                          local_encoder_lstm_size=100,
-                         document_encoder_lstm_size=40,
+                         document_encoder_lstm_size=100,
                          num_lstm_layers=2,
-                         ablation=['prior', 'local_context', 'global_context'])
+                         ablation=['prior', 'local_context', 'document_context'])
 default_run_params = m(load_model=False)
 default_params = default_train_params.update(default_run_params).update(default_model_params)
 
@@ -67,7 +67,7 @@ class Runner(object):
                model_params=default_model_params,
                run_params=default_run_params,
                name=''):
-    self.experiment  = Experiment(api_key="4ttwav4VlxnDZq1m96NH2UKuW", project_name='EL')
+    self.experiment = Experiment(api_key="4ttwav4VlxnDZq1m96NH2UKuW", project_name='EL')
     self.experiment.set_name(name)
     self.log = Logger()
     self.train_params = m().update(default_train_params).update(train_params)
@@ -101,8 +101,10 @@ class Runner(object):
   def _get_word_embedding_path(self):
     if self.model_params.word_embedding_set.lower() == 'glove' and self.model_params.word_embed_len == 100:
       return'./glove.6B.100d.txt'
+    elif self.model_params.word_embedding_set.lower() == 'glove' and self.model_params.word_embed_len == 300:
+      return './glove.840B.300d.txt'
     else:
-      raise NotImplementedError('Only loading from glove 100d is currently supported')
+      raise NotImplementedError('Only loading from glove 100d or 300d is currently supported')
 
   def load_caches(self):
     if not hasattr(self.model_params, 'num_entities'):

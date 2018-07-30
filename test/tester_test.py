@@ -67,7 +67,7 @@ def test_tester(monkeypatch, myMock):
                       embedding_lookup=embedding_lookup,
                       device=device,
                       experiment=mock_experiment,
-                      ablation=['prior', 'local_context', 'global_context'])
+                      ablation=['prior', 'local_context', 'document_context'])
     assert tester.test() == (torch.tensor(1), 1)
     labels_for_batch = tester._get_labels_for_batch(torch.tensor([elem['label'] for elem in dataset]),
                                                     torch.tensor([[1, 0], [4, 5], [1, 0]]))

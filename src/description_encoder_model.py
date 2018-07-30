@@ -12,7 +12,7 @@ class DescriptionEncoder(nn.Module):
     self.entity_embeds = entity_embeds
     self.pad_vector = pad_vector
     self.kernel_size = 5
-    self.dropout_keep_prob = 0.6
+    self.dropout_keep_prob = 0.4
     desc_embed_len = entity_embeds.weight.shape[1]
     self.conv = nn.Conv1d(word_embed_len, desc_embed_len, self.kernel_size, stride=1, padding=0)
     self.relu = nn.ReLU()

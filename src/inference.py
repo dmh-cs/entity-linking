@@ -10,7 +10,7 @@ def predict(embedding_lookup, entity_embeds, p_prior, model, batch, ablation):
   elif 'local_context' in ablation:
     left_splits, right_splits = embed_and_pack_batch(embedding_lookup,
                                                      batch['sentence_splits'])
-    if 'global_context' in ablation:
+    if 'document_context' in ablation:
       mention_embeds = model(((left_splits, right_splits),
                             batch['embedded_page_content'],
                             batch['entity_page_mentions']))
