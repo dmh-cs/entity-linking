@@ -60,9 +60,9 @@ class Tester(object):
                             batch=batch,
                             ablation=self.ablation)
       acc += int((labels_for_batch == predictions).sum())
-      n += 1
       batch_size = len(predictions)
-      self.experiment.record_metrics({'accuracy': acc / (n * batch_size),
+      n += batch_size
+      self.experiment.record_metrics({'accuracy': acc / n,
                                       'TP': acc,
-                                      'num_samples': n * batch_size})
+                                      'num_samples': n})
     return acc, n

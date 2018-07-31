@@ -63,12 +63,11 @@ class Trainer(object):
         loss = self.model.loss(encoded, batch['candidates'], labels_for_batch)
         loss.backward()
         self.optimizer.step()
-        # if batch_num % 100 == 0:
         mention_context_error = self._classification_error(self.model.mention_context_encoder.logits,
                                                            labels_for_batch)
         document_context_error = self._classification_error(self.model.desc_encoder.logits,
                                                             labels_for_batch)
         self.experiment.record_metrics({'mention_context_error': mention_context_error,
-                                              'document_context_error': document_context_error,
-                                              'loss': loss.item()},
-                                             batch_num=batch_num)
+                                        'document_context_error': document_context_error,
+                                        'loss': loss.item()},
+                                       batch_num=batch_num)
