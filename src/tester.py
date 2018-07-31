@@ -63,8 +63,6 @@ class Tester(object):
       n += 1
       batch_size = len(predictions)
       self.experiment.record_metrics({'accuracy': acc / (n * batch_size),
-                                            'TP': acc,
-                                            'num_samples': n * batch_size})
-      if batch_num % 100 == 0:
-        print(acc, n * batch_size)
+                                      'TP': acc,
+                                      'num_samples': n * batch_size})
     return acc, n
