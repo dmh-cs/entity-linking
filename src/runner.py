@@ -46,7 +46,8 @@ default_train_params = m(batch_size=100,
                          num_epochs=1,
                          train_size=0.8,
                          dropout_keep_prob=0.4)
-default_model_params = m(embed_len=100,
+default_model_params = m(use_adaptive_softmax=False,
+                         embed_len=100,
                          word_embed_len=100,
                          num_candidates=30,
                          word_embedding_set='glove',
@@ -54,7 +55,8 @@ default_model_params = m(embed_len=100,
                          document_encoder_lstm_size=100,
                          num_lstm_layers=2,
                          ablation=['prior', 'local_context', 'document_context'])
-default_run_params = m(load_model=False)
+default_run_params = m(load_model=False,
+                       comments='')
 default_params = default_train_params.update(default_run_params).update(default_model_params)
 
 class Runner(object):
@@ -195,6 +197,7 @@ class Runner(object):
                              self.model_params.local_encoder_lstm_size,
                              self.model_params.document_encoder_lstm_size,
                              self.model_params.num_lstm_layers,
+                             self.model_params.use_adaptive_softmax,
                              self.train_params.dropout_keep_prob,
                              self.entity_embeds,
                              pad_vector)

@@ -1,4 +1,4 @@
-from typing import TextIO, List
+from typing import List
 import hashlib
 import os
 import warnings
@@ -26,7 +26,6 @@ class Experiment(object):
     self.separator = '|'
     self.training = None
     self.log = Logger()
-    self.name = None
     self.epoch_num = None
     self.params = params
     self.metrics = {}
@@ -67,9 +66,6 @@ class Experiment(object):
 
   def update_epoch(self, epoch_num):
     self.epoch_num = epoch_num
-
-  def set_name(self, name):
-    self.name = name
 
   def train(self, fields):
     self.training = True

@@ -9,18 +9,20 @@ import torch
 
 from runner import Runner
 
-args_with_values = [{'name': 'batch_size', 'for': 'train_param', 'type': int},
-                    {'name': 'num_epochs', 'for': 'train_param', 'type': int},
-                    {'name': 'train_size', 'for': 'train_param', 'type': int},
-                    {'name': 'dropout_keep_prob', 'for': 'train_param', 'type': float},
-                    {'name': 'embed_len', 'for': 'model_param', 'type': int},
-                    {'name': 'word_embed_len', 'for': 'model_param', 'type': int},
-                    {'name': 'num_candidates', 'for': 'model_param', 'type': int},
-                    {'name': 'local_encoder_lstm_size', 'for': 'model_param', 'type': int},
-                    {'name': 'document_encoder_lstm_size', 'for': 'model_param', 'type': int},
-                    {'name': 'num_lstm_layers', 'for': 'model_param', 'type': int},
-                    {'name': 'word_embedding_set', 'for': 'model_param', 'type': str},
-                    {'name': 'ablation', 'for': 'model_param', 'type': lambda string: string.split(',')}]
+args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param', 'type': int},
+                     {'name': 'dropout_keep_prob'          , 'for': 'train_param', 'type': float},
+                     {'name': 'train_size'                 , 'for': 'train_param', 'type': int},
+                     {'name': 'num_epochs'                 , 'for': 'train_param', 'type': int},
+                     {'name': 'ablation'                   , 'for': 'model_param', 'type': lambda string: string.split(',')},
+                     {'name': 'document_encoder_lstm_size' , 'for': 'model_param', 'type': int},
+                     {'name': 'embed_len'                  , 'for': 'model_param', 'type': int},
+                     {'name': 'local_encoder_lstm_size'    , 'for': 'model_param', 'type': int},
+                     {'name': 'num_candidates'             , 'for': 'model_param', 'type': int},
+                     {'name': 'num_lstm_layers'            , 'for': 'model_param', 'type': int},
+                     {'name': 'word_embed_len'             , 'for': 'model_param', 'type': int},
+                     {'name': 'word_embedding_set'         , 'for': 'model_param', 'type': str},
+                     {'name': 'use_adaptive_softmax'       , 'for': 'model_param', 'type': bool},
+                     {'name': 'comments'                   , 'for': 'run_param', 'type': str}]
 
 def main():
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -43,6 +45,10 @@ def main():
         model_params = model_params.set(name, parsed)
       elif arg['for'] == 'train_param':
         train_params = train_params.set(name, parsed)
+      elif arg['for'] == 'run_param':
+        run_params = run_params.set(name, parsed)
+      else:
+        raise ValueError('`args_with_values` contains unsupported param group ' + arg['for'])
   name_pair = _.find(args, lambda pair: 'name' in pair[0])
   name = name_pair[1] if name_pair else ''
   runner = Runner(device=device,

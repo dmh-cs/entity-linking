@@ -11,6 +11,7 @@ class JointModel(nn.Module):
                local_encoder_lstm_size,
                document_encoder_lstm_size,
                num_lstm_layers,
+               use_adaptive_softmax,
                dropout_keep_prob,
                entity_embeds,
                pad_vector):
