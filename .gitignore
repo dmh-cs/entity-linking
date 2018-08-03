@@ -11,3 +11,4 @@ node_modules
 /glove.6B.100d.txt
 /.coverage
 /.pytest_cache
+.tertestrial.tmp
