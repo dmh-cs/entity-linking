@@ -59,9 +59,9 @@ def test_tester(monkeypatch, myMock):
   device = None
   batch_sampler = BatchSampler(RandomSampler(dataset), batch_size, True)
   mock_experiment = create_autospec(Experiment, instance=True)
-  logits_calc = Logits()
+  calc_logits = Logits()
   softmax = Softmax()
-  logits_and_softmax = lambda hidden, candidates_or_targets: softmax(logits_calc(hidden,
+  logits_and_softmax = lambda hidden, candidates_or_targets: softmax(calc_logits(hidden,
                                                                                  candidates_or_targets))
   with monkeypatch.context() as m:
     m.setattr(nn, 'DataParallel', _.identity)

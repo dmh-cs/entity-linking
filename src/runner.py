@@ -9,6 +9,10 @@ import pydash as _
 import torch
 import torch.nn as nn
 
+from adaptive_softmax import AdaptiveSoftmax
+from adaptive_logits import AdaptiveLogits
+from logits import Logits
+from softmax import Softmax
 from data_fetchers import get_connection, get_embedding_lookup
 from joint_model import JointModel
 from mention_context_batch_sampler import MentionContextBatchSampler
@@ -47,6 +51,7 @@ default_train_params = m(batch_size=100,
                          train_size=0.8,
                          dropout_keep_prob=0.4)
 default_model_params = m(use_adaptive_softmax=False,
+                         use_hardcoded_cutoffs=True,
                          embed_len=100,
                          word_embed_len=100,
                          num_candidates=30,
@@ -76,6 +81,8 @@ class Runner(object):
     self.device = device
     self.model_params = self.model_params.set('context_embed_len',
                                               2 * self.model_params.embed_len)
+    if not hasattr(self.model_params, 'cutoffs'):
+      self.model_params = self.model_params.set('cutoffs', [2000, 10000])
     self.paths = self.paths.set('word_embedding',
                                 self._get_word_embedding_path())
     self.page_id_order: Optional[list] = None
@@ -149,6 +156,13 @@ class Runner(object):
                                       page_ids,
                                       self.train_params.batch_size)
 
+  def _get_adaptive_calc_logits(self):
+    if self.model_params.use_hardcoded_cutoffs:
+      vocab_size = self.entity_embeds.weight.shape[0]
+      cutoffs = self.model_params.adaptive_softmax_cutoffs + [vocab_size + 1]
+    else:
+      raise NotImplementedError
+    return AdaptiveLogits(self.entity_embeds, cutoffs)
 
   def _calc_loss(self, encoded, candidate_entity_ids, labels_for_batch):
     if self.model_params.use_adaptive_softmax:
@@ -179,9 +193,20 @@ class Runner(object):
                    dataset=train_dataset,
                    batch_sampler=batch_sampler,
                    num_epochs=self.train_params.num_epochs,
-                   experiment=self.experiment)
+                   experiment=self.experiment,
+                   calc_loss=self._calc_loss)
+
+  def _get_logits_and_softmax(self):
+    if self.model_params.use_adaptive_softmax:
+      calc_logits = self._get_adaptive_calc_logits()
+      softmax = AdaptiveSoftmax(calc_logits)
+    else:
+      calc_logits = Logits()
+      softmax = Softmax()
+    return lambda hidden, candidates_or_targets: softmax(calc_logits(hidden, candidates_or_targets))
 
   def _get_tester(self, cursor, model):
+    logits_and_softmax = self._get_logits_and_softmax()
     if self.train_params.use_simple_dataloader:
       test_dataset = self._get_simple_dataset(cursor, is_test=True)
       batch_sampler = BatchSampler(RandomSampler(test_dataset),
@@ -193,6 +218,7 @@ class Runner(object):
     return Tester(dataset=test_dataset,
                   batch_sampler=batch_sampler,
                   model=model.mention_context_encoder,
+                  logits_and_softmax=logits_and_softmax,
                   entity_embeds=self.entity_embeds,
                   embedding_lookup=self.lookups.embedding,
                   device=self.device,
@@ -212,7 +238,6 @@ class Runner(object):
                              self.model_params.local_encoder_lstm_size,
                              self.model_params.document_encoder_lstm_size,
                              self.model_params.num_lstm_layers,
-                             self.model_params.use_adaptive_softmax,
                              self.train_params.dropout_keep_prob,
                              self.entity_embeds,
                              pad_vector)

@@ -21,7 +21,7 @@ args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param
                      {'name': 'num_lstm_layers'            , 'for': 'model_param', 'type': int},
                      {'name': 'word_embed_len'             , 'for': 'model_param', 'type': int},
                      {'name': 'word_embedding_set'         , 'for': 'model_param', 'type': str},
-                     {'name': 'use_adaptive_softmax'       , 'for': 'model_param', 'type': bool},
+                     {'name': 'adaptive_softmax_cutoffs'   , 'for': 'model_param', 'type': lambda string: [int(cutoff) for cutoff in string.split(',')]},
                      {'name': 'comments'                   , 'for': 'run_param', 'type': str}]
 
 def main():
@@ -31,7 +31,8 @@ def main():
   flags = [_.head(arg) for arg in args]
   train_params = m()
   run_params = m(load_model='--load_model' in flags)
-  model_params = m()
+  model_params = m(use_adaptive_softmax='--use_adaptive_softmax' in flags,
+                   use_hardcoded_cutoffs='--use_hardcoded_cutoffs' in flags)
   paths = m(lookups=os.getenv("LOOKUPS_PATH"),
             page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
   for arg in args_with_values:
