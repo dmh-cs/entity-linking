@@ -24,7 +24,8 @@ class Trainer(object):
                dataset,
                batch_sampler,
                num_epochs,
-               experiment):
+               experiment,
+               calc_loss):
     self.device = device
     self.model = nn.DataParallel(model)
     self.model = model.to(self.device)
@@ -34,6 +35,7 @@ class Trainer(object):
     self.num_epochs = num_epochs
     self.embedding_lookup = embedding_lookup
     self.experiment = experiment
+    self.calc_loss = calc_loss
 
   def _create_optimizer(self, optimizer: str, params=None):
     return optim.Adam(self.model.parameters())
@@ -60,7 +62,7 @@ class Trainer(object):
                               batch['embedded_page_content'],
                               batch['entity_page_mentions']))
         labels_for_batch = self._get_labels_for_batch(batch['label'], batch['candidates'])
-        loss = self.model.loss(encoded, batch['candidates'], labels_for_batch)
+        loss = self.calc_loss(encoded, batch['candidates'], labels_for_batch)
         loss.backward()
         self.optimizer.step()
         mention_context_error = self._classification_error(self.model.mention_context_encoder.logits,

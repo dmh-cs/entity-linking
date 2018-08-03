@@ -149,6 +149,21 @@ class Runner(object):
                                       page_ids,
                                       self.train_params.batch_size)
 
+
+  def _calc_loss(self, encoded, candidate_entity_ids, labels_for_batch):
+    if self.model_params.use_adaptive_softmax:
+      calc_logits = self._get_adaptive_calc_logits()
+      criterion = calc_logits.loss
+    else:
+      calc_logits = Logits()
+      criterion = nn.CrossEntropyLoss()
+    desc_embeds, mention_context_embeds = encoded
+    desc_logits = calc_logits(desc_embeds, candidate_entity_ids)
+    desc_loss = criterion(desc_logits, labels_for_batch)
+    mention_logits = calc_logits(mention_context_embeds, candidate_entity_ids)
+    mention_loss = criterion(mention_logits, labels_for_batch)
+    return desc_loss + mention_loss
+
   def _get_trainer(self, cursor, model):
     if self.train_params.use_simple_dataloader:
       train_dataset = self._get_simple_dataset(cursor, is_test=False)

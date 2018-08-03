@@ -1,5 +1,7 @@
 import torch
+from torch import nn
 
+from logits import Logits
 from description_encoder_model import DescriptionEncoder
 
 def test_description_encoder_forward():
@@ -25,16 +27,19 @@ def test_description_encoder_loss():
   batch_size = 2
   desc_len = 9
   pad_vector = torch.randn((word_embed_len, ))
+  entity_embeds = torch.nn.Embedding(num_entities,
+                                     embed_len,
+                                     _weight=torch.randn((num_entities, embed_len)))
   desc_enc = DescriptionEncoder(word_embed_len,
-                                torch.nn.Embedding(num_entities,
-                                                   embed_len,
-                                                   _weight=torch.randn((num_entities, embed_len))),
+                                entity_embeds,
                                 pad_vector)
   descriptions = torch.randn((batch_size, desc_len, word_embed_len))
   desc_embeds = desc_enc(descriptions)
   labels_for_batch = torch.arange(batch_size, dtype=torch.long)
-  loss = desc_enc.loss(desc_embeds,
-                       torch.randint(0, num_entities, (batch_size,), dtype=torch.long),
-                       labels_for_batch)
+  calc_logits = Logits()
+  criterion = nn.CrossEntropyLoss()
+  candidates = entity_embeds(torch.randint(0, num_entities, (batch_size,), dtype=torch.long))
+  logits = calc_logits(desc_embeds, candidates)
+  loss = criterion(logits, labels_for_batch)
   assert isinstance(loss, torch.Tensor)
   assert loss.shape == torch.Size([])

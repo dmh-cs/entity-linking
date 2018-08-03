@@ -2,6 +2,8 @@ import torch.nn as nn
 
 from description_encoder_model import DescriptionEncoder
 from mention_context_encoder_model import MentionContextEncoder
+from logits import Logits
+from adaptive_logits import AdaptiveLogits
 
 class JointModel(nn.Module):
   def __init__(self,
@@ -11,7 +13,6 @@ class JointModel(nn.Module):
                local_encoder_lstm_size,
                document_encoder_lstm_size,
                num_lstm_layers,
-               use_adaptive_softmax,
                dropout_keep_prob,
                entity_embeds,
                pad_vector):
@@ -34,13 +35,3 @@ class JointModel(nn.Module):
     desc_embeds = self.desc_encoder(embedded_page_contents)
     mention_context_embeds = self.mention_context_encoder(data)
     return (desc_embeds, mention_context_embeds)
-
-  def loss(self, encoded, candidate_entity_ids, labels_for_batch):
-    desc_embeds, mention_context_embeds = encoded
-    desc_loss = self.desc_encoder.loss(desc_embeds,
-                                       candidate_entity_ids,
-                                       labels_for_batch)
-    mention_loss = self.mention_context_encoder.loss(mention_context_embeds,
-                                                     candidate_entity_ids,
-                                                     labels_for_batch)
-    return desc_loss + mention_loss

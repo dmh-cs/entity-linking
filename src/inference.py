@@ -10,9 +10,9 @@ def predict(embedding_lookup, entity_embeds, p_prior, model, batch, ablation, lo
     left_splits, right_splits = embed_and_pack_batch(embedding_lookup,
                                                      batch['sentence_splits'])
     if 'document_context' in ablation:
-      mention_embeds = model(((left_splits, right_splits),
-                            batch['embedded_page_content'],
-                            batch['entity_page_mentions']))
+      _, mention_embeds = model(((left_splits, right_splits),
+                                 batch['embedded_page_content'],
+                                 batch['entity_page_mentions']))
     else:
       local_context = model.local_context_encoder((left_splits, right_splits))
       mention_embeds = model.relu(model.projection(torch.cat((local_context,

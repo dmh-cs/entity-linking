@@ -18,7 +18,6 @@ class DescriptionEncoder(nn.Module):
     self.relu = nn.ReLU()
     self.dropout = nn.Dropout(p=self.dropout_keep_prob)
     self.global_avg_pooling = nn.AdaptiveAvgPool1d(1)
-    self.criterion = nn.CrossEntropyLoss()
 
   def forward(self, embedded_page_contents):
     desc_embeds = pad_batch(self.pad_vector,
@@ -31,9 +30,3 @@ class DescriptionEncoder(nn.Module):
                  self.conv,
                  _.partial_right(torch.transpose, 1, 2))
     return fn(desc_embeds)
-
-  def loss(self, desc_embeds, candidate_entity_ids, labels_for_batch):
-    self.logits = torch.sum(torch.mul(torch.unsqueeze(desc_embeds, 1),
-                                      self.entity_embeds(candidate_entity_ids)),
-                            2)
-    return self.criterion(self.logits, labels_for_batch)
