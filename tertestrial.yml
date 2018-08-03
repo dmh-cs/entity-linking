@@ -1,0 +1,5 @@
+actions:
+
+  - match:
+      filename: '_test\.py$'
+    command: 'pytest {{filename}}'
