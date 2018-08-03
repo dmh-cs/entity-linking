@@ -17,6 +17,7 @@ class Tester(object):
   def __init__(self,
                dataset,
                model,
+               logits_and_softmax,
                entity_embeds,
                embedding_lookup,
                device,
@@ -32,6 +33,7 @@ class Tester(object):
     self.batch_sampler = batch_sampler
     self.experiment = experiment
     self.ablation = ablation
+    self.logits_and_softmax = logits_and_softmax
 
   def _get_labels_for_batch(self, labels, candidates):
     device = labels.device
@@ -58,7 +60,8 @@ class Tester(object):
                             p_prior=batch['p_prior'],
                             model=self.model,
                             batch=batch,
-                            ablation=self.ablation)
+                            ablation=self.ablation,
+                            logits_and_softmax=self.logits_and_softmax)
       acc += int((labels_for_batch == predictions).sum())
       batch_size = len(predictions)
       n += batch_size

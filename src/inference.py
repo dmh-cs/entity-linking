@@ -1,10 +1,9 @@
 import pydash as _
 import torch
-from torch.nn.functional import softmax
 
 from data_transformers import embed_and_pack_batch
 
-def predict(embedding_lookup, entity_embeds, p_prior, model, batch, ablation):
+def predict(embedding_lookup, entity_embeds, p_prior, model, batch, ablation, logits_and_softmax):
   if ablation == ['prior']:
     return torch.argmax(p_prior, dim=1)
   elif 'local_context' in ablation:
@@ -18,10 +17,7 @@ def predict(embedding_lookup, entity_embeds, p_prior, model, batch, ablation):
       local_context = model.local_context_encoder((left_splits, right_splits))
       mention_embeds = model.relu(model.projection(torch.cat((local_context,
                                                               torch.zeros_like(local_context)), 1)))
-    logits = torch.sum(torch.mul(torch.unsqueeze(mention_embeds, 1),
-                                 entity_embeds(batch['candidates'])),
-                       2)
-    p_text = softmax(logits, dim=1)
+    p_text = logits_and_softmax(mention_embeds, entity_embeds(batch['candidates']))
     if 'prior' in ablation:
       posterior = p_prior + p_text - (p_prior * p_text)
       return torch.argmax(posterior, dim=1)

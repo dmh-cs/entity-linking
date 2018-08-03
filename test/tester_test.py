@@ -4,11 +4,13 @@ import string
 
 import pydash as _
 import torch
-from torch.utils.data.sampler import BatchSampler, RandomSampler
-from comet_ml import Experiment
-
 import torch.nn as nn
+from torch.utils.data.sampler import BatchSampler, RandomSampler
+
 import utils as u
+from experiment import Experiment
+from logits import Logits
+from softmax import Softmax
 
 import tester as t
 
@@ -22,7 +24,7 @@ def myMock():
 def get_mock_model(vector_to_return):
   model = Mock()
   model.to = lambda device: model
-  Mock.__call__ = lambda self, x: torch.unsqueeze(vector_to_return, 0)
+  Mock.__call__ = lambda self, x: (None, vector_to_return)
   return model
 
 def test_tester(monkeypatch, myMock):
@@ -52,23 +54,28 @@ def test_tester(monkeypatch, myMock):
                                _weight=torch.randn((num_entities, embed_len)))
   embedding_lookup = dict(zip(string.ascii_lowercase,
                               [torch.tensor(i) for i, char in enumerate(string.ascii_lowercase)]))
-  vector_to_return = entity_embeds(torch.tensor(1))
+  vector_to_return = entity_embeds(torch.tensor([1, 1, 1]))
   model = get_mock_model(vector_to_return)
   device = None
   batch_sampler = BatchSampler(RandomSampler(dataset), batch_size, True)
   mock_experiment = create_autospec(Experiment, instance=True)
+  logits_calc = Logits()
+  softmax = Softmax()
+  logits_and_softmax = lambda hidden, candidates_or_targets: softmax(logits_calc(hidden,
+                                                                                 candidates_or_targets))
   with monkeypatch.context() as m:
     m.setattr(nn, 'DataParallel', _.identity)
     m.setattr(u, 'tensors_to_device', lambda batch, device: batch)
     tester = t.Tester(dataset=dataset,
                       batch_sampler=batch_sampler,
                       model=model,
+                      logits_and_softmax=logits_and_softmax,
                       entity_embeds=entity_embeds,
                       embedding_lookup=embedding_lookup,
                       device=device,
                       experiment=mock_experiment,
                       ablation=['prior', 'local_context', 'document_context'])
-    assert tester.test() == (torch.tensor(1), 1)
+    assert tester.test() == (1, 3)
     labels_for_batch = tester._get_labels_for_batch(torch.tensor([elem['label'] for elem in dataset]),
                                                     torch.tensor([[1, 0], [4, 5], [1, 0]]))
     assert torch.equal(labels_for_batch,
