@@ -25,7 +25,8 @@ def load_entity_candidates_and_label_lookup(path, train_size):
   with open(path, 'rb') as lookup_file:
     data = pickle.load(lookup_file)
     assert data['train_size'] == train_size, 'The prior at path ' + path + ' uses train size of ' + \
-      str(data['train_size']) + '. Please run `create_candidate_and_entity_lookups.py` with a train size of ' +\
+      str(data['train_size']) + \
+      '. Please run `create_candidate_and_entity_lookups.py` with a train size of ' +\
       str(train_size)
     return data['lookups']
 
@@ -91,6 +92,7 @@ class Runner(object):
     self.page_id_order_test: Optional[list] = None
     self.entity_ids_for_simple_dataset: Optional[list] = None
     self.entity_embeds: Optional[nn.Embedding] = None
+    self.entity_ids_by_freq: Optional[list] = None
     if not self.train_params.use_simple_dataloader and hasattr(self.model_params, 'num_entities'):
       raise NotImplementedError('Can only restrict num of entities when using simple dataloader')
 
@@ -101,6 +103,13 @@ class Runner(object):
       return './glove.840B.300d.txt'
     else:
       raise NotImplementedError('Only loading from glove 100d or 300d is currently supported')
+
+  def _get_entity_ids_by_freq(self, cursor):
+    query = 'select entity_id, count(*) from entity_mentions group by `entity_id`'
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    sorted_rows = sorted(rows, key='count(*)', reverse=True)
+    return [row['entity_id'] for row in sorted_rows]
 
   def load_caches(self):
     if not hasattr(self.model_params, 'num_entities'):
@@ -162,7 +171,7 @@ class Runner(object):
       cutoffs = self.model_params.adaptive_softmax_cutoffs + [vocab_size + 1]
     else:
       raise NotImplementedError
-    return AdaptiveLogits(self.entity_embeds, cutoffs)
+    return AdaptiveLogits(self.entity_embeds(self.entity_ids_by_freq), cutoffs)
 
   def _calc_loss(self, encoded, candidate_entity_ids, labels_for_batch):
     if self.model_params.use_adaptive_softmax:
@@ -232,6 +241,7 @@ class Runner(object):
     try:
       db_connection = get_connection()
       with db_connection.cursor() as cursor:
+        self.entity_ids_by_freq = self._get_entity_ids_by_freq(cursor)
         encoder = JointModel(self.model_params.embed_len,
                              self.model_params.context_embed_len,
                              self.model_params.word_embed_len,
