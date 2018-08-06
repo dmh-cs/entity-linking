@@ -226,7 +226,7 @@ class Runner(object):
       batch_sampler = self._get_sampler(cursor, is_test=True)
     return Tester(dataset=test_dataset,
                   batch_sampler=batch_sampler,
-                  model=model.mention_context_encoder,
+                  model=model,
                   logits_and_softmax=logits_and_softmax,
                   entity_embeds=self.entity_embeds,
                   embedding_lookup=self.lookups.embedding,
