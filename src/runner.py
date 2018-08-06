@@ -108,7 +108,7 @@ class Runner(object):
     query = 'select entity_id, count(*) from entity_mentions group by `entity_id`'
     cursor.execute(query)
     rows = cursor.fetchall()
-    sorted_rows = sorted(rows, key='count(*)', reverse=True)
+    sorted_rows = sorted(rows, key=lambda row: row['count(*)'], reverse=True)
     return [row['entity_id'] for row in sorted_rows]
 
   def load_caches(self):
