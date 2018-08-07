@@ -23,15 +23,6 @@ class AdaptiveSoftmax(object):
   Attributes:
     head: the learnable weights of the module for head bucket
     tail: the learnable weights of the module for tail buckets
-
-  Example:
-
-    >>> vocab = nn.Embedding(vocab_size, hidden_size)
-    >>> cutoffs = [2000, 10000, vocab_size + 1];
-    >>> adaptive_logits = AdaptiveLogits(vocab(vocab_indexes_by_frequency), cutoffs)
-    >>> adaptive_softmax = AdaptiveSoftmax(adaptive_logits)
-    >>> hidden = torch.randn(batch_size, hidden_size)
-    >>> probs = adaptive_softmax(hidden)
   """
 
   def __init__(self, adaptive_logits):
@@ -41,15 +32,15 @@ class AdaptiveSoftmax(object):
     self.tail = self.adaptive_logits.tail
     self.cutoffs = self.adaptive_logits.cutoffs
 
-  def forward(self, hidden):
+  def __call__(self, hidden):
     with torch.no_grad():
       head_out = self.head(hidden)
       batch_size = head_out.size(0)
-      prob = torch.empty(batch_size, self.cutoffs[-1], device=hidden.device)
+      prob = torch.empty(batch_size, self.cutoffs[-1] - 1, device=hidden.device)
       lsm_head = softmax(head_out, 1)
       prob[:, : self.cutoffs[0]].copy_(lsm_head[:, : self.cutoffs[0]])
       for i in range(len(self.tail)):
         split = lsm_head[:, self.cutoffs[0] + i].unsqueeze(1)
         lsm_tail = softmax(self.tail[i](hidden), 1)
-        prob[:, self.cutoffs[i] : self.cutoffs[i + 1]].copy_(lsm_tail).add_(split)
+        prob[:, self.cutoffs[i] : self.cutoffs[i + 1]].copy_(lsm_tail).mul_(split)
     return prob

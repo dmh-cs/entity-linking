@@ -19,15 +19,6 @@ class AdaptiveLogits(nn.Module):
   Attributes:
     head: the learnable weights of the module for head bucket
     tail: the learnable weights of the module for tail buckets
-
-  Example:
-    >>> vocab = nn.Embedding(vocab_size, hidden_size)
-    >>> cutoffs = [2000, 10000, vocab_size + 1];
-    >>> adaptive_logits = AdaptiveLogits(vocab(vocab_indexes_by_frequency), cutoffs)
-    >>> hidden = torch.randn(batch_size, hidden_size)
-    >>> targets = torch.randint(low=0, high=vocab_size + 1, size=[batch_size])
-    >>> all_logits = adaptive_logits(hidden, targets)
-    >>> loss = adaptive_logits.loss(all_logits, targets)
   """
 
   def __init__(self, vocab, cutoffs, reduce_factor=4):
