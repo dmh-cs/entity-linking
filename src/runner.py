@@ -109,7 +109,7 @@ class Runner(object):
     cursor.execute(query)
     rows = cursor.fetchall()
     sorted_rows = sorted(rows, key=lambda row: row['count(*)'], reverse=True)
-    return [row['entity_id'] for row in sorted_rows]
+    return torch.tensor([row['entity_id'] for row in sorted_rows])
 
   def load_caches(self):
     if not hasattr(self.model_params, 'num_entities'):

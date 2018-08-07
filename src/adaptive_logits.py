@@ -2,20 +2,18 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-import math
-
 
 class AdaptiveLogits(nn.Module):
   """Logits calculation
   Args:
-    candidates: tensor containing the vector representation of the candidates (eg word embeddings) sorted by frequency
+    vocab: tensor containing the vector representation of the vocabulary (eg the word embeddings) sorted by frequency
     cutoffs: list of cutoff indices for each cluster when words are sorted by decreasing frequency
     reduce_factor: dimension reduction factor of each tail bucket. Default: 4
 
   Shape:
     - hidden: (batch_size, hidden_size)
     - targets: (batch_size)
-    - candidates: (num_candidates, hidden_size)
+    - vocab: (vocab_size, hidden_size)
     - all_logits: [(batch_size, cutoffs[0] + len(cutoffs) - 1), (batch_size * p_t1, cutoffs[1] - cutoffs[0]), ...]
 
   Attributes:
@@ -23,48 +21,50 @@ class AdaptiveLogits(nn.Module):
     tail: the learnable weights of the module for tail buckets
 
   Example:
-    >>> candidates = nn.Embedding(num_candidates, hidden_size)
+    >>> vocab = nn.Embedding(vocab_size, hidden_size)
     >>> cutoffs = [2000, 10000, vocab_size + 1];
-    >>> adaptive_logits = AdaptiveLogits(candidates, cutoffs)
+    >>> adaptive_logits = AdaptiveLogits(vocab(vocab_indexes_by_frequency), cutoffs)
     >>> hidden = torch.randn(batch_size, hidden_size)
-    >>> targets = torch.randint(low=0, high=vocab_size + 1, size=[128])
+    >>> targets = torch.randint(low=0, high=vocab_size + 1, size=[batch_size])
     >>> all_logits = adaptive_logits(hidden, targets)
-    >>> loss = m.loss(all_logits, targets)
+    >>> loss = adaptive_logits.loss(all_logits, targets)
   """
 
-  def __init__(self, candidates, cutoffs, reduce_factor=4):
+  def __init__(self, vocab, cutoffs, reduce_factor=4):
     super().__init__()
+    self.other_modules = nn.ModuleList()
     self.id = []
     self.cutoffs = cutoffs
-    self.head = self._get_head_calc(candidates, cutoffs)
-    self.tail = self._get_tail_calc(candidates, cutoffs, reduce_factor)
+    self.head = self._get_head_calc(vocab, cutoffs)
+    self.tail = self._get_tail_calc(vocab, cutoffs, reduce_factor)
 
-  def _get_head_calc(self, candidates, cutoffs):
-    all_logits_size = cutoffs[0] + len(cutoffs) - 1
-    hidden_size = candidates.shape[1]
-    head_calc = nn.Linear(hidden_size, all_logits_size, bias=False)
-    tail_vectors = torch.Tensor(len(cutoffs[1:]), hidden_size)
-    tail_vectors.normal_(0, 1.0/math.sqrt(hidden_size))
-    weights = torch.concatenate((candidates[:cutoffs[0]], tail_vectors), 0)
-    head_calc.weight = torch.Parameter(torch.transpose(weights, 0, 1))
+  def _get_head_calc(self, vocab, cutoffs):
+    hidden_size = vocab.shape[1]
+    shortlist = vocab[:cutoffs[0]]
+    tail_vectors = nn.Linear(hidden_size, len(cutoffs[1:]), bias=False)
+    self.other_modules.append(tail_vectors)
+    def head_calc(hidden):
+      shortlist_result = torch.mm(hidden, torch.transpose(shortlist, 0, 1))
+      tail_vectors_result = tail_vectors(hidden)
+      return torch.cat((shortlist_result, tail_vectors_result), 1)
     return head_calc
 
-  def _get_tail_calc(self, candidates, cutoffs, reduce_factor):
-    hidden_size = candidates.shape[1]
-    tail = nn.ModuleList()
+  def _get_tail_calc(self, vocab, cutoffs, reduce_factor):
+    hidden_size = vocab.shape[1]
+    tail = []
     for i in range(len(cutoffs) - 1):
       if reduce_factor == 1:
-        seq = nn.Linear(hidden_size, cutoffs[i + 1] - cutoffs[i], bias=False)
-        seq.weight = torch.transpose(candidates[cutoffs[i] : cutoffs[i + 1]], 0, 1)
+        tail_cluster = vocab[cutoffs[i] : cutoffs[i + 1]]
+        def seq(hidden, tail_cluster=tail_cluster):
+          return torch.mm(hidden, torch.transpose(tail_cluster, 0, 1))
       else:
         down = nn.Linear(hidden_size,
                          hidden_size // reduce_factor ** i,
                          bias=False)
-        decode = nn.Linear(hidden_size // reduce_factor ** i,
-                           cutoffs[i + 1] - cutoffs[i],
-                           bias=False)
-        decode.weight = torch.transpose(candidates[cutoffs[i] : cutoffs[i + 1]], 0, 1)
-        seq = nn.Sequential(down, decode)
+        self.other_modules.append(down)
+        decode_weight = down(vocab[cutoffs[i] : cutoffs[i + 1]])
+        def seq(hidden, down=down, decode_weight=decode_weight):
+          return torch.mm(down(hidden), torch.transpose(decode_weight, 0, 1))
       tail.append(seq)
     return tail
 
@@ -104,7 +104,7 @@ class AdaptiveLogits(nn.Module):
     output = 0.0
     for i in range(len(all_logits)):
       if all_logits[i] is not None:
-        assert targets[i].min() >= 0 and targets[i].max() <= all_logits[i].size(1)
+        assert targets[i].min() >= 0 and targets[i].max() < all_logits[i].size(1)
         output = output + F.cross_entropy(all_logits[i],
                                           targets[i],
                                           size_average=False)

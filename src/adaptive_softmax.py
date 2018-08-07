@@ -17,7 +17,7 @@ class AdaptiveSoftmax(object):
   Shape:
     - hidden: (batch_size, hidden_size)
     - targets: (batch_size)
-    - candidates: (num_candidates, hidden_size)
+    - vocab: (vocab_size, hidden_size)
     - all_logits: [(batch_size, cutoffs[0] + len(cutoffs) - 1), (batch_size * p_t1, cutoffs[1] - cutoffs[0]), ...]
 
   Attributes:
@@ -26,9 +26,9 @@ class AdaptiveSoftmax(object):
 
   Example:
 
-    >>> candidates = nn.Embedding(num_candidates, hidden_size)
+    >>> vocab = nn.Embedding(vocab_size, hidden_size)
     >>> cutoffs = [2000, 10000, vocab_size + 1];
-    >>> adaptive_logits = AdaptiveLogits(candidates, cutoffs)
+    >>> adaptive_logits = AdaptiveLogits(vocab(vocab_indexes_by_frequency), cutoffs)
     >>> adaptive_softmax = AdaptiveSoftmax(adaptive_logits)
     >>> hidden = torch.randn(batch_size, hidden_size)
     >>> probs = adaptive_softmax(hidden)
