@@ -20,6 +20,7 @@ from mention_context_dataset import MentionContextDataset
 from simple_mention_context_dataset_by_entity_ids import SimpleMentionContextDatasetByEntityIds
 from tester import Tester
 from trainer import Trainer
+import utils as u
 
 def load_entity_candidates_and_label_lookup(path, train_size):
   with open(path, 'rb') as lookup_file:
@@ -241,7 +242,7 @@ class Runner(object):
     try:
       db_connection = get_connection()
       with db_connection.cursor() as cursor:
-        self.entity_ids_by_freq = self._get_entity_ids_by_freq(cursor)
+        self.entity_ids_by_freq = self._get_entity_ids_by_freq(cursor).to(self.device)
         encoder = JointModel(self.model_params.embed_len,
                              self.model_params.context_embed_len,
                              self.model_params.word_embed_len,
