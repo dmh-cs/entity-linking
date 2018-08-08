@@ -82,8 +82,8 @@ class Runner(object):
     self.device = device
     self.model_params = self.model_params.set('context_embed_len',
                                               2 * self.model_params.embed_len)
-    if not hasattr(self.model_params, 'cutoffs'):
-      self.model_params = self.model_params.set('cutoffs', [2000, 10000])
+    if not hasattr(self.model_params, 'adaptive_softmax_cutoffs'):
+      self.model_params = self.model_params.set('adaptive_softmax_cutoffs', [2000, 10000])
     self.paths = self.paths.set('word_embedding',
                                 self._get_word_embedding_path())
     self.page_id_order: Optional[list] = None
