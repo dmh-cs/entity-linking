@@ -26,8 +26,12 @@ def parse_for_sentences(page_content):
   tokenizer = load('tokenizers/punkt/{0}.pickle'.format('english'))
   return list(tokenizer.tokenize(page_content))
 
+def _split_token_on(token, char):
+  split = token.split(char)
+  return [elem for elem in _.interleave(split, [char] * (len(split) - 1)) if not _.is_empty(elem)]
+
 def parse_for_tokens(sentence):
-  return list(_treebank_word_tokenizer.tokenize(sentence))
+  return sum([_split_token_on(token, '-') for token in _treebank_word_tokenizer.tokenize(sentence)], [])
 
 def parse_text_for_tokens(text):
   sentences = parse_for_sentences(text)
