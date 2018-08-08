@@ -6,8 +6,11 @@ import warnings
 import pydash as _
 from git import Repo
 import chalk
+from toolz import compose
 
 from logger import Logger
+
+warnings.showwarning = lambda *args, **kwargs: print(chalk.yellow(args[0]))
 
 class ExperimentContext(object):
   def __init__(self, separator: str, train_or_test: bool, run_name: str, fields: List[str]):
@@ -35,7 +38,7 @@ class Experiment(object):
     self.dirty_worktree = False
     if os.popen('git status --untracked-files=no --porcelain').read() != '':
       self.dirty_worktree = True
-      warnings.warn(chalk.yellow('git tree dirty! git hash will not correspond to the codebase!'))
+      warnings.warn('git tree dirty! git hash will not correspond to the codebase!')
 
   @property
   def train_or_test(self):
