@@ -39,7 +39,7 @@ def get_num_entities():
   try:
     db_connection = get_connection()
     with db_connection.cursor() as cursor:
-      cursor.execute('select count(*) from entities')
+      cursor.execute('select count(*) from (select entity_id from entity_mentions group by `entity_id`) ct')
       return cursor.fetchone()['count(*)']
   finally:
     db_connection.close()
@@ -94,6 +94,7 @@ class Runner(object):
     self.entity_ids_for_simple_dataset: Optional[list] = None
     self.entity_embeds: Optional[nn.Embedding] = None
     self.entity_labels_by_freq: Optional[list] = None
+    self.adaptive_logits = None
     if not self.train_params.use_simple_dataloader and hasattr(self.model_params, 'num_entities'):
       raise NotImplementedError('Can only restrict num of entities when using simple dataloader')
 
@@ -138,7 +139,7 @@ class Runner(object):
     entity_embed_weights.data.normal_(0, 1.0/math.sqrt(self.model_params.embed_len))
     self.entity_embeds = nn.Embedding(self.model_params.num_entities,
                                       self.model_params.embed_len,
-                                      _weight=entity_embed_weights)
+                                      _weight=entity_embed_weights).to(self.device)
 
   def _get_simple_dataset(self, cursor, is_test):
     return SimpleMentionContextDatasetByEntityIds(cursor,
@@ -176,9 +177,8 @@ class Runner(object):
 
   def _calc_loss(self, encoded, candidate_entity_ids, labels_for_batch):
     if self.model_params.use_adaptive_softmax:
-      adaptive_logits = self._get_adaptive_calc_logits()
-      calc_logits = _.partial_right(adaptive_logits, labels_for_batch)
-      criterion = adaptive_logits.loss
+      calc_logits = _.partial_right(self.adaptive_logits, labels_for_batch)
+      criterion = self.adaptive_logits.loss
     else:
       calc_logits = _.partial_right(Logits, candidate_entity_ids)
       criterion = nn.CrossEntropyLoss()
@@ -205,16 +205,18 @@ class Runner(object):
                    batch_sampler=batch_sampler,
                    num_epochs=self.train_params.num_epochs,
                    experiment=self.experiment,
-                   calc_loss=self._calc_loss)
+                   calc_loss=self._calc_loss,
+                   logits_and_softmax=self._get_logits_and_softmax())
 
   def _get_logits_and_softmax(self):
     if self.model_params.use_adaptive_softmax:
-      calc_logits = self._get_adaptive_calc_logits()
-      softmax = AdaptiveSoftmax(calc_logits)
+      softmax = AdaptiveSoftmax(self.adaptive_logits)
+      calc = lambda hidden, _: softmax(hidden)
     else:
       calc_logits = Logits()
       softmax = Softmax()
-    return lambda hidden, candidates_or_targets: softmax(calc_logits(hidden, candidates_or_targets))
+      calc = lambda hidden, candidates: softmax(calc_logits(hidden, candidates))
+    return calc
 
   def _get_tester(self, cursor, model):
     logits_and_softmax = self._get_logits_and_softmax()
@@ -244,6 +246,7 @@ class Runner(object):
       db_connection = get_connection()
       with db_connection.cursor() as cursor:
         self.entity_labels_by_freq = self._get_entity_labels_by_freq(cursor).to(self.device)
+        self.adaptive_logits = self._get_adaptive_calc_logits()
         encoder = JointModel(self.model_params.embed_len,
                              self.model_params.context_embed_len,
                              self.model_params.word_embed_len,

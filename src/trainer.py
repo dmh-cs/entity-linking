@@ -25,7 +25,8 @@ class Trainer(object):
                batch_sampler,
                num_epochs,
                experiment,
-               calc_loss):
+               calc_loss,
+               logits_and_softmax):
     self.device = device
     self.model = nn.DataParallel(model)
     self.model = model.to(self.device)
@@ -36,6 +37,7 @@ class Trainer(object):
     self.embedding_lookup = embedding_lookup
     self.experiment = experiment
     self.calc_loss = calc_loss
+    self.logits_and_softmax = logits_and_softmax
 
   def _create_optimizer(self, optimizer: str, params=None):
     return optim.Adam(self.model.parameters())
@@ -61,13 +63,16 @@ class Trainer(object):
         encoded = self.model(((left_splits, right_splits),
                               batch['embedded_page_content'],
                               batch['entity_page_mentions']))
+        desc_embeds, mention_embeds = encoded
         labels_for_batch = self._get_labels_for_batch(batch['label'], batch['candidates'])
         loss = self.calc_loss(encoded, batch['candidates'], labels_for_batch)
         loss.backward()
         self.optimizer.step()
-        mention_context_error = self._classification_error(self.model.mention_context_encoder.logits,
+        mention_context_error = self._classification_error(self.logits_and_softmax(mention_embeds,
+                                                                                   batch['candidates']),
                                                            labels_for_batch)
-        document_context_error = self._classification_error(self.model.desc_encoder.logits,
+        document_context_error = self._classification_error(self.logits_and_softmax(desc_embeds,
+                                                                                    batch['candidates']),
                                                             labels_for_batch)
         self.experiment.record_metrics({'mention_context_error': mention_context_error,
                                         'document_context_error': document_context_error,
