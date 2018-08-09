@@ -1,3 +1,5 @@
+import itertools
+
 from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
@@ -26,21 +28,24 @@ class Trainer(object):
                num_epochs,
                experiment,
                calc_loss,
-               logits_and_softmax):
+               logits_and_softmax,
+               adaptive_logits):
     self.device = device
     self.model = nn.DataParallel(model)
     self.model = model.to(self.device)
     self.dataset = dataset
     self.batch_sampler = batch_sampler
-    self.optimizer = self._create_optimizer('adam')
     self.num_epochs = num_epochs
     self.embedding_lookup = embedding_lookup
     self.experiment = experiment
     self.calc_loss = calc_loss
     self.logits_and_softmax = logits_and_softmax
+    self.adaptive_logits = adaptive_logits
+    self.optimizer = self._create_optimizer('adam')
 
   def _create_optimizer(self, optimizer: str, params=None):
-    return optim.Adam(self.model.parameters())
+    return optim.Adam(itertools.chain(self.model.parameters(),
+                                      self.adaptive_logits.parameters()))
 
   def _classification_error(self, logits, labels):
     predictions = torch.argmax(logits, 1)

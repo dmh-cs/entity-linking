@@ -9,7 +9,6 @@ from data_transformers import pad_batch
 class DescriptionEncoder(nn.Module):
   def __init__(self, word_embed_len, entity_embeds, pad_vector):
     super(DescriptionEncoder, self).__init__()
-    self.entity_embeds = entity_embeds
     self.pad_vector = pad_vector
     self.kernel_size = 5
     self.dropout_keep_prob = 0.4

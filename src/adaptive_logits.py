@@ -21,35 +21,37 @@ class AdaptiveLogits(nn.Module):
     tail: the learnable weights of the module for tail buckets
   """
 
-  def __init__(self, vocab, cutoffs, reduce_factor=4, device=None):
+  def __init__(self, embeds, order, cutoffs, reduce_factor=4, device=None):
     super().__init__()
     if device is None:
-      self.device = vocab.device
+      self.device = embeds.weight.device
     else:
       self.device = device
     self.other_modules = nn.ModuleList()
     self.id = []
     self.cutoffs = cutoffs
-    self.head = self._get_head_calc(vocab, cutoffs)
-    self.tail = self._get_tail_calc(vocab, cutoffs, reduce_factor)
+    self.embeds = embeds
+    self.order = order
+    self.head = self._get_head_calc(cutoffs)
+    self.tail = self._get_tail_calc(cutoffs, reduce_factor)
 
-  def _get_head_calc(self, vocab, cutoffs):
-    hidden_size = vocab.shape[1]
-    shortlist = vocab[:cutoffs[0]]
+  def _get_head_calc(self, cutoffs):
+    hidden_size = self.embeds.weight.shape[1]
     tail_vectors = nn.Linear(hidden_size, len(cutoffs[1:]), bias=False).to(self.device)
     self.other_modules.append(tail_vectors)
     def head_calc(hidden):
+      shortlist = self.embeds(self.order[:cutoffs[0]])
       shortlist_result = torch.mm(hidden, torch.transpose(shortlist, 0, 1))
       tail_vectors_result = tail_vectors(hidden)
       return torch.cat((shortlist_result, tail_vectors_result), 1)
     return head_calc
 
-  def _get_tail_calc(self, vocab, cutoffs, reduce_factor):
-    hidden_size = vocab.shape[1]
+  def _get_tail_calc(self, cutoffs, reduce_factor):
+    hidden_size = self.embeds.weight.shape[1]
     tail = []
     for i in range(len(cutoffs) - 1):
       if reduce_factor == 1:
-        tail_cluster = vocab[cutoffs[i] : cutoffs[i + 1]]
+        tail_cluster = self.embeds(self.order[cutoffs[i] : cutoffs[i + 1]])
         def seq(hidden, tail_cluster=tail_cluster):
           return torch.mm(hidden, torch.transpose(tail_cluster, 0, 1))
       else:
@@ -57,8 +59,8 @@ class AdaptiveLogits(nn.Module):
                          hidden_size // reduce_factor ** i,
                          bias=False).to(self.device)
         self.other_modules.append(down)
-        decode_weight = down(vocab[cutoffs[i] : cutoffs[i + 1]])
-        def seq(hidden, down=down, decode_weight=decode_weight):
+        def seq(hidden, down=down, i=i):
+          decode_weight = down(self.embeds(self.order[cutoffs[i] : cutoffs[i + 1]]))
           return torch.mm(down(hidden), torch.transpose(decode_weight, 0, 1))
       tail.append(seq)
     return tail

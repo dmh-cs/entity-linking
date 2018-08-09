@@ -173,7 +173,7 @@ class Runner(object):
       cutoffs = self.model_params.adaptive_softmax_cutoffs + [vocab_size + 1]
     else:
       raise NotImplementedError
-    return AdaptiveLogits(self.entity_embeds(self.entity_labels_by_freq), cutoffs).to(self.device)
+    return AdaptiveLogits(self.entity_embeds, self.entity_labels_by_freq, cutoffs).to(self.device)
 
   def _calc_loss(self, encoded, candidate_entity_ids, labels_for_batch):
     if self.model_params.use_adaptive_softmax:
@@ -206,7 +206,8 @@ class Runner(object):
                    num_epochs=self.train_params.num_epochs,
                    experiment=self.experiment,
                    calc_loss=self._calc_loss,
-                   logits_and_softmax=self._get_logits_and_softmax())
+                   logits_and_softmax=self._get_logits_and_softmax(),
+                   adaptive_logits=self.adaptive_logits)
 
   def _get_logits_and_softmax(self):
     if self.model_params.use_adaptive_softmax:

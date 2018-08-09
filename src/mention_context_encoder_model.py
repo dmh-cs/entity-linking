@@ -16,7 +16,6 @@ class MentionContextEncoder(nn.Module):
                entity_embeds,
                pad_vector):
     super(MentionContextEncoder, self).__init__()
-    self.entity_embeds = entity_embeds
     self.local_context_encoder = LocalContextEncoder(dropout_keep_prob,
                                                      local_encoder_lstm_size,
                                                      num_lstm_layers,

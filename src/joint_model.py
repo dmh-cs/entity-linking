@@ -17,6 +17,7 @@ class JointModel(nn.Module):
                entity_embeds,
                pad_vector):
     super().__init__()
+    self.entity_embeds = entity_embeds
     self.desc_encoder = DescriptionEncoder(word_embed_len,
                                            entity_embeds,
                                            pad_vector)
