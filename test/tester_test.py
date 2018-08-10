@@ -61,8 +61,8 @@ def test_tester(monkeypatch, myMock):
   mock_experiment = create_autospec(Experiment, instance=True)
   calc_logits = Logits()
   softmax = Softmax()
-  logits_and_softmax = lambda hidden, candidates_or_targets: softmax(calc_logits(hidden,
-                                                                                 candidates_or_targets))
+  logits_and_softmax = {'mention': lambda hidden, candidates_or_targets: softmax(calc_logits(hidden,
+                                                                                             candidates_or_targets))}
   with monkeypatch.context() as m:
     m.setattr(nn, 'DataParallel', _.identity)
     m.setattr(u, 'tensors_to_device', lambda batch, device: batch)

@@ -94,7 +94,7 @@ class Runner(object):
     self.entity_ids_for_simple_dataset: Optional[list] = None
     self.entity_embeds: Optional[nn.Embedding] = None
     self.entity_labels_by_freq: Optional[list] = None
-    self.adaptive_logits = None
+    self.adaptive_logits = {'desc': None, 'mention': None}
     if not self.train_params.use_simple_dataloader and hasattr(self.model_params, 'num_entities'):
       raise NotImplementedError('Can only restrict num of entities when using simple dataloader')
 
@@ -168,25 +168,29 @@ class Runner(object):
                                       self.train_params.batch_size)
 
   def _get_adaptive_calc_logits(self):
-    if self.model_params.use_hardcoded_cutoffs:
-      vocab_size = self.entity_embeds.weight.shape[0]
-      cutoffs = self.model_params.adaptive_softmax_cutoffs + [vocab_size + 1]
-    else:
-      raise NotImplementedError
-    return AdaptiveLogits(self.entity_embeds, self.entity_labels_by_freq, cutoffs).to(self.device)
+    def get_calc(context):
+      if self.model_params.use_hardcoded_cutoffs:
+        vocab_size = self.entity_embeds.weight.shape[0]
+        cutoffs = self.model_params.adaptive_softmax_cutoffs + [vocab_size + 1]
+      else:
+        raise NotImplementedError
+      return AdaptiveLogits(self.entity_embeds, self.entity_labels_by_freq, cutoffs).to(self.device)
+    return {context: get_calc(context) for context in ['desc', 'mention']}
 
   def _calc_loss(self, encoded, candidate_entity_ids, labels_for_batch):
-    if self.model_params.use_adaptive_softmax:
-      calc_logits = _.partial_right(self.adaptive_logits, labels_for_batch)
-      criterion = self.adaptive_logits.loss
-    else:
-      calc_logits = _.partial_right(Logits, candidate_entity_ids)
-      criterion = nn.CrossEntropyLoss()
     desc_embeds, mention_context_embeds = encoded
-    desc_logits = calc_logits(desc_embeds)
-    desc_loss = criterion(desc_logits, labels_for_batch)
-    mention_logits = calc_logits(mention_context_embeds)
-    mention_loss = criterion(mention_logits, labels_for_batch)
+    if self.model_params.use_adaptive_softmax:
+      desc_logits = self.adaptive_logits['desc'](desc_embeds, labels_for_batch)
+      desc_loss = self.adaptive_logits['desc'].loss(desc_logits, labels_for_batch)
+      mention_logits = self.adaptive_logits['mention'](mention_context_embeds, labels_for_batch)
+      mention_loss = self.adaptive_logits['mention'].loss(mention_logits, labels_for_batch)
+    else:
+      calc_logits = _.partial_right(Logits(), candidate_entity_ids)
+      criterion = nn.CrossEntropyLoss()
+      desc_logits = calc_logits(desc_embeds)
+      desc_loss = criterion(desc_logits, labels_for_batch)
+      mention_logits = calc_logits(mention_context_embeds)
+      mention_loss = criterion(mention_logits, labels_for_batch)
     return desc_loss + mention_loss
 
   def _get_trainer(self, cursor, model):
@@ -210,14 +214,16 @@ class Runner(object):
                    adaptive_logits=self.adaptive_logits)
 
   def _get_logits_and_softmax(self):
-    if self.model_params.use_adaptive_softmax:
-      softmax = AdaptiveSoftmax(self.adaptive_logits)
-      calc = lambda hidden, _: softmax(hidden)
-    else:
-      calc_logits = Logits()
-      softmax = Softmax()
-      calc = lambda hidden, candidates: softmax(calc_logits(hidden, candidates))
-    return calc
+    def get_calc(context):
+      if self.model_params.use_adaptive_softmax:
+        softmax = AdaptiveSoftmax(self.adaptive_logits[context])
+        calc = lambda hidden, _: softmax(hidden)
+      else:
+        calc_logits = Logits()
+        softmax = Softmax()
+        calc = lambda hidden, candidates: softmax(calc_logits(hidden, candidates))
+      return calc
+    return {context: get_calc(context) for context in ['desc', 'mention']}
 
   def _get_tester(self, cursor, model):
     logits_and_softmax = self._get_logits_and_softmax()

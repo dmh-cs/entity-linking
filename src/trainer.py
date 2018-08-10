@@ -45,7 +45,8 @@ class Trainer(object):
 
   def _create_optimizer(self, optimizer: str, params=None):
     return optim.Adam(itertools.chain(self.model.parameters(),
-                                      self.adaptive_logits.parameters()))
+                                      self.adaptive_logits['desc'].parameters(),
+                                      self.adaptive_logits['mention'].parameters()))
 
   def _classification_error(self, logits, labels):
     predictions = torch.argmax(logits, 1)

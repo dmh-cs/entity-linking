@@ -17,7 +17,7 @@ def predict(embedding_lookup, entity_embeds, p_prior, model, batch, ablation, lo
       local_context = model.local_context_encoder((left_splits, right_splits))
       mention_embeds = model.relu(model.projection(torch.cat((local_context,
                                                               torch.zeros_like(local_context)), 1)))
-    p_text = logits_and_softmax(mention_embeds, entity_embeds(batch['candidates']))
+    p_text = logits_and_softmax['mention'](mention_embeds, entity_embeds(batch['candidates']))
     if 'prior' in ablation:
       posterior = p_prior + p_text - (p_prior * p_text)
       return torch.argmax(posterior, dim=1)
