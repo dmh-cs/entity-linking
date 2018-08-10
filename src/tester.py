@@ -18,7 +18,6 @@ class Tester(object):
                dataset,
                model,
                logits_and_softmax,
-               entity_embeds,
                embedding_lookup,
                device,
                batch_sampler,
@@ -27,7 +26,6 @@ class Tester(object):
     self.dataset = dataset
     self.model = nn.DataParallel(model)
     self.model = model.to(device)
-    self.entity_embeds = entity_embeds
     self.embedding_lookup = embedding_lookup
     self.device = device
     self.batch_sampler = batch_sampler
@@ -56,7 +54,6 @@ class Tester(object):
       labels_for_batch = self._get_labels_for_batch(batch['label'],
                                                     batch['candidates'])
       predictions = predict(embedding_lookup=self.embedding_lookup,
-                            entity_embeds=self.entity_embeds,
                             p_prior=batch['p_prior'],
                             model=self.model,
                             batch=batch,

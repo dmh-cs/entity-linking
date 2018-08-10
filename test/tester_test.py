@@ -62,7 +62,7 @@ def test_tester(monkeypatch, myMock):
   calc_logits = Logits()
   softmax = Softmax()
   logits_and_softmax = {'mention': lambda hidden, candidates_or_targets: softmax(calc_logits(hidden,
-                                                                                             candidates_or_targets))}
+                                                                                             entity_embeds(candidates_or_targets)))}
   with monkeypatch.context() as m:
     m.setattr(nn, 'DataParallel', _.identity)
     m.setattr(u, 'tensors_to_device', lambda batch, device: batch)
@@ -70,7 +70,6 @@ def test_tester(monkeypatch, myMock):
                       batch_sampler=batch_sampler,
                       model=model,
                       logits_and_softmax=logits_and_softmax,
-                      entity_embeds=entity_embeds,
                       embedding_lookup=embedding_lookup,
                       device=device,
                       experiment=mock_experiment,

@@ -223,7 +223,8 @@ class Runner(object):
       else:
         calc_logits = Logits()
         softmax = Softmax()
-        calc = lambda hidden, candidates: softmax(calc_logits(hidden, candidates))
+        calc = lambda hidden, candidate_entity_ids: softmax(calc_logits(hidden,
+                                                                        self.entity_embeds(candidate_entity_ids)))
       return calc
     return {context: get_calc(context) for context in ['desc', 'mention']}
 
@@ -241,7 +242,6 @@ class Runner(object):
                   batch_sampler=batch_sampler,
                   model=model,
                   logits_and_softmax=logits_and_softmax,
-                  entity_embeds=self.entity_embeds,
                   embedding_lookup=self.lookups.embedding,
                   device=self.device,
                   experiment=self.experiment,
