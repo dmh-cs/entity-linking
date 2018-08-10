@@ -1,70 +1,24 @@
 from typing import Optional
 import math
-import pickle
 
 from experiment import Experiment
 from pyrsistent import m
-from torch.utils.data.sampler import BatchSampler, RandomSampler
 import pydash as _
 import torch
 import torch.nn as nn
 
-from adaptive_softmax import AdaptiveSoftmax
 from adaptive_logits import AdaptiveLogits
-from logits import Logits
-from softmax import Softmax
-from data_fetchers import get_connection, get_embedding_lookup
+from adaptive_softmax import AdaptiveSoftmax
+from data_fetchers import get_connection, get_embedding_lookup, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup
+from default_params import default_train_params, default_model_params, default_run_params, default_paths
 from joint_model import JointModel
+from logits import Logits
 from mention_context_batch_sampler import MentionContextBatchSampler
 from mention_context_dataset import MentionContextDataset
-from simple_mention_context_dataset_by_entity_ids import SimpleMentionContextDatasetByEntityIds
+from softmax import Softmax
 from tester import Tester
 from trainer import Trainer
-import utils as u
 
-def load_entity_candidate_ids_and_label_lookup(path, train_size):
-  with open(path, 'rb') as lookup_file:
-    data = pickle.load(lookup_file)
-    assert data['train_size'] == train_size, 'The prior at path ' + path + ' uses train size of ' + \
-      str(data['train_size']) + \
-      '. Please run `create_candidate_and_entity_lookups.py` with a train size of ' +\
-      str(train_size)
-    return data['lookups']
-
-def load_page_id_order(path):
-  with open(path, 'rb') as f:
-    return pickle.load(f)
-
-def get_num_entities():
-  try:
-    db_connection = get_connection()
-    with db_connection.cursor() as cursor:
-      cursor.execute('select count(*) from (select entity_id from entity_mentions group by `entity_id`) ct')
-      return cursor.fetchone()['count(*)']
-  finally:
-    db_connection.close()
-
-default_paths = m(lookups='../entity-linking-preprocessing/lookups.pkl',
-                  page_id_order='../entity-linking-preprocessing/page_id_order.pkl')
-default_train_params = m(batch_size=100,
-                         debug=False,
-                         use_simple_dataloader=False,
-                         num_epochs=1,
-                         train_size=0.8,
-                         dropout_keep_prob=0.4)
-default_model_params = m(use_adaptive_softmax=False,
-                         use_hardcoded_cutoffs=True,
-                         embed_len=100,
-                         word_embed_len=100,
-                         num_candidates=30,
-                         word_embedding_set='glove',
-                         local_encoder_lstm_size=100,
-                         document_encoder_lstm_size=100,
-                         num_lstm_layers=2,
-                         ablation=['prior', 'local_context', 'document_context'])
-default_run_params = m(load_model=False,
-                       comments='')
-default_params = default_train_params.update(default_run_params).update(default_model_params)
 
 class Runner(object):
   def __init__(self,
@@ -91,12 +45,9 @@ class Runner(object):
     self.num_train_pages: Optional[int] = None
     self.page_id_order_train: Optional[list] = None
     self.page_id_order_test: Optional[list] = None
-    self.entity_ids_for_simple_dataset: Optional[list] = None
     self.entity_embeds: Optional[nn.Embedding] = None
     self.entity_labels_by_freq: Optional[list] = None
     self.adaptive_logits = {'desc': None, 'mention': None}
-    if not self.train_params.use_simple_dataloader and hasattr(self.model_params, 'num_entities'):
-      raise NotImplementedError('Can only restrict num of entities when using simple dataloader')
 
   def _get_word_embedding_path(self):
     if self.model_params.word_embedding_set.lower() == 'glove' and self.model_params.word_embed_len == 100:
@@ -130,8 +81,6 @@ class Runner(object):
     self.num_train_pages = int(len(self.page_id_order) * self.train_params.train_size)
     self.page_id_order_train = self.page_id_order[:self.num_train_pages]
     self.page_id_order_test = self.page_id_order[self.num_train_pages:]
-    if self.train_params.use_simple_dataloader:
-      self.entity_ids_for_simple_dataset = list(sorted(self.lookups.entity_labels.keys()))[:self.model_params.num_entities]
 
   def init_entity_embeds(self):
     entity_embed_weights = nn.Parameter(torch.Tensor(self.model_params.num_entities,
@@ -140,15 +89,6 @@ class Runner(object):
     self.entity_embeds = nn.Embedding(self.model_params.num_entities,
                                       self.model_params.embed_len,
                                       _weight=entity_embed_weights).to(self.device)
-
-  def _get_simple_dataset(self, cursor, is_test):
-    return SimpleMentionContextDatasetByEntityIds(cursor,
-                                                  self.lookups.entity_candidates_prior,
-                                                  self.lookups.entity_labels,
-                                                  self.lookups.embedding,
-                                                  self.model_params.num_candidates,
-                                                  self.entity_ids_for_simple_dataset,
-                                                  is_test)
 
   def _get_dataset(self, cursor, is_test):
     page_ids = self.page_id_order_test if is_test else self.page_id_order_train
@@ -166,16 +106,6 @@ class Runner(object):
     return MentionContextBatchSampler(cursor,
                                       page_ids,
                                       self.train_params.batch_size)
-
-  def _get_adaptive_calc_logits(self):
-    def get_calc(context):
-      if self.model_params.use_hardcoded_cutoffs:
-        vocab_size = self.entity_embeds.weight.shape[0]
-        cutoffs = self.model_params.adaptive_softmax_cutoffs + [vocab_size + 1]
-      else:
-        raise NotImplementedError
-      return AdaptiveLogits(self.entity_embeds, self.entity_labels_by_freq, cutoffs).to(self.device)
-    return {context: get_calc(context) for context in ['desc', 'mention']}
 
   def _calc_loss(self, encoded, candidate_entity_ids, labels_for_batch):
     desc_embeds, mention_context_embeds = encoded
@@ -196,14 +126,8 @@ class Runner(object):
     return desc_loss + mention_loss
 
   def _get_trainer(self, cursor, model):
-    if self.train_params.use_simple_dataloader:
-      train_dataset = self._get_simple_dataset(cursor, is_test=False)
-      batch_sampler = BatchSampler(RandomSampler(train_dataset),
-                                   self.train_params.batch_size,
-                                   True)
-    else:
-      train_dataset = self._get_dataset(cursor, is_test=False)
-      batch_sampler = self._get_sampler(cursor, is_test=False)
+    train_dataset = self._get_dataset(cursor, is_test=False)
+    batch_sampler = self._get_sampler(cursor, is_test=False)
     return Trainer(device=self.device,
                    embedding_lookup=self.lookups.embedding,
                    model=model,
@@ -230,14 +154,8 @@ class Runner(object):
 
   def _get_tester(self, cursor, model):
     logits_and_softmax = self._get_logits_and_softmax()
-    if self.train_params.use_simple_dataloader:
-      test_dataset = self._get_simple_dataset(cursor, is_test=True)
-      batch_sampler = BatchSampler(RandomSampler(test_dataset),
-                                   self.train_params.batch_size,
-                                   True)
-    else:
-      test_dataset = self._get_dataset(cursor, is_test=True)
-      batch_sampler = self._get_sampler(cursor, is_test=True)
+    test_dataset = self._get_dataset(cursor, is_test=True)
+    batch_sampler = self._get_sampler(cursor, is_test=True)
     return Tester(dataset=test_dataset,
                   batch_sampler=batch_sampler,
                   model=model,
@@ -246,6 +164,16 @@ class Runner(object):
                   device=self.device,
                   experiment=self.experiment,
                   ablation=self.model_params.ablation)
+
+  def _get_adaptive_calc_logits(self):
+    def get_calc(context):
+      if self.model_params.use_hardcoded_cutoffs:
+        vocab_size = self.entity_embeds.weight.shape[0]
+        cutoffs = self.model_params.adaptive_softmax_cutoffs + [vocab_size + 1]
+      else:
+        raise NotImplementedError
+      return AdaptiveLogits(self.entity_embeds, self.entity_labels_by_freq, cutoffs).to(self.device)
+    return {context: get_calc(context) for context in ['desc', 'mention']}
 
   def run(self):
     self.load_caches()

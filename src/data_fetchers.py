@@ -1,5 +1,6 @@
 import os
 import random
+import pickle
 
 from dotenv import load_dotenv
 import numpy as np
@@ -121,3 +122,25 @@ def get_candidate_ids(entity_candidates_prior,
   order = list(range(num_candidates))
   random.shuffle(order)
   return candidate_ids[order]
+
+def load_entity_candidate_ids_and_label_lookup(path, train_size):
+  with open(path, 'rb') as lookup_file:
+    data = pickle.load(lookup_file)
+    assert data['train_size'] == train_size, 'The prior at path ' + path + ' uses train size of ' + \
+      str(data['train_size']) + \
+      '. Please run `create_candidate_and_entity_lookups.py` with a train size of ' +\
+      str(train_size)
+    return data['lookups']
+
+def load_page_id_order(path):
+  with open(path, 'rb') as f:
+    return pickle.load(f)
+
+def get_num_entities():
+  try:
+    db_connection = get_connection()
+    with db_connection.cursor() as cursor:
+      cursor.execute('select count(*) from (select entity_id from entity_mentions group by `entity_id`) ct')
+      return cursor.fetchone()['count(*)']
+  finally:
+    db_connection.close()
