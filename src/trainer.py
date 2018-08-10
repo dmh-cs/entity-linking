@@ -74,12 +74,10 @@ class Trainer(object):
         loss = self.calc_loss(encoded, batch['candidates'], labels_for_batch)
         loss.backward()
         self.optimizer.step()
-        mention_context_error = self._classification_error(self.logits_and_softmax(mention_embeds,
-                                                                                   batch['candidates']),
-                                                           labels_for_batch)
-        document_context_error = self._classification_error(self.logits_and_softmax(desc_embeds,
-                                                                                    batch['candidates']),
-                                                            labels_for_batch)
+        mention_probas = self.logits_and_softmax['mention'](mention_embeds, batch['candidates'])
+        desc_probas = self.logits_and_softmax['desc'](desc_embeds, batch['candidates'])
+        mention_context_error = self._classification_error(mention_probas, labels_for_batch)
+        document_context_error = self._classification_error(desc_probas, labels_for_batch)
         self.experiment.record_metrics({'mention_context_error': mention_context_error,
                                         'document_context_error': document_context_error,
                                         'loss': loss.item()},
