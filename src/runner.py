@@ -22,7 +22,7 @@ from tester import Tester
 from trainer import Trainer
 import utils as u
 
-def load_entity_candidates_and_label_lookup(path, train_size):
+def load_entity_candidate_ids_and_label_lookup(path, train_size):
   with open(path, 'rb') as lookup_file:
     data = pickle.load(lookup_file)
     assert data['train_size'] == train_size, 'The prior at path ' + path + ' uses train size of ' + \
@@ -118,8 +118,8 @@ class Runner(object):
       self.log.status('Getting number of entities')
       self.model_params = self.model_params.set('num_entities',
                                                 get_num_entities())
-    self.log.status('Loading entity candidates lookup')
-    lookups = load_entity_candidates_and_label_lookup(self.paths.lookups, self.train_params.train_size)
+    self.log.status('Loading entity candidate_ids lookup')
+    lookups = load_entity_candidate_ids_and_label_lookup(self.paths.lookups, self.train_params.train_size)
     self.log.status('Loading word embedding lookup')
     self.lookups = self.lookups.update({'entity_candidates_prior': lookups['entity_candidates_prior'],
                                         'entity_labels': lookups['entity_labels'],

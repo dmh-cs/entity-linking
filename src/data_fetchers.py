@@ -88,36 +88,36 @@ def get_random_indexes(max_value, exclude, num_to_generate):
     result.append(val)
   return result
 
-def get_candidates(entity_candidates_prior,
+def get_candidate_ids(entity_candidates_prior,
                    num_entities,
                    num_candidates,
                    mention,
                    label):
   if entity_candidates_prior.get(mention) is None:
-    base_candidates = torch.tensor([], dtype=torch.long)
+    base_candidate_ids = torch.tensor([], dtype=torch.long)
   else:
-    base_candidates = torch.tensor(list(entity_candidates_prior[mention].keys()),
+    base_candidate_ids = torch.tensor(list(entity_candidates_prior[mention].keys()),
                                    dtype=torch.long)
-  if len(base_candidates) < num_candidates:
-    num_candidates_to_generate = num_candidates - len(base_candidates)
-    random_candidates = get_random_indexes(num_entities,
-                                           base_candidates.tolist(),
-                                           num_candidates_to_generate)
-    candidates = torch.cat((base_candidates,
-                           torch.tensor(random_candidates)), 0)
+  if len(base_candidate_ids) < num_candidates:
+    num_candidates_to_generate = num_candidates - len(base_candidate_ids)
+    random_candidate_ids = get_random_indexes(num_entities,
+                                              base_candidate_ids.tolist(),
+                                              num_candidates_to_generate)
+    candidate_ids = torch.cat((base_candidate_ids,
+                               torch.tensor(random_candidate_ids)), 0)
   else:
-    label_in_candidates_indexes = (base_candidates == label).nonzero()
+    label_in_candidates_indexes = (base_candidate_ids == label).nonzero()
     if len(label_in_candidates_indexes) == 0:
-      indexes_to_keep = get_random_indexes(len(base_candidates),
+      indexes_to_keep = get_random_indexes(len(base_candidate_ids),
                                            [],
                                            num_candidates)
     else:
       label_index = int(label_in_candidates_indexes.squeeze())
-      random_candidates = get_random_indexes(len(base_candidates),
-                                             [label_index],
-                                             num_candidates - 1)
-      indexes_to_keep = random_candidates + [label_index]
-    candidates = base_candidates[indexes_to_keep]
+      random_candidate_ids = get_random_indexes(len(base_candidate_ids),
+                                                [label_index],
+                                                num_candidates - 1)
+      indexes_to_keep = random_candidate_ids + [label_index]
+    candidate_ids = base_candidate_ids[indexes_to_keep]
   order = list(range(num_candidates))
   random.shuffle(order)
-  return candidates[order]
+  return candidate_ids[order]

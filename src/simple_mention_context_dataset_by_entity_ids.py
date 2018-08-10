@@ -1,4 +1,4 @@
-from data_fetchers import get_candidates
+from data_fetchers import get_candidate_ids
 from data_transformers import get_mention_sentence_splits, embed_page_content
 from parsers import parse_for_sentence_spans
 from torch.utils.data import Dataset
@@ -8,14 +8,14 @@ import torch
 class SimpleMentionContextDatasetByEntityIds(Dataset):
   def __init__(self,
                cursor,
-               entity_candidates_lookup,
+               entity_candidate_ids_lookup,
                entity_label_lookup,
                embedding_lookup,
                num_candidates,
                entity_ids,
                train=True):
     self.cursor = cursor
-    self.entity_candidates_lookup = _.map_values(entity_candidates_lookup, torch.tensor)
+    self.entity_candidate_ids_lookup = _.map_values(entity_candidate_ids_lookup, torch.tensor)
     self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
     self.embedding_lookup = embedding_lookup
     self.num_candidates = num_candidates
@@ -46,12 +46,12 @@ class SimpleMentionContextDatasetByEntityIds(Dataset):
                                                                            page_content)
     self._sentence_spans_lookup = _.map_values(self._page_content_lookup, parse_for_sentence_spans)
 
-  def _get_candidates(self, mention, label):
-    return get_candidates(self.entity_candidates_lookup,
-                          self.num_entities,
-                          self.num_candidates,
-                          mention,
-                          label)
+  def _get_candidate_ids(self, mention, label):
+    return get_candidate_ids(self.entity_candidate_ids_lookup,
+                             self.num_entities,
+                             self.num_candidates,
+                             mention,
+                             label)
 
   def _embed_mentions(self, page_id):
     page_mention_infos = filter(lambda mention_info: mention_info['page_id'] == page_id,
@@ -75,5 +75,5 @@ class SimpleMentionContextDatasetByEntityIds(Dataset):
               'label': label,
               'embedded_page_content': self._embedded_page_content_lookup[mention_info['page_id']],
               'entity_page_mentions': self._embed_mentions(mention_info['page_id']),
-              'candidates': self._get_candidates(mention_info['mention'], label)}
+              'candidate_ids': self._get_candidate_ids(mention_info['mention'], label)}
     return sample

@@ -4,7 +4,7 @@ import torch
 import pydash as _
 
 from data_transformers import get_mention_sentence_splits, embed_page_content
-from data_fetchers import get_candidates
+from data_fetchers import get_candidate_ids
 from parsers import parse_for_sentence_spans
 
 
@@ -34,12 +34,12 @@ class MentionContextDataset(Dataset):
     self._mention_infos = {}
     self.page_ctr = 0
 
-  def _get_candidates(self, mention, label):
-    return get_candidates(self.entity_candidates_prior,
-                          self.num_entities,
-                          self.num_candidates,
-                          mention,
-                          label)
+  def _get_candidate_ids(self, mention, label):
+    return get_candidate_ids(self.entity_candidates_prior,
+                             self.num_entities,
+                             self.num_candidates,
+                             mention,
+                             label)
 
   def __len__(self):
     raise NotImplementedError
@@ -51,8 +51,8 @@ class MentionContextDataset(Dataset):
     sentence_spans = self._sentence_spans_lookup[mention_info['page_id']]
     page_content = self._page_content_lookup[mention_info['page_id']]
     label = self.entity_label_lookup[mention_info['entity_id']]
-    candidates = self._get_candidates(mention_info['mention'], label)
-    p_prior = self._get_p_prior(mention_info['mention'], candidates)
+    candidate_ids = self._get_candidate_ids(mention_info['mention'], label)
+    p_prior = self._get_p_prior(mention_info['mention'], candidate_ids)
     sample = {'sentence_splits': get_mention_sentence_splits(page_content,
                                                              sentence_spans,
                                                              mention_info),
@@ -60,7 +60,7 @@ class MentionContextDataset(Dataset):
               'embedded_page_content': self._embedded_page_content_lookup[mention_info['page_id']],
               'entity_page_mentions': self._entity_page_mentions_lookup[mention_info['page_id']],
               'p_prior': p_prior,
-              'candidates': candidates}
+              'candidate_ids': candidate_ids}
     self._mentions_per_page_ctr[mention_info['page_id']] -= 1
     if self._mentions_per_page_ctr[mention_info['page_id']] == 0:
       self._sentence_spans_lookup.pop(mention_info['page_id'])
@@ -69,11 +69,11 @@ class MentionContextDataset(Dataset):
       self._entity_page_mentions_lookup.pop(mention_info['page_id'])
     return sample
 
-  def _get_p_prior(self, mention, candidates):
+  def _get_p_prior(self, mention, candidate_ids):
     if mention not in self.entity_candidates_prior:
-      return torch.zeros(len(candidates))
+      return torch.zeros(len(candidate_ids))
     entity_counts = self.entity_candidates_prior[mention]
-    candidate_counts = [entity_counts[entity] if entity in entity_counts else 0 for entity in candidates.tolist()]
+    candidate_counts = [entity_counts[entity] if entity in entity_counts else 0 for entity in candidate_ids.tolist()]
     return torch.tensor(candidate_counts, dtype=torch.float) / sum(candidate_counts)
 
   def _get_mention_infos_by_page_id(self, page_id):

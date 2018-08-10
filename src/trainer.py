@@ -16,7 +16,7 @@ def collate(batch):
           'label': torch.tensor([sample['label'] for sample in batch]),
           'embedded_page_content': [sample['embedded_page_content'] for sample in batch],
           'entity_page_mentions': [sample['entity_page_mentions'] for sample in batch],
-          'candidates': torch.stack([sample['candidates'] for sample in batch])}
+          'candidate_ids': torch.stack([sample['candidate_ids'] for sample in batch])}
 
 class Trainer(object):
   def __init__(self,
@@ -52,8 +52,8 @@ class Trainer(object):
     predictions = torch.argmax(logits, 1)
     return int(((predictions - labels) != 0).sum())
 
-  def _get_labels_for_batch(self, labels, candidates):
-    return (torch.unsqueeze(labels, 1) == candidates).nonzero()[:, 1]
+  def _get_labels_for_batch(self, labels, candidate_ids):
+    return (torch.unsqueeze(labels, 1) == candidate_ids).nonzero()[:, 1]
 
   def train(self):
     for epoch_num in range(self.num_epochs):
@@ -70,12 +70,12 @@ class Trainer(object):
                               batch['embedded_page_content'],
                               batch['entity_page_mentions']))
         desc_embeds, mention_embeds = encoded
-        labels_for_batch = self._get_labels_for_batch(batch['label'], batch['candidates'])
-        loss = self.calc_loss(encoded, batch['candidates'], labels_for_batch)
+        labels_for_batch = self._get_labels_for_batch(batch['label'], batch['candidate_ids'])
+        loss = self.calc_loss(encoded, batch['candidate_ids'], labels_for_batch)
         loss.backward()
         self.optimizer.step()
-        mention_probas = self.logits_and_softmax['mention'](mention_embeds, batch['candidates'])
-        desc_probas = self.logits_and_softmax['desc'](desc_embeds, batch['candidates'])
+        mention_probas = self.logits_and_softmax['mention'](mention_embeds, batch['candidate_ids'])
+        desc_probas = self.logits_and_softmax['desc'](desc_embeds, batch['candidate_ids'])
         mention_context_error = self._classification_error(mention_probas, labels_for_batch)
         document_context_error = self._classification_error(desc_probas, labels_for_batch)
         self.experiment.record_metrics({'mention_context_error': mention_context_error,

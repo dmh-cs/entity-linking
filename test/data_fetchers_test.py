@@ -19,17 +19,17 @@ def test_get_random_indexes_too_long():
     caught = True
   assert caught
 
-def test_get_candidates():
+def test_get_candidate_ids():
   entity_candidates_prior = {'a': {1: 20}, 'b': {2: 12}, 'c': {3: 3}}
   num_entities = 300
   num_candidates = 300
   mention = 'b'
   label = 2
-  candidates = df.get_candidates(entity_candidates_prior,
+  candidate_ids = df.get_candidate_ids(entity_candidates_prior,
                                  num_entities,
                                  num_candidates,
                                  mention,
                                  label)
-  assert 2 in candidates.tolist()
-  assert len(candidates) == num_candidates
-  assert len(set(candidates.tolist())) == num_candidates
+  assert 2 in candidate_ids.tolist()
+  assert len(candidate_ids) == num_candidates
+  assert len(set(candidate_ids.tolist())) == num_candidates

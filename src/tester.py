@@ -10,7 +10,7 @@ def collate(batch):
           'label': torch.tensor([sample['label'] for sample in batch]),
           'embedded_page_content': [sample['embedded_page_content'] for sample in batch],
           'entity_page_mentions': [sample['entity_page_mentions'] for sample in batch],
-          'candidates': torch.stack([sample['candidates'] for sample in batch]),
+          'candidate_ids': torch.stack([sample['candidate_ids'] for sample in batch]),
           'p_prior': torch.stack([sample['p_prior'] for sample in batch])}
 
 class Tester(object):
@@ -33,14 +33,14 @@ class Tester(object):
     self.ablation = ablation
     self.logits_and_softmax = logits_and_softmax
 
-  def _get_labels_for_batch(self, labels, candidates):
+  def _get_labels_for_batch(self, labels, candidate_ids):
     device = labels.device
     batch_labels = []
-    for label, row_candidates in zip(labels, candidates):
-      if label not in row_candidates:
+    for label, row_candidate_ids in zip(labels, candidate_ids):
+      if label not in row_candidate_ids:
         batch_labels.append(-1)
       else:
-        batch_labels.append(int((row_candidates == label).nonzero().squeeze()))
+        batch_labels.append(int((row_candidate_ids == label).nonzero().squeeze()))
     return torch.tensor(batch_labels, device=device)
 
   def test(self):
@@ -52,7 +52,7 @@ class Tester(object):
     for batch_num, batch in enumerate(dataloader):
       batch = u.tensors_to_device(batch, self.device)
       labels_for_batch = self._get_labels_for_batch(batch['label'],
-                                                    batch['candidates'])
+                                                    batch['candidate_ids'])
       predictions = predict(embedding_lookup=self.embedding_lookup,
                             p_prior=batch['p_prior'],
                             model=self.model,

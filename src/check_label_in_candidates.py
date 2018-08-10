@@ -12,7 +12,7 @@ from data_fetchers import get_connection
 
 def collate(batch):
   return {'label': torch.tensor([sample['label'] for sample in batch]),
-          'candidates': torch.stack([sample['candidates'] for sample in batch])}
+          'candidate_ids': torch.stack([sample['candidate_ids'] for sample in batch])}
 
 def main():
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -30,8 +30,8 @@ def main():
     acc = 0
     n = 0
     for batch in dataloader:
-      for label, candidates in zip(batch['label'], batch['candidates']):
-        if int(label) in candidates.tolist():
+      for label, candidate_ids in zip(batch['label'], batch['candidate_ids']):
+        if int(label) in candidate_ids.tolist():
           acc += 1
       n += 1
       print(acc, n)

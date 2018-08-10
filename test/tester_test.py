@@ -30,19 +30,19 @@ def get_mock_model(vector_to_return):
 def test_tester(monkeypatch, myMock):
   dataset = [{'label': 0,
               'sentence_splits': [['a', 'b', 'c'], ['c', 'd']],
-              'candidates': torch.tensor([0, 1]),
+              'candidate_ids': torch.tensor([0, 1]),
               'embedded_page_content': torch.tensor([[1], [-2], [2], [3], [-3], [4]]),
               'entity_page_mentions': torch.tensor([[1], [-2], [0], [3], [0], [4]]),
               'p_prior': torch.tensor([0.1, 0.9])},
              {'label': 2,
               'sentence_splits': [['a', 'b', 'c'], ['c', 'd']],
-              'candidates': torch.tensor([2, 1]),
+              'candidate_ids': torch.tensor([2, 1]),
               'embedded_page_content': torch.tensor([[1], [-2], [2], [3], [-3], [4]]),
               'entity_page_mentions': torch.tensor([[1], [-2], [0], [3], [0], [4]]),
               'p_prior': torch.tensor([0.1, 0.9])},
              {'label': 1,
               'sentence_splits': [['a', 'b', 'c'], ['c', 'd']],
-              'candidates': torch.tensor([3, 1]),
+              'candidate_ids': torch.tensor([3, 1]),
               'embedded_page_content': torch.tensor([[1], [-2], [2], [3], [-3], [4]]),
               'entity_page_mentions': torch.tensor([[1], [-2], [0], [3], [0], [4]]),
               'p_prior': torch.tensor([0.1, 0.9])}]
@@ -61,8 +61,8 @@ def test_tester(monkeypatch, myMock):
   mock_experiment = create_autospec(Experiment, instance=True)
   calc_logits = Logits()
   softmax = Softmax()
-  logits_and_softmax = {'mention': lambda hidden, candidates_or_targets: softmax(calc_logits(hidden,
-                                                                                             entity_embeds(candidates_or_targets)))}
+  logits_and_softmax = {'mention': lambda hidden, candidate_ids_or_targets: softmax(calc_logits(hidden,
+                                                                                                entity_embeds(candidate_ids_or_targets)))}
   with monkeypatch.context() as m:
     m.setattr(nn, 'DataParallel', _.identity)
     m.setattr(u, 'tensors_to_device', lambda batch, device: batch)
