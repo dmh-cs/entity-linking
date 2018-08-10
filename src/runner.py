@@ -187,11 +187,11 @@ class Runner(object):
     else:
       logits = Logits()
       criterion = nn.CrossEntropyLoss()
-      desc_logits = logits(self.entity_embeds(candidate_entity_ids),
-                           desc_embeds)
+      desc_logits = logits(desc_embeds,
+                           self.entity_embeds(candidate_entity_ids))
       desc_loss = criterion(desc_logits, labels_for_batch)
-      mention_logits = logits(self.entity_embeds(candidate_entity_ids),
-                              mention_context_embeds)
+      mention_logits = logits(mention_context_embeds,
+                              self.entity_embeds(candidate_entity_ids))
       mention_loss = criterion(mention_logits, labels_for_batch)
     return desc_loss + mention_loss
 
