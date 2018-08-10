@@ -185,11 +185,13 @@ class Runner(object):
       mention_logits = self.adaptive_logits['mention'](mention_context_embeds, labels_for_batch)
       mention_loss = self.adaptive_logits['mention'].loss(mention_logits, labels_for_batch)
     else:
-      calc_logits = _.partial_right(Logits(), candidate_entity_ids)
+      logits = Logits()
       criterion = nn.CrossEntropyLoss()
-      desc_logits = calc_logits(desc_embeds)
+      desc_logits = logits(self.entity_embeds(candidate_entity_ids),
+                           desc_embeds)
       desc_loss = criterion(desc_logits, labels_for_batch)
-      mention_logits = calc_logits(mention_context_embeds)
+      mention_logits = logits(self.entity_embeds(candidate_entity_ids),
+                              mention_context_embeds)
       mention_loss = criterion(mention_logits, labels_for_batch)
     return desc_loss + mention_loss
 
