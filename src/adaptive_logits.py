@@ -21,7 +21,7 @@ class AdaptiveLogits(nn.Module):
     tail: the learnable weights of the module for tail buckets
   """
 
-  def __init__(self, embeds, order, cutoffs, reduce_factor=4, device=None):
+  def __init__(self, embeds, cutoffs, reduce_factor=4, device=None):
     super().__init__()
     if device is None:
       self.device = embeds.weight.device
@@ -31,7 +31,7 @@ class AdaptiveLogits(nn.Module):
     self.id = []
     self.cutoffs = cutoffs
     self.embeds = embeds
-    self.order = order
+    self.order = torch.tensor(range(len(embeds.weight)), device=self.device)
     self.head = self._get_head_calc(cutoffs)
     self.tail = self._get_tail_calc(cutoffs, reduce_factor)
 
@@ -51,8 +51,8 @@ class AdaptiveLogits(nn.Module):
     tail = []
     for i in range(len(cutoffs) - 1):
       if reduce_factor == 1:
-        tail_cluster = self.embeds(self.order[cutoffs[i] : cutoffs[i + 1]])
-        def seq(hidden, tail_cluster=tail_cluster):
+        def seq(hidden, i=i):
+          tail_cluster = self.embeds(self.order[cutoffs[i] : cutoffs[i + 1]])
           return torch.mm(hidden, torch.transpose(tail_cluster, 0, 1))
       else:
         down = nn.Linear(hidden_size,

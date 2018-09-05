@@ -21,8 +21,7 @@ def test_softmax():
     embed_weights.data.normal_(0, 1.0/math.sqrt(hidden_size))
     vocab = nn.Embedding(vocab_size, hidden_size, _weight=embed_weights)
     cutoffs = [20, 30, vocab_size + 1]
-    vocab_indexes_by_frequency = torch.tensor(list(range(vocab_size)))
-    adaptive_logits = AdaptiveLogits(vocab, vocab_indexes_by_frequency, cutoffs)
+    adaptive_logits = AdaptiveLogits(vocab, cutoffs)
     adaptive_softmax = AdaptiveSoftmax(adaptive_logits)
     targets = torch.randint(low=0, high=vocab_size, size=[batch_size], dtype=torch.long)
     hidden = torch.randn(batch_size, hidden_size)

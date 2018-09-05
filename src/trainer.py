@@ -29,7 +29,8 @@ class Trainer(object):
                experiment,
                calc_loss,
                logits_and_softmax,
-               adaptive_logits):
+               adaptive_logits,
+               use_adaptive_softmax):
     self.device = device
     self.model = nn.DataParallel(model)
     self.model = model.to(self.device)
@@ -42,6 +43,7 @@ class Trainer(object):
     self.logits_and_softmax = logits_and_softmax
     self.adaptive_logits = adaptive_logits
     self.optimizer = self._create_optimizer('adam')
+    self.use_adaptive_softmax = use_adaptive_softmax
 
   def _create_optimizer(self, optimizer: str, params=None):
     return optim.Adam(itertools.chain(self.model.parameters(),
@@ -62,22 +64,25 @@ class Trainer(object):
                               batch_sampler=self.batch_sampler,
                               collate_fn=collate)
       for batch_num, batch in enumerate(dataloader):
-        batch = tensors_to_device(batch, self.device)
         self.optimizer.zero_grad()
+        batch = tensors_to_device(batch, self.device)
+        if self.use_adaptive_softmax:
+          labels = batch['label']
+        else:
+          labels = self._get_labels_for_batch(batch['label'], batch['candidate_ids'])
         left_splits, right_splits = embed_and_pack_batch(self.embedding_lookup,
                                                          batch['sentence_splits'])
         encoded = self.model(((left_splits, right_splits),
                               batch['embedded_page_content'],
                               batch['entity_page_mentions']))
         desc_embeds, mention_embeds = encoded
-        labels_for_batch = self._get_labels_for_batch(batch['label'], batch['candidate_ids'])
-        loss = self.calc_loss(encoded, batch['candidate_ids'], labels_for_batch)
+        loss = self.calc_loss(encoded, batch['candidate_ids'], labels)
         loss.backward()
         self.optimizer.step()
         mention_probas = self.logits_and_softmax['mention'](mention_embeds, batch['candidate_ids'])
         desc_probas = self.logits_and_softmax['desc'](desc_embeds, batch['candidate_ids'])
-        mention_context_error = self._classification_error(mention_probas, labels_for_batch)
-        document_context_error = self._classification_error(desc_probas, labels_for_batch)
+        mention_context_error = self._classification_error(mention_probas, labels)
+        document_context_error = self._classification_error(desc_probas, labels)
         self.experiment.record_metrics({'mention_context_error': mention_context_error,
                                         'document_context_error': document_context_error,
                                         'loss': loss.item()},

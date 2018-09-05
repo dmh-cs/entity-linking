@@ -12,10 +12,7 @@ def test_loss():
   vocab_size = 100
   vocab = nn.Embedding(vocab_size, hidden_size)
   cutoffs = [20, 30, vocab_size + 1]
-  vocab_indexes_by_frequency = list(range(vocab_size))
-  shuffle(vocab_indexes_by_frequency)
-  vocab_indexes_by_frequency = torch.tensor(vocab_indexes_by_frequency)
-  adaptive_logits = AdaptiveLogits(vocab, vocab_indexes_by_frequency, cutoffs)
+  adaptive_logits = AdaptiveLogits(vocab, cutoffs)
   hidden = torch.randn(batch_size, hidden_size)
   targets = torch.randint(low=0, high=vocab_size + 1, size=[batch_size], dtype=torch.long)
   all_logits = adaptive_logits(hidden, targets)
@@ -30,10 +27,7 @@ def test_loss_check_loss():
   embed_weights.data.normal_(0, 1.0/math.sqrt(hidden_size))
   vocab = nn.Embedding(vocab_size, hidden_size, _weight=embed_weights)
   cutoffs = [20, 30, vocab_size + 1]
-  vocab_indexes_by_frequency = list(range(vocab_size))
-  shuffle(vocab_indexes_by_frequency)
-  vocab_indexes_by_frequency = torch.tensor(vocab_indexes_by_frequency)
-  adaptive_logits = AdaptiveLogits(vocab, vocab_indexes_by_frequency, cutoffs)
+  adaptive_logits = AdaptiveLogits(vocab, cutoffs)
   hidden = torch.randn(batch_size, hidden_size)
   targets = torch.randint(low=0, high=vocab_size, size=[batch_size], dtype=torch.long)
   all_logits = adaptive_logits(hidden, targets)

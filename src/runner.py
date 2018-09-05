@@ -2,7 +2,7 @@ from typing import Optional
 import math
 
 from experiment import Experiment
-from pyrsistent import m
+from pyrsistent import m, ny
 import pydash as _
 import torch
 import torch.nn as nn
@@ -46,7 +46,6 @@ class Runner(object):
     self.page_id_order_train: Optional[list] = None
     self.page_id_order_test: Optional[list] = None
     self.entity_embeds: Optional[nn.Embedding] = None
-    self.entity_labels_by_freq: Optional[list] = None
     self.adaptive_logits = {'desc': None, 'mention': None}
 
   def _get_word_embedding_path(self):
@@ -57,12 +56,11 @@ class Runner(object):
     else:
       raise NotImplementedError('Only loading from glove 100d or 300d is currently supported')
 
-  def _get_entity_labels_by_freq(self, cursor):
-    assert self.lookups.entity_labels is not None, 'Ensure that `self.load_caches` has been called'
+  def _get_entity_ids_by_freq(self, cursor):
     query = 'select entity_id, count(*) from entity_mentions group by `entity_id` order by count(*) desc'
     cursor.execute(query)
     sorted_rows = cursor.fetchall()
-    return torch.tensor([self.lookups.entity_labels[row['entity_id']] for row in sorted_rows])
+    return [row['entity_id'] for row in sorted_rows]
 
   def load_caches(self):
     if not hasattr(self.model_params, 'num_entities'):
@@ -137,7 +135,8 @@ class Runner(object):
                    experiment=self.experiment,
                    calc_loss=self._calc_loss,
                    logits_and_softmax=self._get_logits_and_softmax(),
-                   adaptive_logits=self.adaptive_logits)
+                   adaptive_logits=self.adaptive_logits,
+                   use_adaptive_softmax=self.model_params.use_adaptive_softmax)
 
   def _get_logits_and_softmax(self):
     def get_calc(context):
@@ -163,7 +162,8 @@ class Runner(object):
                   embedding_lookup=self.lookups.embedding,
                   device=self.device,
                   experiment=self.experiment,
-                  ablation=self.model_params.ablation)
+                  ablation=self.model_params.ablation,
+                  use_adaptive_softmax=self.model_params.use_adaptive_softmax)
 
   def _get_adaptive_calc_logits(self):
     def get_calc(context):
@@ -172,7 +172,7 @@ class Runner(object):
         cutoffs = self.model_params.adaptive_softmax_cutoffs + [vocab_size + 1]
       else:
         raise NotImplementedError
-      return AdaptiveLogits(self.entity_embeds, self.entity_labels_by_freq, cutoffs).to(self.device)
+      return AdaptiveLogits(self.entity_embeds, cutoffs).to(self.device)
     return {context: get_calc(context) for context in ['desc', 'mention']}
 
   def run(self):
@@ -182,7 +182,11 @@ class Runner(object):
     try:
       db_connection = get_connection()
       with db_connection.cursor() as cursor:
-        self.entity_labels_by_freq = self._get_entity_labels_by_freq(cursor).to(self.device)
+        entity_ids_by_freq = self._get_entity_ids_by_freq(cursor)
+        if self.model_params.use_adaptive_softmax:
+          self.lookups = self.lookups.set('entity_labels',
+                                          _.from_pairs(zip(entity_ids_by_freq,
+                                                           range(len(entity_ids_by_freq)))))
         self.adaptive_logits = self._get_adaptive_calc_logits()
         encoder = JointModel(self.model_params.embed_len,
                              self.model_params.context_embed_len,

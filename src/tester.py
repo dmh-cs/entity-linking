@@ -22,7 +22,8 @@ class Tester(object):
                device,
                batch_sampler,
                experiment,
-               ablation):
+               ablation,
+               use_adaptive_softmax):
     self.dataset = dataset
     self.model = nn.DataParallel(model)
     self.model = model.to(device)
@@ -32,6 +33,7 @@ class Tester(object):
     self.experiment = experiment
     self.ablation = ablation
     self.logits_and_softmax = logits_and_softmax
+    self.use_adaptive_softmax = use_adaptive_softmax
 
   def _get_labels_for_batch(self, labels, candidate_ids):
     device = labels.device
@@ -54,7 +56,7 @@ class Tester(object):
       labels_for_batch = self._get_labels_for_batch(batch['label'],
                                                     batch['candidate_ids'])
       predictions = predict(embedding_lookup=self.embedding_lookup,
-                            p_prior=batch['p_prior'],
+                            p_prior=0 if self.use_adaptive_softmax else batch['p_prior'],
                             model=self.model,
                             batch=batch,
                             ablation=self.ablation,
