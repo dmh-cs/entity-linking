@@ -23,8 +23,8 @@ class Trainer(object):
                device,
                embedding_lookup,
                model: nn.Module,
-               dataset,
-               batch_sampler,
+               get_dataset,
+               get_batch_sampler,
                num_epochs,
                experiment,
                calc_loss,
@@ -34,8 +34,8 @@ class Trainer(object):
     self.device = device
     self.model = nn.DataParallel(model)
     self.model = model.to(self.device)
-    self.dataset = dataset
-    self.batch_sampler = batch_sampler
+    self.get_dataset = get_dataset
+    self.get_batch_sampler = get_batch_sampler
     self.num_epochs = num_epochs
     self.embedding_lookup = embedding_lookup
     self.experiment = experiment
@@ -60,8 +60,8 @@ class Trainer(object):
   def train(self):
     for epoch_num in range(self.num_epochs):
       self.experiment.update_epoch(epoch_num)
-      dataloader = DataLoader(dataset=self.dataset,
-                              batch_sampler=self.batch_sampler,
+      dataloader = DataLoader(dataset=self.get_dataset(),
+                              batch_sampler=self.get_batch_sampler(),
                               collate_fn=collate)
       for batch_num, batch in enumerate(dataloader):
         self.optimizer.zero_grad()

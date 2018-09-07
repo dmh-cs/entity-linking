@@ -124,13 +124,11 @@ class Runner(object):
     return desc_loss + mention_loss
 
   def _get_trainer(self, cursor, model):
-    train_dataset = self._get_dataset(cursor, is_test=False)
-    batch_sampler = self._get_sampler(cursor, is_test=False)
     return Trainer(device=self.device,
                    embedding_lookup=self.lookups.embedding,
                    model=model,
-                   dataset=train_dataset,
-                   batch_sampler=batch_sampler,
+                   get_dataset=lambda: self._get_dataset(cursor, is_test=False),
+                   get_batch_sampler=lambda: self._get_sampler(cursor, is_test=False),
                    num_epochs=self.train_params.num_epochs,
                    experiment=self.experiment,
                    calc_loss=self._calc_loss,
