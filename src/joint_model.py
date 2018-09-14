@@ -2,8 +2,6 @@ import torch.nn as nn
 
 from description_encoder_model import DescriptionEncoder
 from mention_context_encoder_model import MentionContextEncoder
-from logits import Logits
-from adaptive_logits import AdaptiveLogits
 
 class JointModel(nn.Module):
   def __init__(self,
