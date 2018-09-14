@@ -13,7 +13,8 @@ class JointModel(nn.Module):
                num_lstm_layers,
                dropout_keep_prob,
                entity_embeds,
-               pad_vector):
+               pad_vector,
+               adaptive_logits):
     super().__init__()
     self.entity_embeds = entity_embeds
     self.desc_encoder = DescriptionEncoder(word_embed_len,
@@ -28,6 +29,8 @@ class JointModel(nn.Module):
                                                          dropout_keep_prob,
                                                          entity_embeds,
                                                          pad_vector)
+    self.desc = adaptive_logits['desc']
+    self.mention = adaptive_logits['mention']
 
   def forward(self, data):
     embedded_page_contents = data[1]

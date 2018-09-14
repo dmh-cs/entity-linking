@@ -6,9 +6,8 @@ from pyrsistent import m, ny
 import pydash as _
 import torch
 import torch.nn as nn
+from torch.nn.modules.adaptive import AdaptiveLogSoftmaxWithLoss
 
-from adaptive_logits import AdaptiveLogits
-from adaptive_softmax import AdaptiveSoftmax
 from data_fetchers import get_connection, get_embedding_lookup, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup
 from default_params import default_train_params, default_model_params, default_run_params, default_paths
 from joint_model import JointModel
@@ -108,10 +107,8 @@ class Runner(object):
   def _calc_loss(self, encoded, candidate_entity_ids, labels_for_batch):
     desc_embeds, mention_context_embeds = encoded
     if self.model_params.use_adaptive_softmax:
-      desc_logits = self.adaptive_logits['desc'](desc_embeds, labels_for_batch)
-      desc_loss = self.adaptive_logits['desc'].loss(desc_logits, labels_for_batch)
-      mention_logits = self.adaptive_logits['mention'](mention_context_embeds, labels_for_batch)
-      mention_loss = self.adaptive_logits['mention'].loss(mention_logits, labels_for_batch)
+      desc_logits, desc_loss = self.adaptive_logits['desc'](desc_embeds, labels_for_batch)
+      mention_logits, mention_loss = self.adaptive_logits['mention'](mention_context_embeds, labels_for_batch)
     else:
       logits = Logits()
       criterion = nn.CrossEntropyLoss()
@@ -139,7 +136,7 @@ class Runner(object):
   def _get_logits_and_softmax(self):
     def get_calc(context):
       if self.model_params.use_adaptive_softmax:
-        softmax = AdaptiveSoftmax(self.adaptive_logits[context])
+        softmax = self.adaptive_logits[context].predict
         calc = lambda hidden, _: softmax(hidden)
       else:
         calc_logits = Logits()
@@ -167,10 +164,12 @@ class Runner(object):
     def get_calc(context):
       if self.model_params.use_hardcoded_cutoffs:
         vocab_size = self.entity_embeds.weight.shape[0]
-        cutoffs = self.model_params.adaptive_softmax_cutoffs + [vocab_size]
+        cutoffs = self.model_params.adaptive_softmax_cutoffs
       else:
         raise NotImplementedError
-      return AdaptiveLogits(self.entity_embeds, cutoffs).to(self.device)
+      in_features = self.entity_embeds.weight.shape[1]
+      n_classes = self.entity_embeds.weight.shape[0]
+      return AdaptiveLogSoftmaxWithLoss(in_features, n_classes, cutoffs).to(self.device)
     return {context: get_calc(context) for context in ['desc', 'mention']}
 
   def run(self):
@@ -194,7 +193,8 @@ class Runner(object):
                              self.model_params.num_lstm_layers,
                              self.train_params.dropout_keep_prob,
                              self.entity_embeds,
-                             pad_vector)
+                             pad_vector,
+                             self.adaptive_logits)
         if not self.run_params.load_model:
           with self.experiment.train(['mention_context_error', 'document_context_error', 'loss']):
             self.log.status('Training')
