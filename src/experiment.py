@@ -67,6 +67,7 @@ class Experiment(object):
     metric_names = sorted(list(metrics.keys()))
     vals = [str(metrics[name]) for name in metric_names] + [str(batch_num), str(self.epoch_num)]
     self.file_handle.write(self.separator.join(vals) + '\n')
+    self.file_handle.flush()
 
   def update_epoch(self, epoch_num):
     self.epoch_num = epoch_num
