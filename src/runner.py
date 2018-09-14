@@ -167,7 +167,7 @@ class Runner(object):
     def get_calc(context):
       if self.model_params.use_hardcoded_cutoffs:
         vocab_size = self.entity_embeds.weight.shape[0]
-        cutoffs = self.model_params.adaptive_softmax_cutoffs + [vocab_size + 1]
+        cutoffs = self.model_params.adaptive_softmax_cutoffs + [vocab_size]
       else:
         raise NotImplementedError
       return AdaptiveLogits(self.entity_embeds, cutoffs).to(self.device)

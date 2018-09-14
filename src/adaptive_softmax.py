@@ -36,7 +36,7 @@ class AdaptiveSoftmax(object):
     with torch.no_grad():
       head_out = self.head(hidden)
       batch_size = head_out.size(0)
-      prob = torch.empty(batch_size, self.cutoffs[-1] - 1, device=hidden.device)
+      prob = torch.empty(batch_size, self.cutoffs[-1], device=hidden.device)
       lsm_head = softmax(head_out, 1)
       prob[:, : self.cutoffs[0]].copy_(lsm_head[:, : self.cutoffs[0]])
       for i in range(len(self.tail)):

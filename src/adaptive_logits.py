@@ -28,6 +28,7 @@ class AdaptiveLogits(nn.Module):
     else:
       self.device = device
     self.other_modules = nn.ModuleList()
+    self.other_params = nn.ParameterList()
     self.id = []
     self.cutoffs = cutoffs
     self.embeds = embeds
@@ -37,11 +38,13 @@ class AdaptiveLogits(nn.Module):
 
   def _get_head_calc(self, cutoffs):
     hidden_size = self.embeds.weight.shape[1]
-    tail_vectors = nn.Linear(hidden_size, len(cutoffs[1:]), bias=False).to(self.device)
+    tail_vectors = nn.Linear(hidden_size, len(cutoffs[1:])).to(self.device)
+    shortlist_bias = nn.Parameter(torch.randn(cutoffs[0]))
     self.other_modules.append(tail_vectors)
+    self.other_params.append(shortlist_bias)
     def head_calc(hidden):
       shortlist = self.embeds(self.order[:cutoffs[0]])
-      shortlist_result = torch.mm(hidden, torch.transpose(shortlist, 0, 1))
+      shortlist_result = torch.mm(hidden, torch.transpose(shortlist, 0, 1)) + torch.unsqueeze(shortlist_bias, 0)
       tail_vectors_result = tail_vectors(hidden)
       return torch.cat((shortlist_result, tail_vectors_result), 1)
     return head_calc
@@ -50,18 +53,20 @@ class AdaptiveLogits(nn.Module):
     hidden_size = self.embeds.weight.shape[1]
     tail = []
     for i in range(len(cutoffs) - 1):
+      tail_bias = nn.Parameter(torch.randn(cutoffs[i + 1] - cutoffs[i]))
+      self.other_params.append(tail_bias)
       if reduce_factor == 1:
-        def seq(hidden, i=i):
+        def seq(hidden, tail_bias=tail_bias, i=i):
           tail_cluster = self.embeds(self.order[cutoffs[i] : cutoffs[i + 1]])
-          return torch.mm(hidden, torch.transpose(tail_cluster, 0, 1))
+          return torch.mm(hidden, torch.transpose(tail_cluster, 0, 1)) + torch.unsqueeze(tail_bias, 0)
       else:
         down = nn.Linear(hidden_size,
                          hidden_size // reduce_factor ** i,
                          bias=False).to(self.device)
         self.other_modules.append(down)
-        def seq(hidden, down=down, i=i):
+        def seq(hidden, tail_bias=tail_bias, down=down, i=i):
           decode_weight = down(self.embeds(self.order[cutoffs[i] : cutoffs[i + 1]]))
-          return torch.mm(down(hidden), torch.transpose(decode_weight, 0, 1))
+          return torch.mm(down(hidden), torch.transpose(decode_weight, 0, 1)) + torch.unsqueeze(tail_bias, 0)
       tail.append(seq)
     return tail
 
