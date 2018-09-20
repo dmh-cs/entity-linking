@@ -136,7 +136,7 @@ class Runner(object):
   def _get_logits_and_softmax(self):
     def get_calc(context):
       if self.model_params.use_adaptive_softmax:
-        softmax = self.adaptive_logits[context].predict
+        softmax = self.adaptive_logits[context].log_prob
         calc = lambda hidden, _: softmax(hidden)
       else:
         calc_logits = Logits()

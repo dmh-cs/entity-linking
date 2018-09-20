@@ -51,10 +51,7 @@ class Trainer(object):
                                       self.adaptive_logits['mention'].parameters()))
 
   def _classification_error(self, logits, labels):
-    if self.use_adaptive_softmax:
-      predictions = logits
-    else:
-      predictions = torch.argmax(logits, 1)
+    predictions = torch.argmax(logits, 1)
     return int(((predictions - labels) != 0).sum())
 
   def _get_labels_for_batch(self, labels, candidate_ids):
