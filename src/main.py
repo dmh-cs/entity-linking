@@ -8,6 +8,7 @@ import pydash as _
 import torch
 
 from runner import Runner
+# from easy_runner import Runner
 
 args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param', 'type': int},
                      {'name': 'dropout_keep_prob'          , 'for': 'train_param', 'type': float},
