@@ -38,7 +38,8 @@ class Runner(object):
     self.model_params = self.model_params.set('context_embed_len',
                                               2 * self.model_params.embed_len)
     if not hasattr(self.model_params, 'adaptive_softmax_cutoffs'):
-      self.model_params = self.model_params.set('adaptive_softmax_cutoffs', [100000, 500000])
+      self.model_params = self.model_params.set('adaptive_softmax_cutoffs',
+                                                [1000, 10000, 100000, 300000, 500000])
     self.paths = self.paths.set('word_embedding',
                                 self._get_word_embedding_path())
     self.page_id_order: Optional[list] = None
@@ -177,7 +178,7 @@ class Runner(object):
         raise NotImplementedError
       in_features = self.entity_embeds.weight.shape[1]
       n_classes = self.entity_embeds.weight.shape[0]
-      return AdaptiveLogSoftmaxWithLoss(in_features, n_classes, cutoffs).to(self. device)
+      return AdaptiveLogSoftmaxWithLoss(in_features, n_classes, cutoffs, div_value=1.0).to(self. device)
     calc = get_calc('desc_and_mention')
     return {context: calc for context in ['desc', 'mention']}
 
