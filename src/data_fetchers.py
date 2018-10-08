@@ -95,7 +95,7 @@ def get_candidate_ids(entity_candidates_prior,
                       mention,
                       label):
   if entity_candidates_prior.get(mention) is None:
-    base_candidate_ids = torch.tensor([], dtype=torch.long)
+    base_candidate_ids = torch.tensor([label], dtype=torch.long)
   else:
     base_candidate_ids = torch.tensor(list(entity_candidates_prior[mention].keys()),
                                       dtype=torch.long)

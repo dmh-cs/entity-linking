@@ -169,8 +169,9 @@ class Runner(object):
         raise NotImplementedError
       in_features = self.entity_embeds.weight.shape[1]
       n_classes = self.entity_embeds.weight.shape[0]
-      return AdaptiveLogSoftmaxWithLoss(in_features, n_classes, cutoffs).to(self.device)
-    return {context: get_calc(context) for context in ['desc', 'mention']}
+      return AdaptiveLogSoftmaxWithLoss(in_features, n_classes, cutoffs).to(self. device)
+    calc = get_calc('desc_and_mention')
+    return {context: calc for context in ['desc', 'mention']}
 
   def run(self):
     self.load_caches()

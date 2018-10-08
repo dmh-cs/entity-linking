@@ -1,4 +1,4 @@
-from toolz import compose
+from toolz import pipe
 import pydash as _
 import torch
 import torch.nn as nn
@@ -22,10 +22,10 @@ class DescriptionEncoder(nn.Module):
     desc_embeds = pad_batch(self.pad_vector,
                             [embeds[:100] for embeds in embedded_page_contents],
                             min_len=100)
-    fn = compose(torch.squeeze,
-                 self.global_avg_pooling,
-                 self.dropout,
-                 self.relu,
-                 self.conv,
-                 _.partial_right(torch.transpose, 1, 2))
-    return fn(desc_embeds)
+    encoded = pipe(desc_embeds,
+                   self.conv,
+                   self.relu,
+                   self.dropout,
+                   self.global_avg_pooling,
+                   torch.squeeze)
+    return encoded / torch.norm(encoded, 2, 1).unsqueeze(1)

@@ -78,11 +78,16 @@ class Trainer(object):
         desc_embeds, mention_embeds = encoded
         loss = self.calc_loss(encoded, batch['candidate_ids'], labels)
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(itertools.chain(self.model.parameters(),
+                                                       self.adaptive_logits['desc'].parameters(),
+                                                       self.adaptive_logits['mention'].parameters()),
+                                       0.01)
         self.optimizer.step()
-        mention_probas = self.logits_and_softmax['mention'](mention_embeds, batch['candidate_ids'])
-        desc_probas = self.logits_and_softmax['desc'](desc_embeds, batch['candidate_ids'])
-        mention_context_error = self._classification_error(mention_probas, labels)
-        document_context_error = self._classification_error(desc_probas, labels)
+        with torch.no_grad():
+          mention_probas = self.logits_and_softmax['mention'](mention_embeds, batch['candidate_ids'])
+          desc_probas = self.logits_and_softmax['desc'](desc_embeds, batch['candidate_ids'])
+          mention_context_error = self._classification_error(mention_probas, labels)
+          document_context_error = self._classification_error(desc_probas, labels)
         self.experiment.record_metrics({'mention_context_error': mention_context_error,
                                         'document_context_error': document_context_error,
                                         'loss': loss.item()},

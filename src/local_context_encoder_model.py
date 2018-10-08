@@ -20,13 +20,14 @@ class LocalContextEncoder(nn.Module):
                              hidden_size=self.lstm_size,
                              num_layers=self.num_lstm_layers,
                              dropout=self.dropout_keep_prob,
-                             batch_first=True)
+                             bidirectional=True)
     self.right_lstm = nn.LSTM(input_size=self.word_embed_len,
                               hidden_size=self.lstm_size,
                               num_layers=self.num_lstm_layers,
                               dropout=self.dropout_keep_prob,
-                              batch_first=True)
-    self.projection = nn.Linear(2 * self.lstm_size, self.context_embed_len)
+                              bidirectional=True)
+    self.projection = nn.Linear(2 * 2 * self.lstm_size * self.num_lstm_layers,
+                                self.context_embed_len)
     self.relu = nn.ReLU()
 
   def forward(self, sentence_splits):
@@ -34,10 +35,12 @@ class LocalContextEncoder(nn.Module):
     right_splits, right_order = get_splits_and_order(sentence_splits[1])
     left_output, left_state_info = self.left_lstm(left_splits)
     right_output, right_state_info = self.right_lstm(right_splits)
-    left_last_hidden_state = left_state_info[0][-1]
-    right_last_hidden_state = right_state_info[0][-1]
+    left_last_hidden_state = torch.cat([left_state_info[0][0], left_state_info[0][1]], 1)
+    right_last_hidden_state = torch.cat([right_state_info[0][0], right_state_info[0][1]], 1)
     unsorted_left = left_last_hidden_state[left_order]
     unsorted_right = right_last_hidden_state[right_order]
     sentence_embed = torch.cat((unsorted_left, unsorted_right),
                                dim=1)
-    return self.relu(self.projection(sentence_embed))
+    encoded = self.relu(self.projection(sentence_embed))
+    # return encoded / torch.norm(encoded, 2, 1).unsqueeze(1)
+    return encoded

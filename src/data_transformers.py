@@ -27,6 +27,8 @@ def _tokens_to_embeddings(embedding_lookup, tokens):
   for token in tokens:
     if token in embedding_lookup:
       text_embeddings.append(embedding_lookup[token])
+    elif token.lower() in embedding_lookup:
+      text_embeddings.append(embedding_lookup[token.lower()])
     elif token == 'MENTION_START_HERE':
       text_embeddings.append(embedding_lookup['<MENTION_START_HERE>'])
     elif token == 'MENTION_END_HERE':
@@ -85,8 +87,10 @@ def embed_and_pack_batch(embedding_lookup, sentence_splits_batch):
                                                         split_left[0])))
     right_batch.append(torch.stack(_tokens_to_embeddings(embedding_lookup,
                                                          split_right[1])))
-  return ({'embeddings': nn.utils.rnn.pack_sequence(left_batch), 'order': left_order},
-          {'embeddings': nn.utils.rnn.pack_sequence(right_batch), 'order': right_order})
+  left_unsort_order = sort_index(left_order)
+  right_unsort_order = sort_index(right_order)
+  return ({'embeddings': nn.utils.rnn.pack_sequence(left_batch), 'order': left_unsort_order},
+          {'embeddings': nn.utils.rnn.pack_sequence(right_batch), 'order': right_unsort_order})
 
 def _insert_mention_flags(page_content, mention_info):
   mention_text = mention_info['mention']

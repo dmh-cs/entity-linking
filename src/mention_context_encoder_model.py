@@ -34,4 +34,5 @@ class MentionContextEncoder(nn.Module):
     local_context_embeds = self.local_context_encoder(sentence_splits)
     document_context_embeds = self.document_context_encoder(entity_page_mentions)
     context_embeds = torch.cat((local_context_embeds, document_context_embeds), 1)
-    return self.relu(self.projection(context_embeds))
+    encoded = self.relu(self.projection(context_embeds))
+    return encoded / torch.norm(encoded, 2, 1).unsqueeze(1)

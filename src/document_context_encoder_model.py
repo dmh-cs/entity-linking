@@ -27,4 +27,6 @@ class DocumentContextEncoder(nn.Module):
     output, state_info = self.lstm(batch)
     last_hidden_state = state_info[0][-2:]
     last_hidden_state_stacked = torch.cat([layer_state for layer_state in last_hidden_state], 1)
-    return self.relu(self.projection(last_hidden_state_stacked))
+    encoded = self.relu(self.projection(last_hidden_state_stacked))
+    # return encoded / torch.norm(encoded, 2, 1).unsqueeze(1)
+    return encoded
