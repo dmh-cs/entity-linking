@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from torch.nn.modules.adaptive import AdaptiveLogSoftmaxWithLoss
 
-from data_fetchers import get_connection, get_embedding_lookup, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup
+from data_fetchers import get_connection, get_embedding_dict, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup
 from default_params import default_train_params, default_model_params, default_run_params, default_paths
 from joint_model import JointModel
 from logits import Logits
@@ -70,10 +70,14 @@ class Runner(object):
     self.log.status('Loading entity candidate_ids lookup')
     lookups = load_entity_candidate_ids_and_label_lookup(self.paths.lookups, self.train_params.train_size)
     self.log.status('Loading word embedding lookup')
+    embedding_dict = get_embedding_dict(self.paths.word_embedding, device=self.device)
+    token_idx_lookup = dict(zip(embedding_dict.keys(),
+                                range(len(embedding_dict))))
+    embedding = nn.Embedding.from_pretrained(torch.stack([embedding_dict[token] for token in token_idx_lookup]))
     self.lookups = self.lookups.update({'entity_candidates_prior': lookups['entity_candidates_prior'],
                                         'entity_labels': lookups['entity_labels'],
-                                        'embedding': get_embedding_lookup(self.paths.word_embedding,
-                                                                          device=self.device)})
+                                        'embedding': embedding,
+                                        'token_idx_lookup': token_idx_lookup})
     self.log.status('Getting page id order')
     self.page_id_order = load_page_id_order(self.paths.page_id_order)
     self.num_train_pages = int(len(self.page_id_order) * self.train_params.train_size)
@@ -95,6 +99,7 @@ class Runner(object):
                                  self.lookups.entity_candidates_prior,
                                  self.lookups.entity_labels,
                                  self.lookups.embedding,
+                                 self.lookups.token_idx_lookup,
                                  self.train_params.batch_size,
                                  self.model_params.num_entities,
                                  self.model_params.num_candidates)
@@ -123,7 +128,8 @@ class Runner(object):
 
   def _get_trainer(self, cursor, model):
     return Trainer(device=self.device,
-                   embedding_lookup=self.lookups.embedding,
+                   embedding=self.lookups.embedding,
+                   token_idx_lookup=self.lookups.token_idx_lookup,
                    model=model,
                    get_dataset=lambda: self._get_dataset(cursor, is_test=False),
                    get_batch_sampler=lambda: self._get_sampler(cursor, is_test=False),
@@ -155,7 +161,8 @@ class Runner(object):
                   batch_sampler=batch_sampler,
                   model=model,
                   logits_and_softmax=logits_and_softmax,
-                  embedding_lookup=self.lookups.embedding,
+                  embedding=self.lookups.embedding,
+                  token_idx_lookup=self.lookups.token_idx_lookup,
                   device=self.device,
                   experiment=self.experiment,
                   ablation=self.model_params.ablation,
@@ -176,7 +183,7 @@ class Runner(object):
 
   def run(self):
     self.load_caches()
-    pad_vector = self.lookups.embedding['<PAD>']
+    pad_vector = self.lookups.embedding[self.lookups.token_idx_lookup['<PAD>']]
     self.init_entity_embeds()
     try:
       db_connection = get_connection()
@@ -195,6 +202,7 @@ class Runner(object):
                              self.model_params.num_lstm_layers,
                              self.train_params.dropout_drop_prob,
                              self.entity_embeds,
+                             self.lookups.embedding,
                              pad_vector,
                              self.adaptive_logits)
         if not self.run_params.load_model:

@@ -1,5 +1,6 @@
 from mention_context_dataset import MentionContextDataset
 import torch
+import torch.nn as nn
 from unittest.mock import Mock
 from utils import coll_compare_keys_by
 import pydash as _
@@ -28,17 +29,21 @@ def test_mention_context_dataset():
                              'cc': {2: 3}}
   entity_label_lookup = dict(zip(range(5), range(5)))
   embedding_dim = 1
-  embedding_lookup = {'<PAD>': torch.tensor([0]),
-                      '<UNK>': torch.tensor([2]),
-                      '<MENTION_START_HERE>': torch.tensor([-1]),
-                      '<MENTION_END_HERE>': torch.tensor([-2])}
+  embedding_dict = {'<PAD>': torch.tensor([0]),
+                    '<UNK>': torch.tensor([2]),
+                    '<MENTION_START_HERE>': torch.tensor([-1]),
+                    '<MENTION_END_HERE>': torch.tensor([-2])}
+  token_idx_lookup = dict(zip(embedding_dict.keys(),
+                              range(len(embedding_dict))))
+  embedding = nn.Embedding.from_pretrained(torch.stack([embedding_dict[token] for token in token_idx_lookup]))
   num_entities = 5
   num_candidates = 2
   dataset = MentionContextDataset(cursor,
                                   page_id_order,
                                   entity_candidates_prior,
                                   entity_label_lookup,
-                                  embedding_lookup,
+                                  embedding,
+                                  token_idx_lookup,
                                   batch_size,
                                   num_entities,
                                   num_candidates)

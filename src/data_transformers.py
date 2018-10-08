@@ -22,20 +22,22 @@ def pad_batch(pad_vector, batch, min_len=0):
       to_stack.append(elem)
   return torch.stack(to_stack)
 
-def _tokens_to_embeddings(embedding_lookup, tokens):
-  text_embeddings = []
+def _tokens_to_embeddings(embedding, token_idx_lookup, tokens):
+  text_idxs = []
   for token in tokens:
-    if token in embedding_lookup:
-      text_embeddings.append(embedding_lookup[token])
-    elif token.lower() in embedding_lookup:
-      text_embeddings.append(embedding_lookup[token.lower()])
+    if token in token_idx_lookup:
+      text_idxs.append(token_idx_lookup[token])
+    elif token.lower() in token_idx_lookup:
+      text_idxs.append(token_idx_lookup[token.lower()])
     elif token == 'MENTION_START_HERE':
-      text_embeddings.append(embedding_lookup['<MENTION_START_HERE>'])
+      text_idxs.append(token_idx_lookup['<MENTION_START_HERE>'])
     elif token == 'MENTION_END_HERE':
-      text_embeddings.append(embedding_lookup['<MENTION_END_HERE>'])
+      text_idxs.append(token_idx_lookup['<MENTION_END_HERE>'])
     else:
-      text_embeddings.append(embedding_lookup['<UNK>'])
-  return text_embeddings
+      text_idxs.append(token_idx_lookup['<UNK>'])
+  return embedding(torch.tensor(text_idxs,
+                                dtype=torch.long,
+                                device=embedding.weight.device))
 
 def _satisfies(span, offset):
   return offset >= span[0] and offset <= span[1]
@@ -75,7 +77,7 @@ def get_mention_sentence_splits(page_content, sentence_spans, mention_info):
 def get_splits_and_order(packed):
   return packed['embeddings'], packed['order']
 
-def embed_and_pack_batch(embedding_lookup, sentence_splits_batch):
+def embed_and_pack_batch(embedding, token_idx_lookup, sentence_splits_batch):
   left_order = sort_index(sentence_splits_batch, key=lambda split: len(split[0]), reverse=True)
   right_order = sort_index(sentence_splits_batch, key=lambda split: len(split[1]), reverse=True)
   left_batch = []
@@ -83,10 +85,12 @@ def embed_and_pack_batch(embedding_lookup, sentence_splits_batch):
   for left_index, right_index in zip(left_order, right_order):
     split_left = sentence_splits_batch[left_index]
     split_right = sentence_splits_batch[right_index]
-    left_batch.append(torch.stack(_tokens_to_embeddings(embedding_lookup,
-                                                        split_left[0])))
-    right_batch.append(torch.stack(_tokens_to_embeddings(embedding_lookup,
-                                                         split_right[1])))
+    left_batch.append(_tokens_to_embeddings(embedding,
+                                            token_idx_lookup,
+                                            split_left[0]))
+    right_batch.append(_tokens_to_embeddings(embedding,
+                                             token_idx_lookup,
+                                             split_right[1]))
   left_unsort_order = sort_index(left_order)
   right_unsort_order = sort_index(right_order)
   return ({'embeddings': nn.utils.rnn.pack_sequence(left_batch), 'order': left_unsort_order},
@@ -98,9 +102,9 @@ def _insert_mention_flags(page_content, mention_info):
   end = mention_info['offset'] + len(mention_text)
   return page_content[:start] + 'MENTION_START_HERE ' + mention_text +  ' MENTION_END_HERE' + page_content[end:]
 
-def embed_page_content(embedding_lookup, page_content, page_mention_infos=[]):
+def embed_page_content(embedding, token_idx_lookup, page_content, page_mention_infos=[]):
   page_content_with_mention_flags = reduce(_insert_mention_flags,
                                            page_mention_infos,
                                            page_content)
   tokens = parse_text_for_tokens(page_content_with_mention_flags)
-  return torch.stack(_tokens_to_embeddings(embedding_lookup, tokens))
+  return _tokens_to_embeddings(embedding, token_idx_lookup, tokens)

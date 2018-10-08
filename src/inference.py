@@ -3,11 +3,12 @@ import torch
 
 from data_transformers import embed_and_pack_batch
 
-def predict(embedding_lookup, p_prior, model, batch, ablation, logits_and_softmax):
+def predict(embedding, token_idx_lookup, p_prior, model, batch, ablation, logits_and_softmax):
   if ablation == ['prior']:
     return torch.argmax(p_prior, dim=1)
   elif 'local_context' in ablation:
-    left_splits, right_splits = embed_and_pack_batch(embedding_lookup,
+    left_splits, right_splits = embed_and_pack_batch(embedding,
+                                                     token_idx_lookup,
                                                      batch['sentence_splits'])
     if 'document_context' in ablation:
       _, mention_embeds = model(((left_splits, right_splits),

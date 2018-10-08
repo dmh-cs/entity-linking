@@ -7,6 +7,7 @@ import numpy as np
 import pydash as _
 import pymysql.cursors
 import torch
+import torch.nn as nn
 
 import utils as u
 
@@ -60,7 +61,7 @@ def _get_data_fetcher(num_items_per_dataset):
 def get_raw_datasets(cursors, num_items):
   return _.map_values(cursors, _get_data_fetcher(num_items))
 
-def get_embedding_lookup(path, embedding_dim=100, device=None):
+def get_embedding_dict(path, embedding_dim=100, device=None):
   if device is None: raise ValueError('Specify a device')
   lookup = {'<PAD>': torch.zeros(size=(embedding_dim,), dtype=torch.float32, device=device),
             '<UNK>': torch.randn(size=(embedding_dim,), dtype=torch.float32, device=device),

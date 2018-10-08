@@ -13,6 +13,7 @@ class JointModel(nn.Module):
                num_lstm_layers,
                dropout_drop_prob,
                entity_embeds,
+               word_embedding,
                pad_vector,
                adaptive_logits):
     super().__init__()
@@ -31,6 +32,7 @@ class JointModel(nn.Module):
                                                          pad_vector)
     self.desc = adaptive_logits['desc']
     self.mention = adaptive_logits['mention']
+    self.word_embedding = word_embedding
 
   def forward(self, data):
     embedded_page_contents = data[1]

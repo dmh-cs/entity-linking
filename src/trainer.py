@@ -21,7 +21,8 @@ def collate(batch):
 class Trainer(object):
   def __init__(self,
                device,
-               embedding_lookup,
+               embedding,
+               token_idx_lookup,
                model: nn.Module,
                get_dataset,
                get_batch_sampler,
@@ -37,7 +38,8 @@ class Trainer(object):
     self.get_dataset = get_dataset
     self.get_batch_sampler = get_batch_sampler
     self.num_epochs = num_epochs
-    self.embedding_lookup = embedding_lookup
+    self.embedding = embedding
+    self.token_idx_lookup = token_idx_lookup
     self.experiment = experiment
     self.calc_loss = calc_loss
     self.logits_and_softmax = logits_and_softmax
@@ -70,7 +72,8 @@ class Trainer(object):
           labels = batch['label']
         else:
           labels = self._get_labels_for_batch(batch['label'], batch['candidate_ids'])
-        left_splits, right_splits = embed_and_pack_batch(self.embedding_lookup,
+        left_splits, right_splits = embed_and_pack_batch(self.embedding,
+                                                         self.token_idx_lookup,
                                                          batch['sentence_splits'])
         encoded = self.model(((left_splits, right_splits),
                               batch['embedded_page_content'],

@@ -14,14 +14,16 @@ class MentionContextDataset(Dataset):
                page_id_order,
                entity_candidates_prior,
                entity_label_lookup,
-               embedding_lookup,
+               embedding,
+               token_idx_lookup,
                batch_size,
                num_entities,
                num_candidates):
     self.page_id_order = page_id_order
     self.entity_candidates_prior = entity_candidates_prior
     self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
-    self.embedding_lookup = embedding_lookup
+    self.embedding = embedding
+    self.token_idx_lookup = token_idx_lookup
     self.cursor = cursor
     self.batch_size = batch_size
     self.num_entities = num_entities
@@ -111,7 +113,8 @@ class MentionContextDataset(Dataset):
       if _.is_empty(page_mention_infos):
         lookup[page_id] = torch.tensor([])
       else:
-        lookup[page_id] = embed_page_content(self.embedding_lookup,
+        lookup[page_id] = embed_page_content(self.embedding,
+                                             self.token_idx_lookup,
                                              content,
                                              page_mention_infos)
     return lookup
@@ -121,7 +124,8 @@ class MentionContextDataset(Dataset):
     for page_id in page_ids:
       page_content = self._page_content_lookup[page_id]
       if len(page_content.strip()) > 5:
-        lookup[page_id] = embed_page_content(self.embedding_lookup,
+        lookup[page_id] = embed_page_content(self.embedding,
+                                             self.token_idx_lookup,
                                              page_content)
     return lookup
 

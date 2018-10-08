@@ -20,15 +20,18 @@ def test_get_mention_sentence_splits_with_merge():
                                         mention_info) == [['a', 'b', 'c', 'aa'], ['c', 'aa', 'bb', 'cc']]
 
 def test_embed_page_content():
-  embedding_lookup = _.map_values({'<PAD>': [-1],
-                                   '<UNK>': [0],
-                                   'MENTION_START_HERE': [-2], 'MENTION_END_HERE': [-3],
-                                   'a': [1], 'b': [2], 'c': [3], 'd': [4]},
-                                  torch.tensor)
+  embedding_dict = _.map_values({'<PAD>': [-1],
+                                 '<UNK>': [0],
+                                 'MENTION_START_HERE': [-2], 'MENTION_END_HERE': [-3],
+                                 'a': [1], 'b': [2], 'c': [3], 'd': [4]},
+                                torch.tensor)
+  token_idx_lookup = dict(zip(embedding_dict.keys(),
+                              range(len(embedding_dict))))
+  embedding = nn.Embedding.from_pretrained(torch.stack([embedding_dict[token] for token in token_idx_lookup]))
   page_mention_infos = [{'offset': 2, 'mention': 'b c'}]
   page_content = 'a b c d'
   embedded = torch.tensor([[1], [-2], [2], [3], [-3], [4]])
-  assert torch.equal(dt.embed_page_content(embedding_lookup, page_content, page_mention_infos), embedded)
+  assert torch.equal(dt.embed_page_content(embedding, token_idx_lookup, page_content, page_mention_infos), embedded)
 
 def test_pad_batch():
   pad_vector = torch.tensor([0])
@@ -46,12 +49,15 @@ def test_pad_batch_no_min():
                                    [[1], [2]]]))
 
 def test_embed_and_pack_batch():
-  embedding_lookup = {'a': torch.tensor([1]), 'b': torch.tensor([2])}
+  embedding_dict = {'a': torch.tensor([1]), 'b': torch.tensor([2])}
+  token_idx_lookup = dict(zip(embedding_dict.keys(),
+                              range(len(embedding_dict))))
+  embedding = nn.Embedding.from_pretrained(torch.stack([embedding_dict[token] for token in token_idx_lookup]))
   sentence_splits_batch = [[['a', 'b', 'a', 'b'], ['b', 'a']],
                            [['b', 'a'], ['a', 'b', 'a', 'b']]]
   left = [torch.tensor(vec) for vec in [[[1], [2], [1], [2]], [[2], [1]]]]
   right = [torch.tensor(vec) for vec in [[[1], [2], [1], [2]], [[2], [1]]]]
-  result = dt.embed_and_pack_batch(embedding_lookup, sentence_splits_batch)
+  result = dt.embed_and_pack_batch(embedding, token_idx_lookup, sentence_splits_batch)
   assert torch.equal(result[0]['embeddings'].data,
                      nn.utils.rnn.pack_sequence(left).data)
   assert torch.equal(result[0]['embeddings'].batch_sizes,

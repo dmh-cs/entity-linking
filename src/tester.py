@@ -18,7 +18,8 @@ class Tester(object):
                dataset,
                model,
                logits_and_softmax,
-               embedding_lookup,
+               embedding,
+               token_idx_lookup,
                device,
                batch_sampler,
                experiment,
@@ -27,7 +28,8 @@ class Tester(object):
     self.dataset = dataset
     self.model = nn.DataParallel(model)
     self.model = model.to(device)
-    self.embedding_lookup = embedding_lookup
+    self.embedding = embedding
+    self.token_idx_lookup = token_idx_lookup
     self.device = device
     self.batch_sampler = batch_sampler
     self.experiment = experiment
@@ -55,7 +57,8 @@ class Tester(object):
       batch = u.tensors_to_device(batch, self.device)
       labels_for_batch = self._get_labels_for_batch(batch['label'],
                                                     batch['candidate_ids'])
-      predictions = predict(embedding_lookup=self.embedding_lookup,
+      predictions = predict(embedding=self.embedding,
+                            token_idx_lookup=self.token_idx_lookup,
                             p_prior=0 if self.use_adaptive_softmax else batch['p_prior'],
                             model=self.model,
                             batch=batch,

@@ -52,8 +52,11 @@ def test_tester(monkeypatch, myMock):
   entity_embeds = nn.Embedding(num_entities,
                                embed_len,
                                _weight=torch.randn((num_entities, embed_len)))
-  embedding_lookup = dict(zip(string.ascii_lowercase,
-                              [torch.tensor(i) for i, char in enumerate(string.ascii_lowercase)]))
+  embedding_dict = dict(zip(string.ascii_lowercase,
+                            [torch.tensor([i]) for i, char in enumerate(string.ascii_lowercase)]))
+  token_idx_lookup = dict(zip(embedding_dict.keys(),
+                              range(len(embedding_dict))))
+  embedding = nn.Embedding.from_pretrained(torch.stack([embedding_dict[token] for token in token_idx_lookup]))
   vector_to_return = entity_embeds(torch.tensor([1, 1, 1]))
   model = get_mock_model(vector_to_return)
   device = None
@@ -70,7 +73,8 @@ def test_tester(monkeypatch, myMock):
                       batch_sampler=batch_sampler,
                       model=model,
                       logits_and_softmax=logits_and_softmax,
-                      embedding_lookup=embedding_lookup,
+                      embedding=embedding,
+                      token_idx_lookup=token_idx_lookup,
                       device=device,
                       experiment=mock_experiment,
                       ablation=['prior', 'local_context', 'document_context'],

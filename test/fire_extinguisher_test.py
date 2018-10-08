@@ -10,5 +10,5 @@ def test_batch_repeater():
   batches = []
   for batch in batch_repeater:
     batches.append(batch)
-  assert all([batch == [0, 1, 2, 3, 4] for batch in batches])
+  assert all([set(batch) == set([0, 1, 2, 3, 4]) for batch in batches])
   assert len(batches) == 3
