@@ -35,8 +35,10 @@ class LocalContextEncoder(nn.Module):
     right_splits, right_order = get_splits_and_order(sentence_splits[1])
     left_output, left_state_info = self.left_lstm(left_splits)
     right_output, right_state_info = self.right_lstm(right_splits)
-    left_last_hidden_state = torch.cat([left_state_info[0][0], left_state_info[0][1]], 1)
-    right_last_hidden_state = torch.cat([right_state_info[0][0], right_state_info[0][1]], 1)
+    left_last_hidden_state = torch.cat([left_state_info[0][i] for i in range(left_state_info[0].shape[0])],
+                                       1)
+    right_last_hidden_state = torch.cat([right_state_info[0][i] for i in range(right_state_info[0].shape[0])],
+                                        1)
     unsorted_left = left_last_hidden_state[left_order]
     unsorted_right = right_last_hidden_state[right_order]
     sentence_embed = torch.cat((unsorted_left, unsorted_right),
