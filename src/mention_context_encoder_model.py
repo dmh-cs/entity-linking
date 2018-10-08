@@ -12,11 +12,11 @@ class MentionContextEncoder(nn.Module):
                local_encoder_lstm_size,
                document_encoder_lstm_size,
                num_lstm_layers,
-               dropout_keep_prob,
+               dropout_drop_prob,
                entity_embeds,
                pad_vector):
     super(MentionContextEncoder, self).__init__()
-    self.local_context_encoder = LocalContextEncoder(dropout_keep_prob,
+    self.local_context_encoder = LocalContextEncoder(dropout_drop_prob,
                                                      local_encoder_lstm_size,
                                                      num_lstm_layers,
                                                      word_embed_len,

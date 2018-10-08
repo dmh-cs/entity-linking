@@ -11,7 +11,7 @@ class JointModel(nn.Module):
                local_encoder_lstm_size,
                document_encoder_lstm_size,
                num_lstm_layers,
-               dropout_keep_prob,
+               dropout_drop_prob,
                entity_embeds,
                pad_vector,
                adaptive_logits):
@@ -26,7 +26,7 @@ class JointModel(nn.Module):
                                                          local_encoder_lstm_size,
                                                          document_encoder_lstm_size,
                                                          num_lstm_layers,
-                                                         dropout_keep_prob,
+                                                         dropout_drop_prob,
                                                          entity_embeds,
                                                          pad_vector)
     self.desc = adaptive_logits['desc']

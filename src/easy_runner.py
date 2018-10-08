@@ -226,7 +226,7 @@ class Runner(object):
                              self.model_params.local_encoder_lstm_size,
                              self.model_params.document_encoder_lstm_size,
                              self.model_params.num_lstm_layers,
-                             self.train_params.dropout_keep_prob,
+                             self.train_params.dropout_drop_prob,
                              self.entity_embeds,
                              pad_vector,
                              self.adaptive_logits)

@@ -6,7 +6,7 @@ default_train_params = m(batch_size=100,
                          debug=False,
                          num_epochs=1,
                          train_size=0.8,
-                         dropout_keep_prob=0.4)
+                         dropout_drop_prob=0.4)
 default_model_params = m(use_adaptive_softmax=False,
                          use_hardcoded_cutoffs=True,
                          embed_len=100,

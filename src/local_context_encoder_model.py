@@ -5,7 +5,7 @@ from data_transformers import get_splits_and_order
 
 class LocalContextEncoder(nn.Module):
   def __init__(self,
-               dropout_keep_prob,
+               dropout_drop_prob,
                lstm_size,
                num_lstm_layers,
                word_embed_len,
@@ -15,16 +15,16 @@ class LocalContextEncoder(nn.Module):
     self.lstm_size = lstm_size
     self.word_embed_len = word_embed_len
     self.context_embed_len = context_embed_len
-    self.dropout_keep_prob = dropout_keep_prob
+    self.dropout_drop_prob = dropout_drop_prob
     self.left_lstm = nn.LSTM(input_size=self.word_embed_len,
                              hidden_size=self.lstm_size,
                              num_layers=self.num_lstm_layers,
-                             dropout=self.dropout_keep_prob,
+                             dropout=self.dropout_drop_prob,
                              bidirectional=True)
     self.right_lstm = nn.LSTM(input_size=self.word_embed_len,
                               hidden_size=self.lstm_size,
                               num_layers=self.num_lstm_layers,
-                              dropout=self.dropout_keep_prob,
+                              dropout=self.dropout_drop_prob,
                               bidirectional=True)
     self.projection = nn.Linear(2 * 2 * self.lstm_size * self.num_lstm_layers,
                                 self.context_embed_len)

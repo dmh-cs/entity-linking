@@ -11,7 +11,7 @@ from runner import Runner
 # from easy_runner import Runner
 
 args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param', 'type': int},
-                     {'name': 'dropout_keep_prob'          , 'for': 'train_param', 'type': float},
+                     {'name': 'dropout_drop_prob'          , 'for': 'train_param', 'type': float},
                      {'name': 'train_size'                 , 'for': 'train_param', 'type': int},
                      {'name': 'num_epochs'                 , 'for': 'train_param', 'type': int},
                      {'name': 'ablation'                   , 'for': 'model_param', 'type': lambda string: string.split(',')},
