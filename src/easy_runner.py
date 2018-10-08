@@ -10,6 +10,8 @@ import torch.nn as nn
 from torch.nn.modules.adaptive import AdaptiveLogSoftmaxWithLoss
 from torch.utils.data import RandomSampler, BatchSampler, Dataset
 
+import numpy as np
+
 from data_fetchers import get_connection, get_embedding_lookup, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup
 from default_params import default_train_params, default_model_params, default_run_params, default_paths
 from joint_model import JointModel
@@ -52,7 +54,8 @@ class Runner(object):
     if not hasattr(self.model_params, 'adaptive_softmax_cutoffs'):
       # self.model_params = self.model_params.set('adaptive_softmax_cutoffs', [100000, 500000])
       # self.model_params = self.model_params.set('adaptive_softmax_cutoffs', [10, 100, 1000, 10000, 100000])
-      self.model_params = self.model_params.set('adaptive_softmax_cutoffs', [3, 6])
+      # self.model_params = self.model_params.set('adaptive_softmax_cutoffs', [20, 25])
+      self.model_params = self.model_params.set('adaptive_softmax_cutoffs', [3, 4])
     self.paths = self.paths.set('word_embedding',
                                 self._get_word_embedding_path())
     self.page_id_order: Optional[list] = None
@@ -80,11 +83,11 @@ class Runner(object):
     self.log.status('Loading word embedding lookup')
     self.lookups = self.lookups.update({'embedding': get_embedding_lookup(self.paths.word_embedding,
                                                                           device=self.device)})
-    if not hasattr(self.model_params, 'num_entities'):
-      self.log.status('Getting number of entities')
-    cursor.execute("select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id = 19325")
+    cursor.execute("select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id = 20388")
     mention_infos = cursor.fetchall()
-    cursor.execute("select content from pages where id = 19325")
+    entity_ids = list(set([mention_info['entity_id'] for mention_info in mention_infos]))
+    mention_infos = [i for i in mention_infos if i['entity_id'] in entity_ids]
+    cursor.execute("select content from pages where id = 20388")
     page_content = cursor.fetchone()['content']
     sentence_spans = parse_for_sentence_spans(page_content)
     self.samples = []
@@ -94,20 +97,26 @@ class Runner(object):
     entity_page_mentions = embed_page_content(self.lookups.embedding,
                                               content,
                                               mention_infos)
-    entity_labels = self.lookups.get('entity_labels') or {}
+    entity_labels = {}
     embedded_page_content = embed_page_content(self.lookups.embedding, page_content)
     for mention_info in mention_infos:
-      entity_labels[mention_info['entity_id']] = entity_labels.get(mention_info['entity_id']) or len(entity_labels)
+      entity_labels[mention_info['entity_id']] = entity_labels[mention_info['entity_id']] if mention_info['entity_id'] in entity_labels else len(entity_labels)
     self.lookups = self.lookups.set('entity_labels',entity_labels)
     for mention_info in mention_infos:
+      cands = list(set(entity_labels.values()) - set([entity_labels[mention_info['entity_id']]]))
+      shuffle(cands)
+      cands = [entity_labels[mention_info['entity_id']]] + cands[:5]
+      # cands = list(range(len(entity_labels)))
+      # # shuffle(cands)
       self.samples.append({'sentence_splits': get_mention_sentence_splits(page_content,
                                                                           sentence_spans,
                                                                           mention_info),
                            'label': entity_labels[mention_info['entity_id']],
                            'embedded_page_content': embedded_page_content,
                            'entity_page_mentions': entity_page_mentions,
-                           'candidate_ids': torch.tensor(list(entity_labels.values()))})
-    shuffle(self.samples)
+                           # 'candidate_ids': torch.tensor(list(entity_labels.values()))})
+                           'candidate_ids': torch.tensor(cands)})
+    # shuffle(self.samples)
 
   def init_entity_embeds(self):
     entity_embed_weights = nn.Parameter(torch.Tensor(self.model_params.num_entities,
@@ -116,14 +125,16 @@ class Runner(object):
     self.entity_embeds = nn.Embedding(self.model_params.num_entities,
                                       self.model_params.embed_len,
                                       _weight=entity_embed_weights).to(self.device)
+    # for p in self.entity_embeds.parameters():
+    #   p.requires_grad = False
 
   def _get_dataset(self, cursor, is_test):
     return BasicDataset(self.samples)
 
   def _get_sampler(self, cursor, is_test):
-    return BatchSampler(RandomSampler(list(range(100))),
-                        self.train_params.batch_size,
-                        False)
+    return BatchRepeater(BatchSampler(RandomSampler(list(range(len(self.samples)))),
+                                      self.train_params.batch_size,
+                                      False))
 
   def _calc_loss(self, encoded, candidate_entity_ids, labels_for_batch):
     desc_embeds, mention_context_embeds = encoded
@@ -132,6 +143,11 @@ class Runner(object):
       mention_logits, mention_loss = self.adaptive_logits['mention'](mention_context_embeds, labels_for_batch)
     else:
       logits = Logits()
+      # weight = np.zeros(candidate_entity_ids.shape[1])
+      # counts = np.bincount(labels_for_batch)
+      # weight[:len(counts)] = 1.0 / (counts + 0.1)
+      # weight = torch.tensor(weight, device=encoded[0].device, dtype=torch.float)
+      # criterion = nn.CrossEntropyLoss(weight=weight)
       criterion = nn.CrossEntropyLoss()
       desc_logits = logits(desc_embeds,
                            self.entity_embeds(candidate_entity_ids))
@@ -157,7 +173,6 @@ class Runner(object):
   def _get_logits_and_softmax(self):
     def get_calc(context):
       if self.model_params.use_adaptive_softmax:
-        # softmax = self.adaptive_logits[context].predict
         softmax = self.adaptive_logits[context].log_prob
         calc = lambda hidden, _: softmax(hidden)
       else:
@@ -192,7 +207,8 @@ class Runner(object):
       in_features = self.entity_embeds.weight.shape[1]
       n_classes = self.entity_embeds.weight.shape[0]
       return AdaptiveLogSoftmaxWithLoss(in_features, n_classes, cutoffs, div_value=2.0).to(self.device)
-    return {context: get_calc(context) for context in ['desc', 'mention']}
+    calc = get_calc('')
+    return {context: calc for context in ['desc', 'mention']}
 
   def run(self):
     try:

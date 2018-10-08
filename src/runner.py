@@ -18,6 +18,7 @@ from softmax import Softmax
 from tester import Tester
 from trainer import Trainer
 
+from fire_extinguisher import BatchRepeater
 
 class Runner(object):
   def __init__(self,
