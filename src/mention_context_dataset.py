@@ -47,8 +47,7 @@ class MentionContextDataset(Dataset):
   def __getitem__(self, idx):
     if idx not in self._mention_infos:
       self._next_batch()
-    # mention_info = self._mention_infos.pop(idx)
-    mention_info = self._mention_infos[idx]
+    mention_info = self._mention_infos.pop(idx)
     sentence_spans = self._sentence_spans_lookup[mention_info['page_id']]
     page_content = self._page_content_lookup[mention_info['page_id']]
     label = self.entity_label_lookup[mention_info['entity_id']]
@@ -64,11 +63,10 @@ class MentionContextDataset(Dataset):
               'candidate_ids': candidate_ids}
     self._mentions_per_page_ctr[mention_info['page_id']] -= 1
     if self._mentions_per_page_ctr[mention_info['page_id']] == 0:
-      # self._sentence_spans_lookup.pop(mention_info['page_id'])
-      # self._page_content_lookup.pop(mention_info['page_id'])
-      # self._embedded_page_content_lookup.pop(mention_info['page_id'])
-      # self._entity_page_mentions_lookup.pop(mention_info['page_id'])
-      pass
+      self._sentence_spans_lookup.pop(mention_info['page_id'])
+      self._page_content_lookup.pop(mention_info['page_id'])
+      self._embedded_page_content_lookup.pop(mention_info['page_id'])
+      self._entity_page_mentions_lookup.pop(mention_info['page_id'])
     return sample
 
   def _get_p_prior(self, mention, candidate_ids):
