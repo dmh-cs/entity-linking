@@ -183,7 +183,8 @@ class Runner(object):
 
   def run(self):
     self.load_caches()
-    pad_vector = self.lookups.embedding[self.lookups.token_idx_lookup['<PAD>']]
+    pad_vector = self.lookups.embedding(torch.tensor([self.lookups.token_idx_lookup['<PAD>']],
+                                                     device=self.lookups.embedding.weight.device)).squeeze()
     self.init_entity_embeds()
     try:
       db_connection = get_connection()
