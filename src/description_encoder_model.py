@@ -23,10 +23,11 @@ class DescriptionEncoder(nn.Module):
                             [embeds[:100] for embeds in embedded_page_contents],
                             min_len=100)
     encoded = pipe(desc_embeds,
-                   # lambda embed: torch.transpose(embed, 1, 2),
+                   lambda embed: torch.transpose(embed, 1, 2),
                    self.conv,
                    self.relu,
                    self.dropout,
                    self.global_avg_pooling,
+                   lambda embed: torch.transpose(embed, 1, 2),
                    torch.squeeze)
     return encoded / torch.norm(encoded, 2, 1).unsqueeze(1)
