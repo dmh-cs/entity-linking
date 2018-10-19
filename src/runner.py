@@ -71,7 +71,9 @@ class Runner(object):
     self.log.status('Loading entity candidate_ids lookup')
     lookups = load_entity_candidate_ids_and_label_lookup(self.paths.lookups, self.train_params.train_size)
     self.log.status('Loading word embedding lookup')
-    embedding_dict = get_embedding_dict(self.paths.word_embedding, device=self.device)
+    embedding_dict = get_embedding_dict(self.paths.word_embedding,
+                                        embedding_dim=self.model_params.word_embed_len,
+                                        device=self.device)
     token_idx_lookup = dict(zip(embedding_dict.keys(),
                                 range(len(embedding_dict))))
     embedding = nn.Embedding.from_pretrained(torch.stack([embedding_dict[token] for token in token_idx_lookup]))
