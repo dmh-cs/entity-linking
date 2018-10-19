@@ -71,7 +71,8 @@ def get_embedding_dict(path, embedding_dim=100, device=None):
     while True:
       line = f.readline()
       if line and len(line) > 0:
-        split_line = line.strip().split(' ')
+        split_line = line.rstrip().split(' ')
+        assert embedding_dim == len(np.array(split_line[1:], dtype=np.float32))
         lookup[split_line[0]] = torch.tensor(np.array(split_line[1:], dtype=np.float32),
                                              dtype=torch.float32,
                                              device=device)
