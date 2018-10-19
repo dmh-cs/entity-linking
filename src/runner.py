@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from torch.nn.modules.adaptive import AdaptiveLogSoftmaxWithLoss
 
-from data_fetchers import get_connection, get_embedding_dict, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup
+from data_fetchers import get_connection, get_embedding_dict, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup, get_entity_text
 from default_params import default_train_params, default_model_params, default_run_params, default_paths
 from joint_model import JointModel
 from logits import Logits
@@ -17,6 +17,8 @@ from mention_context_dataset import MentionContextDataset
 from softmax import Softmax
 from tester import Tester
 from trainer import Trainer
+from parsers import parse_for_tokens
+from data_transformers import pad_batch
 
 from fire_extinguisher import BatchRepeater
 
@@ -87,10 +89,25 @@ class Runner(object):
     self.page_id_order_train = self.page_id_order[:self.num_train_pages]
     self.page_id_order_test = self.page_id_order[self.num_train_pages:]
 
+  def _get_entity_tokens(self):
+    entity_id_to_text = get_entity_text()
+    entity_texts = _.map_keys(entity_id_to_text, lambda key: self.lookups.entity_labels[key])
+    entity_tokens = _.map_values(entity_texts, parse_for_tokens)
+    entity_indexed_tokens = _.map_values(entity_tokens,
+                                         lambda tokens: [self.lookups.token_idx_lookup[token] for token in tokens if token in self.lookups.token_idx_lookup else self.lookups.token_idx_lookup['<UNK>']])
+    return torch.tensor(pad_batch(0, entity_indexed_tokens),
+                        device=self.device)
+
   def init_entity_embeds(self):
-    entity_embed_weights = nn.Parameter(torch.Tensor(self.model_params.num_entities,
-                                                     self.model_params.embed_len))
-    entity_embed_weights.data.normal_(0, 1.0/math.sqrt(self.model_params.embed_len))
+    if self.model_params.word_embed_len == self.model_params.embed_len:
+      entities_by_token = self._get_entity_tokens()
+      entity_word_vecs = self.lookups.embedding(entities_by_token)
+      entity_embed_weights = nn.Parameter(entity_word_vecs.sum(1))
+    else:
+      print(f'word embed len: {self.model_params.word_embed_len} != entity embed len {self.model_params.embed_len}. Not initializing entity embeds with word embeddings')
+      entity_embed_weights = nn.Parameter(torch.Tensor(self.model_params.num_entities,
+                                                       self.model_params.embed_len))
+      entity_embed_weights.data.normal_(0, 1.0/math.sqrt(self.model_params.embed_len))
     self.entity_embeds = nn.Embedding(self.model_params.num_entities,
                                       self.model_params.embed_len,
                                       _weight=entity_embed_weights).to(self.device)
