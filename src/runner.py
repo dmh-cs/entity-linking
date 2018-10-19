@@ -18,7 +18,7 @@ from softmax import Softmax
 from tester import Tester
 from trainer import Trainer
 from parsers import parse_for_tokens
-from data_transformers import pad_batch
+from data_transformers import pad_batch_list
 
 from fire_extinguisher import BatchRepeater
 
@@ -93,7 +93,7 @@ class Runner(object):
     entity_indexed_tokens = {self.lookups.entity_labels[entity_id]: _.map_(parse_for_tokens(text), mapper)
                              for entity_id, text in get_entity_text().items()
                              if entity_id in self.lookups.entity_labels}
-    return torch.tensor(pad_batch(0, entity_indexed_tokens),
+    return torch.tensor(pad_batch_list(0, entity_indexed_tokens),
                         device=self.device)
 
   def init_entity_embeds(self):

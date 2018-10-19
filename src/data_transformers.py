@@ -9,15 +9,27 @@ from parsers import parse_text_for_tokens, parse_for_tokens
 
 
 def pad_batch(pad_vector, batch, min_len=0):
-  elem_pad_dim = 0
   pad_to_len = max(min_len, max(_.map_(batch, len)))
   to_stack = []
   for elem in batch:
-    dim_len = elem.shape[elem_pad_dim]
+    dim_len = len(elem)
     if pad_to_len != dim_len:
       pad = torch.stack([pad_vector] * (pad_to_len - dim_len))
-      to_stack.append(torch.cat((elem, pad),
-                                elem_pad_dim))
+      to_stack.append(torch.cat((elem, pad), 0))
+    else:
+      to_stack.append(elem)
+  return torch.stack(to_stack)
+
+def pad_batch_list(pad_elem, batch, min_len=0):
+  assert isinstance(batch, list)
+  assert isinstance(batch, (int, str))
+  pad_to_len = max(min_len, max(_.map_(batch, len)))
+  to_stack = []
+  for elem in batch:
+    dim_len = len(elem)
+    if pad_to_len != dim_len:
+      pad = [pad_elem for i in range(pad_to_len - dim_len)]
+      to_stack.append(elem + pad)
     else:
       to_stack.append(elem)
   return torch.stack(to_stack)
