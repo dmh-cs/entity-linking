@@ -141,11 +141,11 @@ def get_num_entities():
   finally:
     db_connection.close()
 
-def get_entity_texts():
+def get_entity_text():
   try:
     db_connection = get_connection()
     with db_connection.cursor() as cursor:
-      cursor.execute('select text from entities')
-      return [row['text'] for row in cursor.fetchall()]
+      cursor.execute('select id, text from entities')
+      return {row['id']: row['text'] for row in cursor.fetchall()}
   finally:
     db_connection.close()
