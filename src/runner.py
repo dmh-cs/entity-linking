@@ -74,11 +74,10 @@ class Runner(object):
     lookups = load_entity_candidate_ids_and_label_lookup(self.paths.lookups, self.train_params.train_size)
     self.log.status('Loading word embedding lookup')
     embedding_dict = get_embedding_dict(self.paths.word_embedding,
-                                        embedding_dim=self.model_params.word_embed_len,
-                                        device=self.device)
+                                        embedding_dim=self.model_params.word_embed_len)
     token_idx_lookup = dict(zip(embedding_dict.keys(),
                                 range(len(embedding_dict))))
-    embedding = nn.Embedding.from_pretrained(torch.stack([embedding_dict[token] for token in token_idx_lookup]))
+    embedding = nn.Embedding.from_pretrained(torch.stack([embedding_dict[token] for token in token_idx_lookup]).to(self.device))
     self.lookups = self.lookups.update({'entity_candidates_prior': lookups['entity_candidates_prior'],
                                         'entity_labels': lookups['entity_labels'],
                                         'embedding': embedding,
@@ -93,8 +92,11 @@ class Runner(object):
     entity_id_to_text = get_entity_text()
     entity_texts = _.map_keys(entity_id_to_text, lambda key: self.lookups.entity_labels[key])
     entity_tokens = _.map_values(entity_texts, parse_for_tokens)
-    entity_indexed_tokens = _.map_values(entity_tokens,
-                                         lambda tokens: [self.lookups.token_idx_lookup[token] for token in tokens if token in self.lookups.token_idx_lookup else self.lookups.token_idx_lookup['<UNK>']])
+    mapper = lambda tokens: [self.lookups.token_idx_lookup[token]
+                             if token in self.lookups.token_idx_lookup
+                             else self.lookups.token_idx_lookup['<UNK>']
+                             for token in tokens]
+    entity_indexed_tokens = _.map_values(entity_tokens, mapper)
     return torch.tensor(pad_batch(0, entity_indexed_tokens),
                         device=self.device)
 

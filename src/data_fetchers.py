@@ -8,6 +8,7 @@ import pydash as _
 import pymysql.cursors
 import torch
 import torch.nn as nn
+from progressbar import progressbar
 
 import utils as u
 
@@ -61,23 +62,16 @@ def _get_data_fetcher(num_items_per_dataset):
 def get_raw_datasets(cursors, num_items):
   return _.map_values(cursors, _get_data_fetcher(num_items))
 
-def get_embedding_dict(path, embedding_dim=100, device=None):
-  if device is None: raise ValueError('Specify a device')
-  lookup = {'<PAD>': torch.zeros(size=(embedding_dim,), dtype=torch.float32, device=device),
-            '<UNK>': torch.randn(size=(embedding_dim,), dtype=torch.float32, device=device),
-            '<MENTION_START_HERE>': torch.randn(size=(embedding_dim,), dtype=torch.float32, device=device),
-            '<MENTION_END_HERE>': torch.randn(size=(embedding_dim,), dtype=torch.float32, device=device)}
+def get_embedding_dict(path, embedding_dim=100):
+  lookup = {'<PAD>': torch.zeros(size=(embedding_dim,), dtype=torch.float32),
+            '<UNK>': torch.randn(size=(embedding_dim,), dtype=torch.float32),
+            '<MENTION_START_HERE>': torch.randn(size=(embedding_dim,), dtype=torch.float32),
+            '<MENTION_END_HERE>': torch.randn(size=(embedding_dim,), dtype=torch.float32)}
   with open(path) as f:
-    while True:
-      line = f.readline()
-      if line and len(line) > 0:
-        split_line = line.rstrip().split(' ')
-        assert embedding_dim == len(np.array(split_line[1:], dtype=np.float32))
-        lookup[split_line[0]] = torch.tensor(np.array(split_line[1:], dtype=np.float32),
-                                             dtype=torch.float32,
-                                             device=device)
-      else:
-        break
+    for line in progressbar(f):
+      split_line = line.rstrip().split(' ')
+      lookup[split_line[0]] = torch.tensor(np.array(split_line[1:], dtype=np.float32),
+                                           dtype=torch.float32)
   return lookup
 
 def get_random_indexes(max_value, exclude, num_to_generate):
