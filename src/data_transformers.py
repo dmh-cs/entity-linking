@@ -22,7 +22,7 @@ def pad_batch(pad_vector, batch, min_len=0):
 
 def pad_batch_list(pad_elem, batch, min_len=0):
   assert isinstance(batch, list)
-  assert isinstance(batch, (int, str))
+  assert isinstance(pad_elem, (int, str))
   pad_to_len = max(min_len, max(_.map_(batch, len)))
   to_stack = []
   for elem in batch:
