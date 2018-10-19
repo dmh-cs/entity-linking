@@ -97,11 +97,17 @@ class Runner(object):
     return torch.tensor(pad_batch_list(0, entity_indexed_tokens_list),
                         device=self.device)
 
+  def _sum_in_batches(self, by_token):
+    results = []
+    for chunk in torch.chunk(by_token, 100):
+      entity_word_vecs = self.lookups.embedding(chunk)
+      results.append(entity_word_vecs.sum(1))
+    return torch.concatenate(results, 0)
+
   def init_entity_embeds(self):
     if self.model_params.word_embed_len == self.model_params.embed_len:
       entities_by_token = self._get_entity_tokens()
-      entity_word_vecs = self.lookups.embedding(entities_by_token)
-      entity_embed_weights = nn.Parameter(entity_word_vecs.sum(1))
+      entity_embed_weights = nn.Parameter(self._sum_in_batches(entities_by_token))
     else:
       print(f'word embed len: {self.model_params.word_embed_len} != entity embed len {self.model_params.embed_len}. Not initializing entity embeds with word embeddings')
       entity_embed_weights = nn.Parameter(torch.Tensor(self.model_params.num_entities,
