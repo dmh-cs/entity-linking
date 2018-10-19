@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from torch.nn.modules.adaptive import AdaptiveLogSoftmaxWithLoss
 
-from data_fetchers import get_connection, get_embedding_dict, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup, get_entity_text
+from data_fetchers import get_connection, get_embedding_dict, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup, get_entity_texts
 from default_params import default_train_params, default_model_params, default_run_params, default_paths
 from joint_model import JointModel
 from logits import Logits
@@ -89,9 +89,9 @@ class Runner(object):
     self.page_id_order_test = self.page_id_order[self.num_train_pages:]
 
   def _get_entity_tokens(self):
-    entity_id_to_text = get_entity_text()
-    entity_texts = _.map_keys(entity_id_to_text, lambda key: self.lookups.entity_labels[key])
-    entity_tokens = _.map_values(entity_texts, parse_for_tokens)
+    entity_texts = get_entity_texts()
+    entity_texts_by_label = {self.lookups.entity_labels[text]: text for text in entity_texts}
+    entity_tokens = _.map_values(entity_texts_by_label, parse_for_tokens)
     mapper = lambda tokens: [self.lookups.token_idx_lookup[token]
                              if token in self.lookups.token_idx_lookup
                              else self.lookups.token_idx_lookup['<UNK>']
