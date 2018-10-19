@@ -32,7 +32,7 @@ def pad_batch_list(pad_elem, batch, min_len=0):
       to_stack.append(elem + pad)
     else:
       to_stack.append(elem)
-  return torch.stack(to_stack)
+  return to_stack
 
 def _tokens_to_embeddings(embedding, token_idx_lookup, tokens):
   text_idxs = []
