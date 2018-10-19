@@ -90,7 +90,7 @@ class Runner(object):
 
   def _get_entity_tokens(self):
     entity_id_to_text = get_entity_text()
-    entity_texts = _.map_keys(entity_id_to_text, lambda key: self.lookups.entity_labels[key])
+    entity_texts = _.map_keys(entity_id_to_text, lambda text, key: self.lookups.entity_labels[key])
     entity_tokens = _.map_values(entity_texts, parse_for_tokens)
     mapper = lambda tokens: [self.lookups.token_idx_lookup[token]
                              if token in self.lookups.token_idx_lookup
