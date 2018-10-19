@@ -89,14 +89,13 @@ class Runner(object):
     self.page_id_order_test = self.page_id_order[self.num_train_pages:]
 
   def _get_entity_tokens(self):
-    entity_id_to_text = get_entity_text()
-    entity_texts = _.map_keys(entity_id_to_text, lambda text, key: self.lookups.entity_labels[key])
-    entity_tokens = _.map_values(entity_texts, parse_for_tokens)
     mapper = lambda tokens: [self.lookups.token_idx_lookup[token]
                              if token in self.lookups.token_idx_lookup
                              else self.lookups.token_idx_lookup['<UNK>']
                              for token in tokens]
-    entity_indexed_tokens = _.map_values(entity_tokens, mapper)
+    entity_indexed_tokens = {self.lookups.entity_labels[entity_id]: _.map_(parse_for_tokens(text), mapper)
+                             for entity_id, text in get_entity_text().items()
+                             if entity_id in self.lookups.entity_labels}
     return torch.tensor(pad_batch(0, entity_indexed_tokens),
                         device=self.device)
 
