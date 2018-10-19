@@ -44,5 +44,4 @@ class LocalContextEncoder(nn.Module):
     sentence_embed = torch.cat((unsorted_left, unsorted_right),
                                dim=1)
     encoded = self.relu(self.projection(sentence_embed))
-    # return encoded / torch.norm(encoded, 2, 1).unsqueeze(1)
     return encoded

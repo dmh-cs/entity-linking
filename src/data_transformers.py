@@ -10,7 +10,7 @@ from parsers import parse_text_for_tokens, parse_for_tokens
 
 def pad_batch(pad_vector, batch, min_len=0):
   elem_pad_dim = 0
-  pad_to_len = max(min_len, max(map(len, batch)))
+  pad_to_len = max(min_len, max(_.map_(batch, len)))
   to_stack = []
   for elem in batch:
     dim_len = elem.shape[elem_pad_dim]
