@@ -24,7 +24,9 @@ args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param
                      {'name': 'adaptive_softmax_cutoffs'   , 'for': 'model_param', 'type': lambda string: [int(cutoff) for cutoff in string.split(',')]},
                      {'name': 'comments'                   , 'for': 'run_param', 'type': str}]
 
+runner = None
 def main():
+  global runner
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   load_dotenv(dotenv_path='.env')
   flag_argnames = ['load_model', 'use_adaptive_softmax', 'dont_use_hardcoded_cutoffs']
@@ -69,6 +71,7 @@ if __name__ == "__main__":
   try:
     main()
   except: # pylint: disable=bare-except
+    torch.save(runner.encoder.state_dict(), './' + runner.experiment.model_name + '_debug')
     extype, value, tb = sys.exc_info()
     traceback.print_exc()
     ipdb.post_mortem(tb)

@@ -50,6 +50,7 @@ class Runner(object):
     self.page_id_order_test: Optional[list] = None
     self.entity_embeds: Optional[nn.Embedding] = None
     self.adaptive_logits = {'desc': None, 'mention': None}
+    self.encoder = None
 
   def _get_word_embedding_path(self):
     if self.model_params.word_embedding_set.lower() == 'glove' and self.model_params.word_embed_len == 100:
@@ -220,30 +221,30 @@ class Runner(object):
                                           _.from_pairs(zip(entity_ids_by_freq,
                                                            range(len(entity_ids_by_freq)))))
         self.adaptive_logits = self._get_adaptive_calc_logits()
-        encoder = JointModel(self.model_params.embed_len,
-                             self.model_params.context_embed_len,
-                             self.model_params.word_embed_len,
-                             self.model_params.local_encoder_lstm_size,
-                             self.model_params.document_encoder_lstm_size,
-                             self.model_params.num_lstm_layers,
-                             self.train_params.dropout_drop_prob,
-                             self.entity_embeds,
-                             self.lookups.embedding,
-                             pad_vector,
-                             self.adaptive_logits)
+        self.encoder = JointModel(self.model_params.embed_len,
+                                  self.model_params.context_embed_len,
+                                  self.model_params.word_embed_len,
+                                  self.model_params.local_encoder_lstm_size,
+                                  self.model_params.document_encoder_lstm_size,
+                                  self.model_params.num_lstm_layers,
+                                  self.train_params.dropout_drop_prob,
+                                  self.entity_embeds,
+                                  self.lookups.embedding,
+                                  pad_vector,
+                                  self.adaptive_logits)
         if not self.run_params.load_model:
           with self.experiment.train(['mention_context_error', 'document_context_error', 'loss']):
             self.log.status('Training')
-            trainer = self._get_trainer(cursor, encoder)
+            trainer = self._get_trainer(cursor, self.encoder)
             trainer.train()
-            torch.save(encoder.state_dict(), './' + self.experiment.model_name)
+            torch.save(self.encoder.state_dict(), './' + self.experiment.model_name)
         else:
-          encoder.load_state_dict(torch.load('./' + self.experiment.model_name))
-          encoder = nn.DataParallel(encoder)
-          encoder = encoder.to(self.device).module
+          self.encoder.load_state_dict(torch.load('./' + self.experiment.model_name))
+          self.encoder = nn.DataParallel(self.encoder)
+          self.encoder = self.encoder.to(self.device).module
         with self.experiment.test(['accuracy', 'TP', 'num_samples']):
           self.log.status('Testing')
-          tester = self._get_tester(cursor, encoder)
+          tester = self._get_tester(cursor, self.encoder)
           tester.test()
     finally:
       db_connection.close()
