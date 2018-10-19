@@ -102,7 +102,7 @@ class Runner(object):
     for chunk in torch.chunk(by_token, 100):
       entity_word_vecs = self.lookups.embedding(chunk)
       results.append(entity_word_vecs.sum(1))
-    return torch.concatenate(results, 0)
+    return torch.cat(results, 0)
 
   def init_entity_embeds(self):
     if self.model_params.word_embed_len == self.model_params.embed_len:
