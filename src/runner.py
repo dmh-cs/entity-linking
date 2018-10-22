@@ -78,7 +78,8 @@ class Runner(object):
                                         embedding_dim=self.model_params.word_embed_len)
     token_idx_lookup = dict(zip(embedding_dict.keys(),
                                 range(len(embedding_dict))))
-    embedding = nn.Embedding.from_pretrained(torch.stack([embedding_dict[token] for token in token_idx_lookup]).to(self.device))
+    embedding = nn.Embedding.from_pretrained(torch.stack([embedding_dict[token] for token in token_idx_lookup]).to(self.device),
+                                             freeze=self.model_params.freeze_word_embeddings)
     self.lookups = self.lookups.update({'entity_candidates_prior': lookups['entity_candidates_prior'],
                                         'entity_labels': lookups['entity_labels'],
                                         'embedding': embedding,

@@ -29,14 +29,19 @@ def main():
   global runner
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   load_dotenv(dotenv_path='.env')
-  flag_argnames = ['load_model', 'use_adaptive_softmax', 'dont_use_hardcoded_cutoffs', 'use_ranking_loss']
+  flag_argnames = ['load_model',
+                   'use_adaptive_softmax',
+                   'dont_use_hardcoded_cutoffs',
+                   'use_ranking_loss',
+                   'freeze_word_embeddings']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
   flags = [_.head(arg) for arg in args]
   train_params = m()
   run_params = m(load_model='--load_model' in flags)
   model_params = m(use_adaptive_softmax='--use_adaptive_softmax' in flags,
                    use_hardcoded_cutoffs='--dont_use_hardcoded_cutoffs' not in flags,
-                   use_ranking_loss='--use_ranking_loss' in flags)
+                   use_ranking_loss='--use_ranking_loss' in flags,
+                   freeze_word_embeddings='--freeze_word_embeddings' in flags)
   paths = m(lookups=os.getenv("LOOKUPS_PATH"),
             page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
   for arg in args_with_values:
