@@ -30,4 +30,5 @@ class DescriptionEncoder(nn.Module):
                    self.global_avg_pooling,
                    lambda embed: torch.transpose(embed, 1, 2),
                    torch.squeeze)
-    return encoded / torch.norm(encoded, 2, 1).unsqueeze(1)
+    # return encoded / torch.norm(encoded, 2, 1).unsqueeze(1)
+    return encoded

@@ -143,6 +143,7 @@ class Runner(object):
       desc_logits, desc_loss = self.adaptive_logits['desc'](desc_embeds, labels_for_batch)
       mention_logits, mention_loss = self.adaptive_logits['mention'](mention_context_embeds, labels_for_batch)
     elif self.model_params.use_ranking_loss:
+      batch_len = len(encoded)
       logits = Logits()
       candidates = self.entity_embeds(candidate_entity_ids).sum(1)
       true = self.entity_embeds(candidate_entity_ids[range(len(labels_for_batch)),
@@ -150,9 +151,9 @@ class Runner(object):
       desc_margin_violation = 1 + logits(desc_embeds, candidates) - 2 * logits(desc_embeds, true)
       mention_margin_violation = 1 + logits(mention_context_embeds, candidates) - 2 * logits(mention_context_embeds, true)
       mention_loss = torch.sum(torch.max(torch.zeros_like(mention_margin_violation),
-                                         mention_margin_violation))
+                                         mention_margin_violation)) / batch_len
       desc_loss = torch.sum(torch.max(torch.zeros_like(desc_margin_violation),
-                                      desc_margin_violation))
+                                      desc_margin_violation)) / batch_len
     else:
       logits = Logits()
       criterion = nn.CrossEntropyLoss()
