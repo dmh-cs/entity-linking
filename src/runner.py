@@ -147,8 +147,10 @@ class Runner(object):
       true = self.entity_embeds(candidate_entity_ids[labels_for_batch])
       desc_margin_violation = 1 + logits(desc_embeds, candidates) - 2 * logits(desc_embeds, true)
       mention_margin_violation = 1 + logits(mention_context_embeds, candidates) - 2 * logits(mention_context_embeds, true)
-      mention_loss = torch.max(torch.zeros_like(), mention_margin_violation)
-      desc_loss = torch.max(torch.zeros_like(), desc_margin_violation)
+      mention_loss = torch.max(torch.zeros_like(mention_margin_violation),
+                               mention_margin_violation)
+      desc_loss = torch.max(torch.zeros_like(desc_margin_violation),
+                            desc_margin_violation)
     else:
       logits = Logits()
       criterion = nn.CrossEntropyLoss()
