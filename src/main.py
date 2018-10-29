@@ -12,7 +12,7 @@ from runner import Runner
 args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param', 'type': int},
                      {'name': 'dataset_limit'              , 'for': 'train_param', 'type': lambda limit: int(limit) if limit is not None else None},
                      {'name': 'dropout_drop_prob'          , 'for': 'train_param', 'type': float},
-                     {'name': 'train_size'                 , 'for': 'train_param', 'type': int},
+                     {'name': 'train_size'                 , 'for': 'train_param', 'type': float},
                      {'name': 'num_epochs'                 , 'for': 'train_param', 'type': int},
                      {'name': 'ablation'                   , 'for': 'model_param', 'type': lambda string: string.split(',')},
                      {'name': 'document_encoder_lstm_size' , 'for': 'model_param', 'type': int},
