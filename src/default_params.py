@@ -3,6 +3,7 @@ from pyrsistent import m
 default_paths = m(lookups='../entity-linking-preprocessing/lookups.pkl',
                   page_id_order='../entity-linking-preprocessing/page_id_order.pkl')
 default_train_params = m(batch_size=100,
+                         dataset_limit=None,
                          debug=False,
                          num_epochs=1,
                          train_size=0.8,

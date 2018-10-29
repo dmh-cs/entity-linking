@@ -6,7 +6,7 @@ import pydash as _
 
 
 class MentionContextBatchSampler(Sampler):
-  def __init__(self, cursor, page_id_order, batch_size):
+  def __init__(self, cursor, page_id_order, batch_size, limit=None):
     super(MentionContextBatchSampler, self).__init__([])
     self.cursor = cursor
     self.page_id_order = page_id_order
@@ -14,13 +14,18 @@ class MentionContextBatchSampler(Sampler):
     self.page_ctr = 0
     self.ids_from_last_page = set()
     self.ids = []
+    self.limit = limit
+    self.num_mentions_seen = 0
 
   def __len__(self):
     raise NotImplementedError
 
   def __iter__(self):
     while self.page_ctr < len(self.page_id_order) or not _.is_empty(self.ids_from_last_page):
-      yield self._get_next_batch()
+      if (self.limit is not None) and (self.num_mentions_seen >= self.limit): return
+      batch = self._get_next_batch()
+      yield batch
+      self.num_mentions_seen += len(batch)
 
   def _get_next_batch(self):
     ids = []

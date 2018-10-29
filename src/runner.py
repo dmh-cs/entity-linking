@@ -132,11 +132,12 @@ class Runner(object):
                                  self.model_params.num_candidates,
                                  cheat=self.run_params.cheat)
 
-  def _get_sampler(self, cursor, is_test):
+  def _get_sampler(self, cursor, is_test, limit):
     page_ids = self.page_id_order_test if is_test else self.page_id_order_train
     return MentionContextBatchSampler(cursor,
                                       page_ids,
-                                      self.train_params.batch_size)
+                                      self.train_params.batch_size,
+                                      limit=limit)
 
   def _calc_loss(self, encoded, candidate_entity_ids, labels_for_batch):
     desc_embeds, mention_context_embeds = encoded
@@ -173,7 +174,9 @@ class Runner(object):
                    token_idx_lookup=self.lookups.token_idx_lookup,
                    model=model,
                    get_dataset=lambda: self._get_dataset(cursor, is_test=False),
-                   get_batch_sampler=lambda: self._get_sampler(cursor, is_test=False),
+                   get_batch_sampler=lambda: self._get_sampler(cursor,
+                                                               is_test=False,
+                                                               limit=self.train_params.dataset_limit),
                    num_epochs=self.train_params.num_epochs,
                    experiment=self.experiment,
                    calc_loss=self._calc_loss,
