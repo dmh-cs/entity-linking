@@ -34,7 +34,7 @@ def main():
                    'use_adaptive_softmax',
                    'dont_use_hardcoded_cutoffs',
                    'use_ranking_loss',
-                   'use_deep_network',
+                   'dont_use_deep_network',
                    'freeze_word_embeddings',
                    'cheat']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
@@ -82,7 +82,7 @@ if __name__ == "__main__":
   try:
     main()
   except: # pylint: disable=bare-except
-    if runner.encoder is not None:
+    if (runner is not None) and (runner.encoder is not None):
       torch.save(runner.encoder.state_dict(), './' + runner.experiment.model_name + '_debug')
     extype, value, tb = sys.exc_info()
     traceback.print_exc()
