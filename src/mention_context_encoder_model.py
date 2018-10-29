@@ -14,17 +14,20 @@ class MentionContextEncoder(nn.Module):
                num_lstm_layers,
                dropout_drop_prob,
                entity_embeds,
-               pad_vector):
+               pad_vector,
+               use_deep_network):
     super(MentionContextEncoder, self).__init__()
     self.local_context_encoder = LocalContextEncoder(dropout_drop_prob,
                                                      local_encoder_lstm_size,
                                                      num_lstm_layers,
                                                      word_embed_len,
-                                                     context_embed_len)
+                                                     context_embed_len,
+                                                     use_deep_network)
     self.document_context_encoder = DocumentContextEncoder(document_encoder_lstm_size,
                                                            word_embed_len,
                                                            context_embed_len,
-                                                           pad_vector)
+                                                           pad_vector,
+                                                           use_deep_network)
     self.projection = nn.Linear(2 * context_embed_len, embed_len)
     self.relu = nn.ReLU()
 

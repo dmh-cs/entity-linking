@@ -10,6 +10,7 @@ default_train_params = m(batch_size=100,
                          dropout_drop_prob=0.4)
 default_model_params = m(use_adaptive_softmax=False,
                          use_ranking_loss=False,
+                         use_deep_network=True,
                          freeze_word_embeddings=True,
                          use_hardcoded_cutoffs=True,
                          embed_len=100,
