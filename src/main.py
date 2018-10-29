@@ -33,11 +33,13 @@ def main():
                    'use_adaptive_softmax',
                    'dont_use_hardcoded_cutoffs',
                    'use_ranking_loss',
-                   'freeze_word_embeddings']
+                   'freeze_word_embeddings',
+                   'cheat']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
   flags = [_.head(arg) for arg in args]
   train_params = m()
-  run_params = m(load_model='--load_model' in flags)
+  run_params = m(load_model='--load_model' in flags,
+                 cheat='--cheat' in flags)
   model_params = m(use_adaptive_softmax='--use_adaptive_softmax' in flags,
                    use_hardcoded_cutoffs='--dont_use_hardcoded_cutoffs' not in flags,
                    use_ranking_loss='--use_ranking_loss' in flags,

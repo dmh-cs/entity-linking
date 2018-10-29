@@ -18,7 +18,8 @@ class MentionContextDataset(Dataset):
                token_idx_lookup,
                batch_size,
                num_entities,
-               num_candidates):
+               num_candidates,
+               cheat=False):
     self.page_id_order = page_id_order
     self.entity_candidates_prior = entity_candidates_prior
     self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
@@ -35,13 +36,15 @@ class MentionContextDataset(Dataset):
     self._mentions_per_page_ctr = {}
     self._mention_infos = {}
     self.page_ctr = 0
+    self.cheat = cheat
 
   def _get_candidate_ids(self, mention, label):
     return get_candidate_ids(self.entity_candidates_prior,
                              self.num_entities,
                              self.num_candidates,
                              mention,
-                             label)
+                             label,
+                             cheat=self.cheat)
 
   def __len__(self):
     raise NotImplementedError

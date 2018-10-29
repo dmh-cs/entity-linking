@@ -129,7 +129,8 @@ class Runner(object):
                                  self.lookups.token_idx_lookup,
                                  self.train_params.batch_size,
                                  self.model_params.num_entities,
-                                 self.model_params.num_candidates)
+                                 self.model_params.num_candidates,
+                                 cheat=self.run_params.cheat)
 
   def _get_sampler(self, cursor, is_test):
     page_ids = self.page_id_order_test if is_test else self.page_id_order_train
