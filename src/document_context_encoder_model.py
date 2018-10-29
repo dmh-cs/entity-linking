@@ -28,12 +28,12 @@ class DocumentContextEncoder(nn.Module):
     self.relu = nn.ReLU()
 
   def forward(self, entity_page_mentions):
-    batch = pad_batch(self.pad_vector, entity_page_mentions)
     if self.use_deep_network:
+      batch = pad_batch(self.pad_vector, entity_page_mentions)
       output, state_info = self.lstm(batch)
       last_hidden_state = state_info[0][-2:]
       hidden = torch.cat([layer_state for layer_state in last_hidden_state], 1)
     else:
-      hidden = torch.sum(batch, 1)
+      hidden = torch.stack([torch.sum(context, 0) for context in batch])
     encoded = self.relu(self.projection(hidden))
     return encoded
