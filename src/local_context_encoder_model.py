@@ -51,12 +51,10 @@ class LocalContextEncoder(nn.Module):
       right = right_last_hidden_state[right_order]
     else:
       left_tokens = pad_packed_sequence(left_splits,
-                                        padding_value=torch.zeros(self.word_embed_len,
-                                                                  device=left_splits[0].device),
+                                        padding_value=0,
                                         batch_first=True)[0][left_order]
       right_tokens = pad_packed_sequence(right_splits,
-                                        padding_value=torch.zeros(self.word_embed_len,
-                                                                  device=right_splits[0].device),
+                                        padding_value=0,
                                         batch_first=True)[0][right_order]
       left = left_tokens.sum(1)
       right = right_tokens.sum(1)
