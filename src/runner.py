@@ -132,7 +132,7 @@ class Runner(object):
                                  self.model_params.num_candidates,
                                  cheat=self.run_params.cheat)
 
-  def _get_sampler(self, cursor, is_test, limit):
+  def _get_sampler(self, cursor, is_test, limit=None):
     page_ids = self.page_id_order_test if is_test else self.page_id_order_train
     return MentionContextBatchSampler(cursor,
                                       page_ids,
