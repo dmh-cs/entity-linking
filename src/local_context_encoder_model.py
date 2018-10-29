@@ -56,8 +56,8 @@ class LocalContextEncoder(nn.Module):
       right_tokens = pad_packed_sequence(right_splits,
                                         padding_value=0,
                                         batch_first=True)[0][right_order]
-      left = left_tokens.sum(1)
-      right = right_tokens.sum(1)
+      left = left_tokens.sum(1) / left_tokens.shape[1]
+      right = right_tokens.sum(1) / right_tokens.shape[1]
     sentence_embed = torch.cat((left, right),
                                dim=1)
     encoded = self.relu(self.projection(sentence_embed))

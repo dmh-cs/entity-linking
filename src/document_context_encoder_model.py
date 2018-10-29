@@ -34,6 +34,6 @@ class DocumentContextEncoder(nn.Module):
       last_hidden_state = state_info[0][-2:]
       hidden = torch.cat([layer_state for layer_state in last_hidden_state], 1)
     else:
-      hidden = torch.stack([torch.sum(context, 0) for context in batch])
+      hidden = torch.stack([torch.sum(context, 0) / len(context) for context in entity_page_mentions])
     encoded = self.relu(self.projection(hidden))
     return encoded
