@@ -145,13 +145,12 @@ class Runner(object):
     elif self.model_params.use_ranking_loss:
       batch_size = len(labels_for_batch)
       logits = Logits()
-      # candidates = self.entity_embeds(candidate_entity_ids).sum(1)
-      candidates = self.entity_embeds(torch.arange(len(self.entity_embeds.weight),
-                                                   device=self.entity_embeds.weight.device)).sum(0).unsqueeze(0)
       true = self.entity_embeds(candidate_entity_ids[range(batch_size),
                                                      labels_for_batch])
-      desc_margin_violation = 1 + torch.tanh(logits(desc_embeds, candidates - true)) - torch.tanh(logits(desc_embeds, true))
-      mention_margin_violation = 1 + torch.tanh(logits(mention_context_embeds, candidates - true)) - torch.tanh(logits(mention_context_embeds, true))
+      num_candidates = len(candidate_entity_ids)
+      candidates = (self.entity_embeds(candidate_entity_ids).sum(1) - true) / (num_candidates - 1)
+      desc_margin_violation = 1 + torch.tanh(logits(desc_embeds, candidates)) - torch.tanh(logits(desc_embeds, true))
+      mention_margin_violation = 1 + torch.tanh(logits(mention_context_embeds, candidates)) - torch.tanh(logits(mention_context_embeds, true))
       mention_loss = torch.sum(torch.max(torch.zeros_like(mention_margin_violation),
                                          mention_margin_violation)) / batch_size
       desc_loss = torch.sum(torch.max(torch.zeros_like(desc_margin_violation),
