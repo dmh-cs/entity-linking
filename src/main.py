@@ -77,7 +77,8 @@ if __name__ == "__main__":
   try:
     main()
   except: # pylint: disable=bare-except
-    torch.save(runner.encoder.state_dict(), './' + runner.experiment.model_name + '_debug')
+    if runner.encoder is not None:
+      torch.save(runner.encoder.state_dict(), './' + runner.experiment.model_name + '_debug')
     extype, value, tb = sys.exc_info()
     traceback.print_exc()
     ipdb.post_mortem(tb)
