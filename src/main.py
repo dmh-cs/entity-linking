@@ -20,6 +20,7 @@ args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param
                      {'name': 'local_encoder_lstm_size'    , 'for': 'model_param', 'type': int},
                      {'name': 'num_candidates'             , 'for': 'model_param', 'type': int},
                      {'name': 'num_lstm_layers'            , 'for': 'model_param', 'type': int},
+                     {'name': 'num_cnn_local_filters'      , 'for': 'model_param', 'type': int},
                      {'name': 'word_embed_len'             , 'for': 'model_param', 'type': int},
                      {'name': 'word_embedding_set'         , 'for': 'model_param', 'type': str},
                      {'name': 'adaptive_softmax_cutoffs'   , 'for': 'model_param', 'type': lambda string: [int(cutoff) for cutoff in string.split(',')]},
@@ -35,6 +36,7 @@ def main():
                    'dont_use_hardcoded_cutoffs',
                    'use_ranking_loss',
                    'dont_use_deep_network',
+                   'use_cnn_local',
                    'freeze_word_embeddings',
                    'cheat']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
@@ -45,6 +47,7 @@ def main():
   model_params = m(use_adaptive_softmax='--use_adaptive_softmax' in flags,
                    use_hardcoded_cutoffs='--dont_use_hardcoded_cutoffs' not in flags,
                    use_ranking_loss='--use_ranking_loss' in flags,
+                   use_cnn_local='--use_cnn_local' in flags,
                    use_deep_network='--dont_use_deep_network' not in flags,
                    freeze_word_embeddings='--freeze_word_embeddings' in flags)
   paths = m(lookups=os.getenv("LOOKUPS_PATH"),
