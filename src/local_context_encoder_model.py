@@ -47,7 +47,7 @@ class LocalContextEncoder(nn.Module):
       self.projection = nn.Linear(2 * 2 * self.lstm_size * self.num_lstm_layers,
                                   self.context_embed_len)
     elif self.use_cnn_local:
-      self.projection = nn.Linear(2 * self.num_cnn_local_fiters, self.context_embed_len)
+      self.projection = nn.Linear(2 * self.num_cnn_local_filters, self.context_embed_len)
     else:
       self.projection = nn.Linear(self.word_embed_len * 2,
                                   self.context_embed_len)
