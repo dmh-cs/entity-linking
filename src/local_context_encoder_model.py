@@ -13,7 +13,7 @@ class LocalContextEncoder(nn.Module):
                num_lstm_layers,
                word_embed_len,
                context_embed_len,
-               use_deep_network=True,
+               use_lstm_local=True,
                num_cnn_local_filters=None,
                use_cnn_local=False):
     super(LocalContextEncoder, self).__init__()
@@ -23,6 +23,7 @@ class LocalContextEncoder(nn.Module):
     self.context_embed_len = context_embed_len
     self.dropout_drop_prob = dropout_drop_prob
     self.use_cnn_local = use_cnn_local
+    self.use_lstm_local = use_lstm_local
     self.num_cnn_local_filters = num_cnn_local_filters
     if self.use_cnn_local:
       self.left_cnn = nn.Conv1d(self.word_embed_len, num_cnn_local_filters, 5)
@@ -31,7 +32,7 @@ class LocalContextEncoder(nn.Module):
       self.right_cnn = nn.Conv1d(self.word_embed_len, num_cnn_local_filters, 5)
       self.right_relu = nn.ReLU()
       self.right_pool = nn.AdaptiveMaxPool1d(1)
-    else:
+    elif self.use_lstm_local:
       self.left_lstm = nn.LSTM(input_size=self.word_embed_len,
                                hidden_size=self.lstm_size,
                                num_layers=self.num_lstm_layers,
@@ -42,8 +43,7 @@ class LocalContextEncoder(nn.Module):
                                 num_layers=self.num_lstm_layers,
                                 dropout=self.dropout_drop_prob,
                                 bidirectional=True)
-    self.use_deep_network = use_deep_network
-    if self.use_deep_network:
+    if self.use_lstm_local:
       self.projection = nn.Linear(2 * 2 * self.lstm_size * self.num_lstm_layers,
                                   self.context_embed_len)
     elif self.use_cnn_local:
@@ -56,7 +56,7 @@ class LocalContextEncoder(nn.Module):
   def forward(self, sentence_splits):
     left_splits, left_order = get_splits_and_order(sentence_splits[0])
     right_splits, right_order = get_splits_and_order(sentence_splits[1])
-    if self.use_deep_network:
+    if self.use_lstm_local:
       left_output, left_state_info = self.left_lstm(left_splits)
       right_output, right_state_info = self.right_lstm(right_splits)
       left_last_hidden_state = torch.cat([left_state_info[0][i] for i in range(left_state_info[0].shape[0])],

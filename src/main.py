@@ -37,6 +37,7 @@ def main():
                    'use_ranking_loss',
                    'dont_use_deep_network',
                    'use_cnn_local',
+                   'use_lstm_local',
                    'freeze_word_embeddings',
                    'cheat']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
@@ -48,8 +49,9 @@ def main():
                    use_hardcoded_cutoffs='--dont_use_hardcoded_cutoffs' not in flags,
                    use_ranking_loss='--use_ranking_loss' in flags,
                    use_cnn_local='--use_cnn_local' in flags,
+                   use_lstm_local='--use_lstm_local' in flags,
                    use_deep_network='--dont_use_deep_network' not in flags,
-                   freeze_word_embeddings='--freeze_word_embeddings' in flags)
+                   freeze_word_embeddings='--dont_freeze_word_embeddings' not in flags)
   paths = m(lookups=os.getenv("LOOKUPS_PATH"),
             page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
   for arg in args_with_values:
