@@ -250,7 +250,10 @@ class Runner(object):
                                   self.lookups.embedding,
                                   pad_vector,
                                   self.adaptive_logits,
-                                  self.model_params.use_deep_network)
+                                  self.model_params.use_deep_network,
+                                  self.model_params.use_lstm_local,
+                                  self.model_params.num_cnn_local_filters,
+                                  self.model_params.use_cnn_local)
         if not self.run_params.load_model:
           with self.experiment.train(['mention_context_error', 'document_context_error', 'loss']):
             self.log.status('Training')

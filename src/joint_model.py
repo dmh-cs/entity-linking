@@ -16,7 +16,10 @@ class JointModel(nn.Module):
                word_embedding,
                pad_vector,
                adaptive_logits,
-               use_deep_network):
+               use_deep_network,
+               use_lstm_local,
+               num_cnn_local_filters,
+               use_cnn_local):
     super().__init__()
     self.entity_embeds = entity_embeds
     self.desc_encoder = DescriptionEncoder(word_embed_len,
@@ -31,7 +34,10 @@ class JointModel(nn.Module):
                                                          dropout_drop_prob,
                                                          entity_embeds,
                                                          pad_vector,
-                                                         use_deep_network)
+                                                         use_deep_network,
+                                                         use_lstm_local,
+                                                         num_cnn_local_filters,
+                                                         use_cnn_local)
     self.desc = adaptive_logits['desc']
     self.mention = adaptive_logits['mention']
     self.word_embedding = word_embedding

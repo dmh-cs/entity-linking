@@ -15,14 +15,19 @@ class MentionContextEncoder(nn.Module):
                dropout_drop_prob,
                entity_embeds,
                pad_vector,
-               use_deep_network):
+               use_deep_network,
+               use_lstm_local,
+               num_cnn_local_filters,
+               use_cnn_local):
     super(MentionContextEncoder, self).__init__()
     self.local_context_encoder = LocalContextEncoder(dropout_drop_prob,
                                                      local_encoder_lstm_size,
                                                      num_lstm_layers,
                                                      word_embed_len,
                                                      context_embed_len,
-                                                     use_deep_network)
+                                                     use_lstm_local,
+                                                     num_cnn_local_filters,
+                                                     use_cnn_local)
     self.document_context_encoder = DocumentContextEncoder(document_encoder_lstm_size,
                                                            word_embed_len,
                                                            context_embed_len,
