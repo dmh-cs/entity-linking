@@ -22,4 +22,5 @@ default_model_params = m(use_adaptive_softmax=False,
                          num_lstm_layers=2,
                          ablation=['prior', 'local_context', 'document_context'])
 default_run_params = m(load_model=False,
+                       cheat=False,
                        comments='')
