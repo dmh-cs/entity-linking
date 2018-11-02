@@ -1,3 +1,4 @@
+import operator
 from typing import List
 import hashlib
 import os
@@ -89,7 +90,7 @@ class Experiment(object):
   def _write_details(self):
     master = self._repo.head.reference
     with open('params_' + self.run_name, 'w+') as f:
-      for name, val in self.params.items():
+      for name, val in sorted(self.params.items(), key=operator.itemgetter(0)):
         f.write(name + self.separator + str(val) + '\n')
       f.write('commit hash' + self.separator + str(master.commit.hexsha) + '\n')
       f.write('commit msg' + self.separator + str(master.commit.message))
