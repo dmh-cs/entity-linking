@@ -149,17 +149,17 @@ class Runner(object):
       logits = Logits()
       true = self.entity_embeds(candidate_entity_ids[range(batch_size),
                                                      labels_for_batch])
-      num_candidates = len(candidate_entity_ids)
+      num_candidates = candidate_entity_ids.shape[1]
       other_ids = torch.tensor([[cand for cand in candidates if cand != labels_for_batch[elem_num]][:num_candidates - 1]
                                 for elem_num, candidates in enumerate(candidate_entity_ids)],
                                device=self.device)
       other = self.entity_embeds(other_ids)
-      neg_desc = torch.sum(torch.tanh(logits(desc_embeds.unsqueeze(1), other)))
-      pos_desc = torch.sum(torch.tanh(logits(desc_embeds, true)))
-      desc_margin_violation = 1.0 + neg_desc - pos_desc
-      neg_ment = torch.sum(torch.tanh(logits(mention_context_embeds.unsqueeze(1), other)))
-      pos_ment = torch.sum(torch.tanh(logits(mention_context_embeds, true)))
-      mention_margin_violation = 1.0 + neg_ment - pos_ment
+      neg_desc = torch.sum(torch.tanh(logits(desc_embeds, other)))
+      pos_desc = torch.sum(torch.tanh(torch.sum(desc_embeds * true, 1)))
+      desc_margin_violation = 0.01 + neg_desc - pos_desc
+      neg_ment = torch.sum(torch.tanh(logits(mention_context_embeds, other)))
+      pos_ment = torch.sum(torch.tanh(torch.sum(mention_context_embeds * true, 1)))
+      mention_margin_violation = 0.01 + neg_ment - pos_ment
       mention_loss = torch.sum(torch.max(torch.zeros_like(mention_margin_violation),
                                          mention_margin_violation)) / batch_size
       desc_loss = torch.sum(torch.max(torch.zeros_like(desc_margin_violation),
