@@ -150,9 +150,15 @@ class Runner(object):
       true = self.entity_embeds(candidate_entity_ids[range(batch_size),
                                                      labels_for_batch])
       num_candidates = len(candidate_entity_ids)
-      candidates = (self.entity_embeds(candidate_entity_ids).sum(1) - true) / (num_candidates - 1)
-      desc_margin_violation = 0.1 + torch.tanh(logits(desc_embeds, candidates)) - torch.tanh(logits(desc_embeds, true))
-      mention_margin_violation = 0.1 + torch.tanh(logits(mention_context_embeds, candidates)) - torch.tanh(logits(mention_context_embeds, true))
+      other_ids = torch.tensor([[cand for cand in candidates if int(cand) not in labels_for_batch[elem_num]]
+                                for elem_num, candidates in enumerate(candidate_entity_ids)])
+      other = self.entity_embeds(other_ids)
+      neg_desc = torch.sum(torch.tanh(logits(desc_embeds.unsqueeze(1), other)))
+      pos_desc = torch.sum(torch.tanh(logits(desc_embeds, true)))
+      desc_margin_violation = 0.01 + neg_desc - pos_desc
+      neg_ment = torch.sum(torch.tanh(logits(mention_context_embeds.unsqueeze(1), other)))
+      pos_ment = torch.sum(torch.tanh(logits(mention_context_embeds, true)))
+      mention_margin_violation = 0.01 + neg_ment - pos_ment
       mention_loss = torch.sum(torch.max(torch.zeros_like(mention_margin_violation),
                                          mention_margin_violation)) / batch_size
       desc_loss = torch.sum(torch.max(torch.zeros_like(desc_margin_violation),
