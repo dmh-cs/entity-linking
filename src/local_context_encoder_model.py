@@ -26,10 +26,10 @@ class LocalContextEncoder(nn.Module):
     self.use_lstm_local = use_lstm_local
     self.num_cnn_local_filters = num_cnn_local_filters
     if self.use_cnn_local:
-      self.left_cnn = nn.Conv1d(self.word_embed_len, num_cnn_local_filters, 5)
+      self.left_cnn = nn.Conv1d(self.word_embed_len, num_cnn_local_filters, 5, padding=2)
       self.left_relu = nn.ReLU()
       self.left_pool = nn.AdaptiveMaxPool1d(1)
-      self.right_cnn = nn.Conv1d(self.word_embed_len, num_cnn_local_filters, 5)
+      self.right_cnn = nn.Conv1d(self.word_embed_len, num_cnn_local_filters, 5, padding=2)
       self.right_relu = nn.ReLU()
       self.right_pool = nn.AdaptiveMaxPool1d(1)
     elif self.use_lstm_local:
