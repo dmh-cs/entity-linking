@@ -150,7 +150,7 @@ class Runner(object):
       true = self.entity_embeds(candidate_entity_ids[range(batch_size),
                                                      labels_for_batch])
       num_candidates = len(candidate_entity_ids)
-      other_ids = torch.tensor([[cand for cand in candidates if cand != labels_for_batch[elem_num]]
+      other_ids = torch.tensor([[cand for cand in candidates if cand != labels_for_batch[elem_num]][:num_candidates - 1]
                                 for elem_num, candidates in enumerate(candidate_entity_ids)],
                                device=self.device)
       other = self.entity_embeds(other_ids)
