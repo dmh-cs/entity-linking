@@ -156,10 +156,10 @@ class Runner(object):
       other = self.entity_embeds(other_ids)
       neg_desc = torch.sum(torch.tanh(logits(desc_embeds, other)))
       pos_desc = torch.sum(torch.tanh(torch.sum(desc_embeds * true, 1)))
-      desc_margin_violation = 0.01 + neg_desc - pos_desc
+      desc_margin_violation = 1.0 + neg_desc - pos_desc
       neg_ment = torch.sum(torch.tanh(logits(mention_context_embeds, other)))
       pos_ment = torch.sum(torch.tanh(torch.sum(mention_context_embeds * true, 1)))
-      mention_margin_violation = 0.01 + neg_ment - pos_ment
+      mention_margin_violation = 1.0 + neg_ment - pos_ment
       mention_loss = torch.sum(torch.max(torch.zeros_like(mention_margin_violation),
                                          mention_margin_violation)) / batch_size
       desc_loss = torch.sum(torch.max(torch.zeros_like(desc_margin_violation),
