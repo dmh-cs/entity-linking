@@ -150,7 +150,7 @@ class Runner(object):
       true = self.entity_embeds(candidate_entity_ids[range(batch_size),
                                                      labels_for_batch])
       num_candidates = len(candidate_entity_ids)
-      other_ids = torch.tensor([[cand for cand in candidates if int(cand) not in labels_for_batch[elem_num]]
+      other_ids = torch.tensor([[cand for cand in candidates if cand != labels_for_batch[elem_num]]
                                 for elem_num, candidates in enumerate(candidate_entity_ids)])
       other = self.entity_embeds(other_ids)
       neg_desc = torch.sum(torch.tanh(logits(desc_embeds.unsqueeze(1), other)))
