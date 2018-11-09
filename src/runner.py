@@ -151,8 +151,8 @@ class Runner(object):
                                                      labels_for_batch])
       num_candidates = len(candidate_entity_ids)
       candidates = (self.entity_embeds(candidate_entity_ids).sum(1) - true) / (num_candidates - 1)
-      desc_margin_violation = 1 + torch.tanh(logits(desc_embeds, candidates)) - torch.tanh(logits(desc_embeds, true))
-      mention_margin_violation = 1 + torch.tanh(logits(mention_context_embeds, candidates)) - torch.tanh(logits(mention_context_embeds, true))
+      desc_margin_violation = 0.01 + torch.tanh(logits(desc_embeds, candidates)) - torch.tanh(logits(desc_embeds, true))
+      mention_margin_violation = 0.01 + torch.tanh(logits(mention_context_embeds, candidates)) - torch.tanh(logits(mention_context_embeds, true))
       mention_loss = torch.sum(torch.max(torch.zeros_like(mention_margin_violation),
                                          mention_margin_violation)) / batch_size
       desc_loss = torch.sum(torch.max(torch.zeros_like(desc_margin_violation),
