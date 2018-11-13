@@ -16,7 +16,8 @@ def collate(batch):
           'label': torch.tensor([sample['label'] for sample in batch]),
           'embedded_page_content': [sample['embedded_page_content'] for sample in batch],
           'entity_page_mentions': [sample['entity_page_mentions'] for sample in batch],
-          'candidate_ids': torch.stack([sample['candidate_ids'] for sample in batch])}
+          'candidate_ids': torch.stack([sample['candidate_ids'] for sample in batch]),
+          'candidate_mention_sim': [torch.tensor(sample['candidate_mention_sim']) for sample in batch]}
 
 class Trainer(object):
   def __init__(self,

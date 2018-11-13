@@ -1,3 +1,5 @@
+import Levenshtein
+
 from torch.utils.data import Dataset
 import torch
 
@@ -46,6 +48,10 @@ class MentionContextDataset(Dataset):
                              label,
                              cheat=self.cheat)
 
+  def _get_candidate_strs(self, candidate_ids):
+    self.cursor.execute('select text from entities where page_id in (%s)', ', '.join(candidate_ids))
+    return [row['text'] for row in self.cursor.fetchall()]
+
   def __len__(self):
     raise NotImplementedError
 
@@ -58,6 +64,7 @@ class MentionContextDataset(Dataset):
     label = self.entity_label_lookup[mention_info['entity_id']]
     candidate_ids = self._get_candidate_ids(mention_info['mention'], label)
     p_prior = self._get_p_prior(mention_info['mention'], candidate_ids)
+    candidates = self._get_candidate_strs(candidate_ids)
     sample = {'sentence_splits': get_mention_sentence_splits(page_content,
                                                              sentence_spans,
                                                              mention_info),
@@ -65,7 +72,9 @@ class MentionContextDataset(Dataset):
               'embedded_page_content': self._embedded_page_content_lookup[mention_info['page_id']],
               'entity_page_mentions': self._entity_page_mentions_lookup[mention_info['page_id']],
               'p_prior': p_prior,
-              'candidate_ids': candidate_ids}
+              'candidate_ids': candidate_ids,
+              'candidate_mention_sim': torch.tensor([Levenshtein.ratio(mention_info['mention'], candidate)
+                                                     for candidate in candidates])}
     self._mentions_per_page_ctr[mention_info['page_id']] -= 1
     if self._mentions_per_page_ctr[mention_info['page_id']] == 0:
       self._sentence_spans_lookup.pop(mention_info['page_id'])
