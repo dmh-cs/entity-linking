@@ -38,7 +38,7 @@ class Runner(object):
     self.lookups = m()
     self.device = device
     self.model_params = self.model_params.set('context_embed_len',
-                                              2 * self.model_params.embed_len)
+                                              self.model_params.embed_len)
     if not hasattr(self.model_params, 'adaptive_softmax_cutoffs'):
       self.model_params = self.model_params.set('adaptive_softmax_cutoffs',
                                                 [1000, 10000, 100000, 300000, 500000])
