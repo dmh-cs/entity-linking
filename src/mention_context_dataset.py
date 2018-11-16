@@ -49,8 +49,8 @@ class MentionContextDataset(Dataset):
                              cheat=self.cheat)
 
   def _get_candidate_strs(self, candidate_ids):
-    self.cursor.execute('select text from entities where entity_id in (%s)', ', '.join([str(id)
-                                                                                        for id in candidate_ids.tolist()]))
+    self.cursor.execute('select text from entities where id in (%s)', ', '.join([str(id)
+                                                                                 for id in candidate_ids.tolist()]))
     return [row['text'] for row in self.cursor.fetchall()]
 
   def __len__(self):
