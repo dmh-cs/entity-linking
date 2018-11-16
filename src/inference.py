@@ -11,12 +11,12 @@ def predict(embedding, token_idx_lookup, p_prior, model, batch, ablation, logits
                                                      token_idx_lookup,
                                                      batch['sentence_splits'])
     if 'document_context' in ablation:
-      _, mention_embeds = model(((left_splits, right_splits),
-                                 batch['embedded_page_content'],
-                                 batch['entity_page_mentions']))
+      _, mention_embeds = model.eval()(((left_splits, right_splits),
+                                        batch['embedded_page_content'],
+                                        batch['entity_page_mentions']))
     else:
-      local_context = model.local_context_encoder((left_splits, right_splits))
-      mention_embeds = model.relu(model.projection(torch.cat((local_context,
+      local_context = model.eval().local_context_encoder((left_splits, right_splits))
+      mention_embeds = model.eval().relu(model.projection(torch.cat((local_context,
                                                               torch.zeros_like(local_context)), 1)))
     p_text = logits_and_softmax['mention'](mention_embeds, batch['candidate_ids'])
     if 'prior' in ablation:
