@@ -67,6 +67,7 @@ class Trainer(object):
                               batch_sampler=self.get_batch_sampler(),
                               collate_fn=collate)
       for batch_num, batch in enumerate(dataloader):
+        self.model.train()
         self.optimizer.zero_grad()
         batch = tensors_to_device(batch, self.device)
         if self.use_adaptive_softmax:
