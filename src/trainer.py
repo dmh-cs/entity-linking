@@ -30,6 +30,7 @@ class Trainer(object):
                num_epochs,
                experiment,
                calc_loss,
+               calc_logits,
                logits_and_softmax,
                adaptive_logits,
                use_adaptive_softmax):
@@ -43,6 +44,7 @@ class Trainer(object):
     self.token_idx_lookup = token_idx_lookup
     self.experiment = experiment
     self.calc_loss = calc_loss
+    self.calc_logits = calc_logits
     self.logits_and_softmax = logits_and_softmax
     self.adaptive_logits = adaptive_logits
     self.optimizer = self._create_optimizer('adam')
@@ -77,11 +79,15 @@ class Trainer(object):
         left_splits, right_splits = embed_and_pack_batch(self.embedding,
                                                          self.token_idx_lookup,
                                                          batch['sentence_splits'])
-        encoded = self.model(((left_splits, right_splits),
-                              batch['embedded_page_content'],
-                              batch['entity_page_mentions']))
-        desc_embeds, mention_embeds = encoded
-        loss = self.calc_loss(encoded, batch['candidate_ids'], labels)
+        encoded = self.model.encoder(((left_splits, right_splits),
+                                      batch['embedded_page_content'],
+                                      batch['entity_page_mentions']))
+        logits = self.calc_logits(encoded, batch['candidate_ids'])
+        scores = self.model.calc_scores(logits,
+                                        batch['candidate_entity_ids'],
+                                        batch['candidate_mention_sim'],
+                                        batch['prior'])
+        loss = self.calc_loss(scores, labels)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(itertools.chain(self.model.parameters(),
                                                        self.adaptive_logits['desc'].parameters(),

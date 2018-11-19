@@ -139,40 +139,30 @@ class Runner(object):
                                       self.train_params.batch_size,
                                       limit=limit)
 
-  def _calc_loss(self, encoded, candidate_entity_ids, labels_for_batch):
+  def _calc_logits(self, encoded, candidate_entity_ids):
     desc_embeds, mention_context_embeds = encoded
     if self.model_params.use_adaptive_softmax:
-      desc_logits, desc_loss = self.adaptive_logits['desc'](desc_embeds, labels_for_batch)
-      mention_logits, mention_loss = self.adaptive_logits['mention'](mention_context_embeds, labels_for_batch)
+      raise NotImplementedError('No longer supported')
     elif self.model_params.use_ranking_loss:
-      batch_size = len(labels_for_batch)
-      logits = Logits()
-      true = self.entity_embeds(candidate_entity_ids[range(batch_size),
-                                                     labels_for_batch])
-      num_candidates = candidate_entity_ids.shape[1]
-      other_ids = torch.tensor([[cand for cand in candidates if cand != labels_for_batch[elem_num]][:num_candidates - 1]
-                                for elem_num, candidates in enumerate(candidate_entity_ids)],
-                               device=self.device)
-      other = self.entity_embeds(other_ids)
-      neg_desc = torch.sum(torch.sigmoid(logits(desc_embeds, other)), 1)
-      pos_desc = torch.sigmoid(torch.sum(desc_embeds * true, 1))
-      desc_margin_violation = 1.0 + neg_desc - pos_desc
-      neg_ment = torch.sum(torch.sigmoid(logits(mention_context_embeds, other)), 1)
-      pos_ment = torch.sigmoid(torch.sum(mention_context_embeds * true, 1))
-      mention_margin_violation = 1.0 + neg_ment - pos_ment
-      mention_loss = torch.sum(torch.max(torch.zeros_like(mention_margin_violation),
-                                         mention_margin_violation)) / batch_size
-      desc_loss = torch.sum(torch.max(torch.zeros_like(desc_margin_violation),
-                                      desc_margin_violation)) / batch_size
+      raise NotImplementedError('No longer supported')
     else:
       logits = Logits()
-      criterion = nn.CrossEntropyLoss()
       desc_logits = logits(desc_embeds,
                            self.entity_embeds(candidate_entity_ids))
-      desc_loss = criterion(desc_logits, labels_for_batch)
       mention_logits = logits(mention_context_embeds,
                               self.entity_embeds(candidate_entity_ids))
-      mention_loss = criterion(mention_logits, labels_for_batch)
+    return desc_logits, mention_logits
+
+  def _calc_loss(self, scores, labels_for_batch):
+    desc_score, mention_score = scores
+    if self.model_params.use_adaptive_softmax:
+      raise NotImplementedError('No longer supported')
+    elif self.model_params.use_ranking_loss:
+      raise NotImplementedError('No longer supported')
+    else:
+      criterion = nn.CrossEntropyLoss()
+      desc_loss = criterion(desc_score, labels_for_batch)
+      mention_loss = criterion(mention_score, labels_for_batch)
     return desc_loss + mention_loss
 
   def _get_trainer(self, cursor, model):
@@ -187,6 +177,7 @@ class Runner(object):
                    num_epochs=self.train_params.num_epochs,
                    experiment=self.experiment,
                    calc_loss=self._calc_loss,
+                   calc_logits=self._calc_logits,
                    logits_and_softmax=self._get_logits_and_softmax(),
                    adaptive_logits=self.adaptive_logits,
                    use_adaptive_softmax=self.model_params.use_adaptive_softmax)
