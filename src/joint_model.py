@@ -19,10 +19,11 @@ class Stacker(nn.Module):
     num_features = 3
     self.linear = nn.Linear(num_features, 1)
 
-  def forward(self, logits, str_sim, prior):
-    self.linear(torch.cat([logits.reshape(-1),
-                           str_sim.reshape(-1),
-                           prior.reshape(-1)])).reshape(*logits.shape)
+  def forward(self, logits, str_sim):
+    lin_result = self.linear(torch.cat([logits.reshape(-1),
+                                        str_sim.reshape(-1)]))
+                                        # prior.reshape(-1)]))
+    return lin_result.reshape(*logits.shape)
 
 class JointModel(nn.Module):
   def __init__(self,

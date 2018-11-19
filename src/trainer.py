@@ -85,8 +85,8 @@ class Trainer(object):
         logits = self.calc_logits(encoded, batch['candidate_ids'])
         scores = self.model.calc_scores(logits,
                                         batch['candidate_entity_ids'],
-                                        batch['candidate_mention_sim'],
-                                        batch['prior'])
+                                        batch['candidate_mention_sim'])
+                                        # batch['prior'])
         loss = self.calc_loss(scores, labels)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(itertools.chain(self.model.parameters(),
