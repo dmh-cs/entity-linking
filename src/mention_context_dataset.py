@@ -37,6 +37,7 @@ class MentionContextDataset(Dataset):
     self._entity_page_mentions_lookup = {}
     self._mentions_per_page_ctr = {}
     self._mention_infos = {}
+    self._candidate_strs_lookup = {}
     self.page_ctr = 0
     self.cheat = cheat
 
@@ -60,7 +61,7 @@ class MentionContextDataset(Dataset):
     label = self.entity_label_lookup[mention_info['entity_id']]
     candidate_ids = self._get_candidate_ids(mention_info['mention'], label)
     p_prior = get_p_prior(self.entity_candidates_prior, mention_info['mention'], candidate_ids)
-    candidates = get_candidate_strs(self.cursor, candidate_ids)
+    candidates = self._get_candidate_strs(candidate_ids)
     sample = {'sentence_splits': get_mention_sentence_splits(page_content,
                                                              sentence_spans,
                                                              mention_info),
@@ -79,14 +80,26 @@ class MentionContextDataset(Dataset):
       self._entity_page_mentions_lookup.pop(mention_info['page_id'])
     return sample
 
+  def _get_candidate_strs(self, candidate_ids):
+    return [self._candidate_strs_lookup[candidate_id] for candidate_id in candidate_ids]
+
   def _get_mention_infos_by_page_id(self, page_id):
     self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id = %s', page_id)
     return self.cursor.fetchall()
 
   def _get_batch_mention_infos(self, closeby_page_ids):
+    self._candidate_strs_lookup = {}
     mention_infos = {}
+    mentions_covered = set()
     for page_id in closeby_page_ids:
       mentions = self._get_mention_infos_by_page_id(page_id)
+      for mention_info in mentions:
+        if mention_info['mention'] in mentions_covered: continue
+        mentions_covered.add(mention_info['mention'])
+        label = self.entity_label_lookup[mention_info['entity_id']]
+        candidate_ids = self._get_candidate_ids(mention_info['mention'], label)
+        self._candidate_strs_lookup.update(dict(zip(candidate_ids,
+                                                    get_candidate_strs(self.cursor, candidate_ids))))
       self._mentions_per_page_ctr[page_id] = len(mentions)
       mention_infos.update({mention['mention_id']: mention for mention in mentions})
     return mention_infos
