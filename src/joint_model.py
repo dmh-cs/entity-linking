@@ -5,6 +5,7 @@ from mention_context_encoder_model import MentionContextEncoder
 
 class JointEncoder(nn.Module):
   def __init__(self, desc_encoder, mention_context_encoder):
+    super().__init__()
     self.desc_encoder = desc_encoder
     self.mention_context_encoder = mention_context_encoder
 
@@ -16,6 +17,7 @@ class JointEncoder(nn.Module):
 
 class Stacker(nn.Module):
   def __init__(self):
+    super().__init__()
     num_features = 3
     self.linear = nn.Linear(num_features, 1)
 
