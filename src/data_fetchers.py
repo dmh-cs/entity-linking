@@ -158,3 +158,15 @@ def get_entity_text():
       return {row['id']: row['text'] for row in cursor.fetchall()}
   finally:
     db_connection.close()
+
+def get_p_prior(entity_candidates_prior, mention, candidate_ids):
+  if mention not in entity_candidates_prior:
+    return torch.zeros(len(candidate_ids))
+  entity_counts = entity_candidates_prior[mention]
+  candidate_counts = [entity_counts[entity] if entity in entity_counts else 0 for entity in candidate_ids.tolist()]
+  return torch.tensor(candidate_counts, dtype=torch.float) / sum(candidate_counts)
+
+def get_candidate_strs(cursor, candidate_ids):
+  cursor.execute('select text from entities where id in (' + ', '.join([str(cand_id)
+                                                                             for cand_id in candidate_ids.tolist()]) + ')')
+  return [row['text'] for row in cursor.fetchall()]

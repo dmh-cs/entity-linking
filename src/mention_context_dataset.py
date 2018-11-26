@@ -6,7 +6,7 @@ import torch
 import pydash as _
 
 from data_transformers import get_mention_sentence_splits, embed_page_content
-from data_fetchers import get_candidate_ids
+from data_fetchers import get_candidate_ids, get_p_prior, get_candidate_strs
 from parsers import parse_for_sentence_spans
 
 
@@ -48,11 +48,6 @@ class MentionContextDataset(Dataset):
                              label,
                              cheat=self.cheat)
 
-  def _get_candidate_strs(self, candidate_ids):
-    self.cursor.execute('select text from entities where id in (' + ', '.join([str(cand_id)
-                                                                               for cand_id in candidate_ids.tolist()]) + ')')
-    return [row['text'] for row in self.cursor.fetchall()]
-
   def __len__(self):
     raise NotImplementedError
 
@@ -64,8 +59,8 @@ class MentionContextDataset(Dataset):
     page_content = self._page_content_lookup[mention_info['page_id']]
     label = self.entity_label_lookup[mention_info['entity_id']]
     candidate_ids = self._get_candidate_ids(mention_info['mention'], label)
-    p_prior = self._get_p_prior(mention_info['mention'], candidate_ids)
-    candidates = self._get_candidate_strs(candidate_ids)
+    p_prior = get_p_prior(self.entity_candidates_prior, mention_info['mention'], candidate_ids)
+    candidates = get_candidate_strs(self.cursor, candidate_ids)
     sample = {'sentence_splits': get_mention_sentence_splits(page_content,
                                                              sentence_spans,
                                                              mention_info),
@@ -83,13 +78,6 @@ class MentionContextDataset(Dataset):
       self._embedded_page_content_lookup.pop(mention_info['page_id'])
       self._entity_page_mentions_lookup.pop(mention_info['page_id'])
     return sample
-
-  def _get_p_prior(self, mention, candidate_ids):
-    if mention not in self.entity_candidates_prior:
-      return torch.zeros(len(candidate_ids))
-    entity_counts = self.entity_candidates_prior[mention]
-    candidate_counts = [entity_counts[entity] if entity in entity_counts else 0 for entity in candidate_ids.tolist()]
-    return torch.tensor(candidate_counts, dtype=torch.float) / sum(candidate_counts)
 
   def _get_mention_infos_by_page_id(self, page_id):
     self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id = %s', page_id)
