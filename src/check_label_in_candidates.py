@@ -19,7 +19,8 @@ def main():
   load_dotenv(dotenv_path='.env')
   paths = m(lookups=os.getenv("LOOKUPS_PATH"),
             page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
-  runner = Runner(device, paths=paths)
+  model_params = m(freeze_word_embeddings=True)
+  runner = Runner(device, paths=paths, model_params=model_params)
   runner.load_caches()
   runner.init_entity_embeds()
   db_connection = get_connection()
