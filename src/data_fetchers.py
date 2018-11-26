@@ -168,5 +168,5 @@ def get_p_prior(entity_candidates_prior, mention, candidate_ids):
 
 def get_candidate_strs(cursor, candidate_ids):
   cursor.execute('select text from entities where id in (' + ', '.join([str(cand_id)
-                                                                             for cand_id in candidate_ids.tolist()]) + ')')
+                                                                             for cand_id in candidate_ids]) + ')')
   return [row['text'] for row in cursor.fetchall()]
