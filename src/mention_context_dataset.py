@@ -61,7 +61,7 @@ class MentionContextDataset(Dataset):
     label = self.entity_label_lookup[mention_info['entity_id']]
     candidate_ids = self._get_candidate_ids(mention_info['mention'], label)
     p_prior = get_p_prior(self.entity_candidates_prior, mention_info['mention'], candidate_ids)
-    candidates = self._get_candidate_strs(candidate_ids)
+    candidates = self._get_candidate_strs(candidate_ids.tolist())
     sample = {'sentence_splits': get_mention_sentence_splits(page_content,
                                                              sentence_spans,
                                                              mention_info),
@@ -97,7 +97,7 @@ class MentionContextDataset(Dataset):
         if mention_info['mention'] in mentions_covered: continue
         mentions_covered.add(mention_info['mention'])
         label = self.entity_label_lookup[mention_info['entity_id']]
-        candidate_ids = self._get_candidate_ids(mention_info['mention'], label)
+        candidate_ids = self._get_candidate_ids(mention_info['mention'], label).tolist()
         self._candidate_strs_lookup.update(dict(zip(candidate_ids,
                                                     get_candidate_strs(self.cursor, candidate_ids))))
       self._mentions_per_page_ctr[page_id] = len(mentions)
