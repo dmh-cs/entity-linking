@@ -38,7 +38,7 @@ def main():
                    'dont_use_deep_network',
                    'use_cnn_local',
                    'use_lstm_local',
-                   'freeze_word_embeddings',
+                   'dont_freeze_word_embeddings',
                    'cheat']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
   flags = [_.head(arg) for arg in args]
