@@ -81,7 +81,9 @@ class MentionContextDataset(Dataset):
     return sample
 
   def _get_candidate_strs(self, candidate_ids):
-    return [self._candidate_strs_lookup[candidate_id] for candidate_id in candidate_ids]
+    return [self._candidate_strs_lookup[candidate_id]
+            if candidate_id in self._candidate_strs_lookup else ''
+            for candidate_id in candidate_ids]
 
   def _get_mention_infos_by_page_id(self, page_id):
     self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id = %s', page_id)

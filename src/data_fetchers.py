@@ -99,11 +99,8 @@ def get_candidate_ids(entity_candidates_prior,
       base_candidate_ids = torch.tensor(ids + [label] if label not in ids else ids,
                                         dtype=torch.long)
   else:
-    if entity_candidates_prior.get(mention) is None:
-      base_candidate_ids = torch.tensor([label], dtype=torch.long)
-    else:
-      base_candidate_ids = torch.tensor(list(entity_candidates_prior[mention].keys()),
-                                        dtype=torch.long)
+    base_candidate_ids = torch.tensor(list(entity_candidates_prior[mention].keys()),
+                                      dtype=torch.long)
   if len(base_candidate_ids) < num_candidates:
     num_candidates_to_generate = num_candidates - len(base_candidate_ids)
     random_candidate_ids = get_random_indexes(num_entities,
@@ -167,6 +164,8 @@ def get_p_prior(entity_candidates_prior, mention, candidate_ids):
   return torch.tensor(candidate_counts, dtype=torch.float) / sum(candidate_counts)
 
 def get_candidate_strs(cursor, candidate_ids):
-  cursor.execute('select text from entities where id in (' + ', '.join([str(cand_id)
-                                                                             for cand_id in candidate_ids]) + ')')
-  return [row['text'] for row in cursor.fetchall()]
+  strs = []
+  for candidate_id in candidate_ids:
+    cursor.execute('select text from entities where id = %s', candidate_id)
+    strs.append(cursor.fetchone()['text'])
+  return strs
