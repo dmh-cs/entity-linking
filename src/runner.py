@@ -95,7 +95,9 @@ class Runner(object):
     entity_indexed_tokens = {self.lookups.entity_labels[entity_id]: _.map_(parse_for_tokens(text), mapper)
                              for entity_id, text in get_entity_text().items()
                              if entity_id in self.lookups.entity_labels}
-    entity_indexed_tokens_list = [entity_indexed_tokens[i] for i in range(len(entity_indexed_tokens))]
+    entity_indexed_tokens_list = [entity_indexed_tokens[i]
+                                  if i in entity_indexed_tokens else [1]
+                                  for i in range(len(entity_indexed_tokens))]
     return torch.tensor(pad_batch_list(0, entity_indexed_tokens_list),
                         device=self.device)
 
