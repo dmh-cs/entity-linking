@@ -90,14 +90,14 @@ class Runner(object):
     self.page_id_order_train = self.page_id_order[:self.num_train_pages]
     self.page_id_order_test = self.page_id_order[self.num_train_pages:]
 
-  def _get_entity_tokens(self):
+  def _get_entity_tokens(self, num_entities):
     mapper = lambda token: self.lookups.token_idx_lookup[token] if token in self.lookups.token_idx_lookup else self.lookups.token_idx_lookup['<UNK>']
     entity_indexed_tokens = {self.lookups.entity_labels[entity_id]: _.map_(parse_for_tokens(text), mapper)
                              for entity_id, text in get_entity_text().items()
                              if entity_id in self.lookups.entity_labels}
     entity_indexed_tokens_list = [entity_indexed_tokens[i]
                                   if i in entity_indexed_tokens else [1]
-                                  for i in range(len(entity_indexed_tokens))]
+                                  for i in range(num_entities)]
     return torch.tensor(pad_batch_list(0, entity_indexed_tokens_list),
                         device=self.device)
 
@@ -110,7 +110,7 @@ class Runner(object):
 
   def init_entity_embeds(self):
     if self.model_params.word_embed_len == self.model_params.embed_len:
-      entities_by_token = self._get_entity_tokens()
+      entities_by_token = self._get_entity_tokens(self.model_params.num_entities)
       entity_embed_weights = nn.Parameter(self._sum_in_batches(entities_by_token))
     else:
       print(f'word embed len: {self.model_params.word_embed_len} != entity embed len {self.model_params.embed_len}. Not initializing entity embeds with word embeddings')
