@@ -24,12 +24,10 @@ class Stacker(nn.Module):
     self.desc_linear = nn.Linear(self.num_features, 1)
 
   def forward(self, logits, str_sim):
-    men_lin_result = self.men_linear(torch.stack([logits[0].reshape(-1),
-                                                  str_sim.reshape(-1)],
+    men_lin_result = self.men_linear(torch.stack([logits[0], str_sim],
                                                  2).reshape(-1, self.num_features))
     # prior.reshape(-1)]))
-    desc_lin_result = self.desc_linear(torch.stack([logits[1].reshape(-1),
-                                                    str_sim.reshape(-1)],
+    desc_lin_result = self.desc_linear(torch.stack([logits[1], str_sim],
                                                    2).reshape(-1, self.num_features))
     # prior.reshape(-1)]))
     return men_lin_result.reshape(*logits.shape), desc_lin_result.reshape(*logits.shape)
