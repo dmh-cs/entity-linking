@@ -19,14 +19,20 @@ class JointEncoder(nn.Module):
 class Stacker(nn.Module):
   def __init__(self):
     super().__init__()
-    num_features = 3
-    self.linear = nn.Linear(num_features, 1)
+    self.num_features = 2
+    self.men_linear = nn.Linear(self.num_features, 1)
+    self.desc_linear = nn.Linear(self.num_features, 1)
 
   def forward(self, logits, str_sim):
-    lin_result = self.linear(torch.cat([logits.reshape(-1),
-                                        str_sim.reshape(-1)]))
-                                        # prior.reshape(-1)]))
-    return lin_result.reshape(*logits.shape)
+    men_lin_result = self.men_linear(torch.stack([logits[0].reshape(-1),
+                                                  str_sim.reshape(-1)],
+                                                 2).reshape(-1, self.num_features))
+    # prior.reshape(-1)]))
+    desc_lin_result = self.desc_linear(torch.stack([logits[1].reshape(-1),
+                                                    str_sim.reshape(-1)],
+                                                   2).reshape(-1, self.num_features))
+    # prior.reshape(-1)]))
+    return men_lin_result.reshape(*logits.shape), desc_lin_result.reshape(*logits.shape)
 
 class JointModel(nn.Module):
   def __init__(self,
