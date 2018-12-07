@@ -30,7 +30,7 @@ class Stacker(nn.Module):
     desc_lin_result = self.desc_linear(torch.stack([logits[1], str_sim],
                                                    2).reshape(-1, self.num_features))
     # prior.reshape(-1)]))
-    return men_lin_result.reshape(*logits.shape), desc_lin_result.reshape(*logits.shape)
+    return men_lin_result.reshape(*logits[0].shape), desc_lin_result.reshape(*logits[1].shape)
 
 class JointModel(nn.Module):
   def __init__(self,
