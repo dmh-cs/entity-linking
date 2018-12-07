@@ -98,7 +98,9 @@ class Trainer(object):
           encoded_test = self.model.encoder(((left_splits, right_splits),
                                              batch['embedded_page_content'],
                                              batch['entity_page_mentions']))
-          mention_probas, desc_probas = self.model.calc_scores(encoded_test)
+          logits_test = self.calc_logits(encoded_test, batch['candidate_ids'])
+          mention_probas, desc_probas = self.model.calc_scores(logits_test,
+                                               batch['candidate_mention_sim'])
           mention_context_error = self._classification_error(mention_probas, labels)
           document_context_error = self._classification_error(desc_probas, labels)
         self.experiment.record_metrics({'mention_context_error': mention_context_error,
