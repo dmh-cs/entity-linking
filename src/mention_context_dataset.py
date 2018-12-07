@@ -25,6 +25,7 @@ class MentionContextDataset(Dataset):
     self.page_id_order = page_id_order
     self.entity_candidates_prior = entity_candidates_prior
     self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
+    self.entity_id_lookup = {int(label): entity_id for entity_id, label in self.entity_label_lookup.items()}
     self.embedding = embedding
     self.token_idx_lookup = token_idx_lookup
     self.cursor = cursor
@@ -101,7 +102,8 @@ class MentionContextDataset(Dataset):
         label = self.entity_label_lookup[mention_info['entity_id']]
         candidate_ids = self._get_candidate_ids(mention_info['mention'], label).tolist()
         self._candidate_strs_lookup.update(dict(zip(candidate_ids,
-                                                    get_candidate_strs(self.cursor, candidate_ids))))
+                                                    get_candidate_strs(self.cursor,
+                                                                       [self.entity_id_lookup[cand_id] for cand_id in candidate_ids]))))
       self._mentions_per_page_ctr[page_id] = len(mentions)
       mention_infos.update({mention['mention_id']: mention for mention in mentions})
     return mention_infos
