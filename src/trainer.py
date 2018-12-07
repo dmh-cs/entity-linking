@@ -94,12 +94,11 @@ class Trainer(object):
                                        0.01)
         self.optimizer.step()
         with torch.no_grad():
-          encoded_test = self.model.eval()(((left_splits, right_splits),
-                                            batch['embedded_page_content'],
-                                            batch['entity_page_mentions']))
-          desc_embeds_test, mention_embeds_test = encoded_test
-          mention_probas = self.logits_and_softmax['mention'](mention_embeds_test, batch['candidate_ids'])
-          desc_probas = self.logits_and_softmax['desc'](desc_embeds_test, batch['candidate_ids'])
+          self.model.eval()
+          encoded_test = self.model.encoder(((left_splits, right_splits),
+                                             batch['embedded_page_content'],
+                                             batch['entity_page_mentions']))
+          mention_probas, desc_probas = self.model.calc_scores(encoded_test)
           mention_context_error = self._classification_error(mention_probas, labels)
           document_context_error = self._classification_error(desc_probas, labels)
         self.experiment.record_metrics({'mention_context_error': mention_context_error,
