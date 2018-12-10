@@ -99,8 +99,11 @@ def get_candidate_ids(entity_candidates_prior,
       base_candidate_ids = torch.tensor(ids + [label] if label not in ids else ids,
                                         dtype=torch.long)
   else:
-    base_candidate_ids = torch.tensor(list(entity_candidates_prior[mention].keys()),
-                                      dtype=torch.long)
+    if entity_candidates_prior.get(mention) is None:
+      base_candidate_ids = torch.tensor([], dtype=torch.long)
+    else:
+      ids = list(entity_candidates_prior[mention].keys())
+      base_candidate_ids = torch.tensor(ids, dtype=torch.long)
   if len(base_candidate_ids) < num_candidates:
     num_candidates_to_generate = num_candidates - len(base_candidate_ids)
     random_candidate_ids = get_random_indexes(num_entities,
