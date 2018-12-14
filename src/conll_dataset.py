@@ -137,7 +137,9 @@ class CoNLLDataset(Dataset):
     return {'sentence_splits': self.sentence_splits[idx],
             'label': label,
             'embedded_page_content': self.embedded_documents[self.mention_doc_id[idx]],
-            'entity_page_mentions': self.mentions_by_doc_id[self.mention_doc_id[idx]],
+            'entity_page_mentions': embed_page_content(self.embedding,
+                                                       self.token_idx_lookup,
+                                                       self.mentions_by_doc_id[self.mention_doc_id[idx]]),
             'p_prior': get_p_prior(self.entity_candidates_prior, mention, candidate_ids),
             'candidate_ids': candidate_ids,
             'candidate_mention_sim': torch.tensor([Levenshtein.ratio(mention, candidate)
