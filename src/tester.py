@@ -64,7 +64,7 @@ class Tester(object):
                             model=self.model,
                             batch=batch,
                             ablation=self.ablation,
-                            logits_and_softmax=self.logits_and_softmax)
+                            entity_embeds=self.model.entity_embeds)
       acc += int((labels_for_batch == predictions).sum())
       batch_size = len(predictions)
       n += batch_size

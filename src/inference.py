@@ -4,7 +4,7 @@ import torch
 from data_transformers import embed_and_pack_batch
 from logits import Logits
 
-def predict(embedding, token_idx_lookup, p_prior, model, batch, ablation, logits_and_softmax):
+def predict(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds):
   model.eval()
   if ablation == ['prior']:
     return torch.argmax(p_prior, dim=1)
@@ -17,10 +17,11 @@ def predict(embedding, token_idx_lookup, p_prior, model, batch, ablation, logits
                                                    batch['embedded_page_content'],
                                                    batch['entity_page_mentions']))
     else:
-      local_context = model.local_context_encoder((left_splits, right_splits))
-      mention_embeds = model.relu(model.projection(torch.cat((local_context,
-                                                              torch.zeros_like(local_context)), 1)))
-    calc_logits = Logits()
+      local_context = model.encoder.local_context_encoder((left_splits, right_splits))
+      mention_embeds = model.encoder.relu(model.projection(torch.cat((local_context,
+                                                                      torch.zeros_like(local_context)), 1)))
+    logits = Logits()
+    calc_logits = lambda embeds, ids: logits(ids, entity_embeds(ids))
     men_logits = calc_logits(mention_embeds, batch['candidate_ids'])
     p_text, __ = model.calc_scores((men_logits, torch.zeros_like(men_logits)),
                                    batch['candidate_mention_sim'])
