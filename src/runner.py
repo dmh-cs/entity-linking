@@ -7,6 +7,7 @@ import pydash as _
 import torch
 import torch.nn as nn
 from torch.nn.modules.adaptive import AdaptiveLogSoftmaxWithLoss
+from torch.utils.data.sampler import BatchSampler, RandomSampler
 
 from data_fetchers import get_connection, get_embedding_dict, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup, get_entity_text
 from default_params import default_train_params, default_model_params, default_run_params, default_paths
@@ -145,11 +146,14 @@ class Runner(object):
                                    cheat=self.run_params.cheat)
 
   def _get_sampler(self, cursor, is_test, limit=None):
-    page_ids = self.page_id_order_test if is_test else self.page_id_order_train
-    return MentionContextBatchSampler(cursor,
-                                      page_ids,
-                                      self.train_params.batch_size,
-                                      limit=limit)
+    if self.use_conll:
+      return BatchSampler(RandomSampler(self._trainer._dataset), self.batch_size, False)
+    else:
+      page_ids = self.page_id_order_test if is_test else self.page_id_order_train
+      return MentionContextBatchSampler(cursor,
+                                        page_ids,
+                                        self.train_params.batch_size,
+                                        limit=limit)
 
   def _calc_logits(self, encoded, candidate_entity_ids):
     desc_embeds, mention_context_embeds = encoded
@@ -178,21 +182,22 @@ class Runner(object):
     return desc_loss + mention_loss
 
   def _get_trainer(self, cursor, model):
-    return Trainer(device=self.device,
-                   embedding=self.lookups.embedding,
-                   token_idx_lookup=self.lookups.token_idx_lookup,
-                   model=model,
-                   get_dataset=lambda: self._get_dataset(cursor, is_test=False),
-                   get_batch_sampler=lambda: self._get_sampler(cursor,
-                                                               is_test=False,
-                                                               limit=self.train_params.dataset_limit),
-                   num_epochs=self.train_params.num_epochs,
-                   experiment=self.experiment,
-                   calc_loss=self._calc_loss,
-                   calc_logits=self._calc_logits,
-                   logits_and_softmax=self._get_logits_and_softmax(),
-                   adaptive_logits=self.adaptive_logits,
-                   use_adaptive_softmax=self.model_params.use_adaptive_softmax)
+    self._trainer = Trainer(device=self.device,
+                            embedding=self.lookups.embedding,
+                            token_idx_lookup=self.lookups.token_idx_lookup,
+                            model=model,
+                            get_dataset=lambda: self._get_dataset(cursor, is_test=False),
+                            get_batch_sampler=lambda: self._get_sampler(cursor,
+                                                                        is_test=False,
+                                                                        limit=self.train_params.dataset_limit),
+                            num_epochs=self.train_params.num_epochs,
+                            experiment=self.experiment,
+                            calc_loss=self._calc_loss,
+                            calc_logits=self._calc_logits,
+                            logits_and_softmax=self._get_logits_and_softmax(),
+                            adaptive_logits=self.adaptive_logits,
+                            use_adaptive_softmax=self.model_params.use_adaptive_softmax)
+    return self._trainer
 
   def _get_logits_and_softmax(self):
     def get_calc(context):

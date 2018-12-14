@@ -117,6 +117,9 @@ class CoNLLDataset(Dataset):
     self.mention_doc_id = _get_doc_id_per_mention(self.lines)
     self.mentions_by_doc_id = _get_mentions_by_doc_id(self.lines)
 
+  def __len__(self):
+    return len(self.labels)
+
   def __getitem__(self, idx):
     label = self.labels[idx]
     mention = self.mentions[idx]

@@ -65,7 +65,8 @@ class Trainer(object):
   def train(self):
     for epoch_num in range(self.num_epochs):
       self.experiment.update_epoch(epoch_num)
-      dataloader = DataLoader(dataset=self.get_dataset(),
+      self._dataset = self.get_dataset()
+      dataloader = DataLoader(dataset=self._dataset,
                               batch_sampler=self.get_batch_sampler(),
                               collate_fn=collate)
       for batch_num, batch in enumerate(dataloader):
