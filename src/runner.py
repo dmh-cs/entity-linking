@@ -19,6 +19,7 @@ from tester import Tester
 from trainer import Trainer
 from parsers import parse_for_tokens
 from data_transformers import pad_batch_list
+from conll_dataset import CoNLLDataset
 
 from fire_extinguisher import BatchRepeater
 
@@ -51,6 +52,7 @@ class Runner(object):
     self.entity_embeds: Optional[nn.Embedding] = None
     self.adaptive_logits = {'desc': None, 'mention': None}
     self.encoder = None
+    self.use_conll = self.run_params.use_conll
 
   def _get_word_embedding_path(self):
     if self.model_params.word_embedding_set.lower() == 'glove' and self.model_params.word_embed_len == 100:
@@ -123,16 +125,24 @@ class Runner(object):
 
   def _get_dataset(self, cursor, is_test):
     page_ids = self.page_id_order_test if is_test else self.page_id_order_train
-    return MentionContextDataset(cursor,
-                                 page_ids,
-                                 self.lookups.entity_candidates_prior,
-                                 self.lookups.entity_labels,
-                                 self.lookups.embedding,
-                                 self.lookups.token_idx_lookup,
-                                 self.train_params.batch_size,
-                                 self.model_params.num_entities,
-                                 self.model_params.num_candidates,
-                                 cheat=self.run_params.cheat)
+    if self.use_conll:
+      return CoNLLDataset(cursor,
+                          self.lookups.entity_candidates_prior,
+                          self.lookups.embedding,
+                          self.lookups.token_idx_lookup,
+                          self.model_params.num_entities,
+                          self.model_params.num_candidates)
+    else:
+      return MentionContextDataset(cursor,
+                                   page_ids,
+                                   self.lookups.entity_candidates_prior,
+                                   self.lookups.entity_labels,
+                                   self.lookups.embedding,
+                                   self.lookups.token_idx_lookup,
+                                   self.train_params.batch_size,
+                                   self.model_params.num_entities,
+                                   self.model_params.num_candidates,
+                                   cheat=self.run_params.cheat)
 
   def _get_sampler(self, cursor, is_test, limit=None):
     page_ids = self.page_id_order_test if is_test else self.page_id_order_train

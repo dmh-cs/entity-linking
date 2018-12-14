@@ -39,12 +39,14 @@ def main():
                    'use_cnn_local',
                    'use_lstm_local',
                    'dont_freeze_word_embeddings',
-                   'cheat']
+                   'cheat',
+                   'use_conll']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
   flags = [_.head(arg) for arg in args]
   train_params = m()
   run_params = m(load_model='--load_model' in flags,
-                 cheat='--cheat' in flags)
+                 cheat='--cheat' in flags,
+                 use_conll='--use_conll' in flags)
   model_params = m(use_adaptive_softmax='--use_adaptive_softmax' in flags,
                    use_hardcoded_cutoffs='--dont_use_hardcoded_cutoffs' not in flags,
                    use_ranking_loss='--use_ranking_loss' in flags,

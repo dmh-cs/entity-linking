@@ -109,7 +109,7 @@ class CoNLLDataset(Dataset):
       self.lines = fh.read().strip().split('\n')[:-1]
     self.documents = _get_documents(self.lines)
     self.mentions = _get_mentions(self.lines)
-    self.sentence_splits = _get_splits(self.document, self.mentions)
+    self.sentence_splits = _get_splits(self.documents, self.mentions)
     self.entity_page_ids = _get_entity_page_ids(self.lines)
     self.labels = _from_page_ids_to_entity_ids(cursor, self.entity_page_ids)
     self.mention_doc_id = _get_doc_id_per_mention(self.lines)
