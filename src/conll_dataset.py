@@ -75,7 +75,7 @@ def _from_page_ids_to_entity_ids(cursor, page_ids):
   entity_ids = []
   for page_id in page_ids:
     cursor.execute('select entity_id from entity_by_page where page_id = %s', page_id)
-    entity_ids.append(cursor.findone()['entity_id'])
+    entity_ids.append(cursor.fetchone()['entity_id'])
   return entity_ids
 
 def _get_doc_id_per_mention(lines):
