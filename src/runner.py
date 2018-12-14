@@ -132,7 +132,8 @@ class Runner(object):
                           self.lookups.embedding,
                           self.lookups.token_idx_lookup,
                           self.model_params.num_entities,
-                          self.model_params.num_candidates)
+                          self.model_params.num_candidates,
+                          self.lookups.entity_labels)
     else:
       return MentionContextDataset(cursor,
                                    page_ids,

@@ -100,6 +100,7 @@ class CoNLLDataset(Dataset):
                token_idx_lookup,
                num_entities,
                num_candidates,
+               entity_label_lookup,
                path='./AIDA-YAGO2-dataset.tsv'):
     self.cursor = cursor
     self.entity_candidates_prior = entity_candidates_prior
@@ -116,6 +117,8 @@ class CoNLLDataset(Dataset):
     self.labels = _from_page_ids_to_entity_ids(cursor, self.entity_page_ids)
     self.mention_doc_id = _get_doc_id_per_mention(self.lines)
     self.mentions_by_doc_id = _get_mentions_by_doc_id(self.lines)
+    self.entity_label_lookup = entity_label_lookup
+    self.entity_id_lookup = {int(label): entity_id for entity_id, label in self.entity_label_lookup.items()}
 
   def __len__(self):
     return len(self.labels)
@@ -128,7 +131,7 @@ class CoNLLDataset(Dataset):
                                       self.num_candidates,
                                       mention,
                                       label)
-    candidates = get_candidate_strs(self.cursor, candidate_ids.tolist())
+    candidates = get_candidate_strs(self.cursor, [self.entity_id_lookup[cand_id] for cand_id in candidate_ids.tolist()])
     return {'sentence_splits': self.sentence_splits[idx],
             'label': label,
             'embedded_page_content': self.documents[self.mention_doc_id[idx]],
