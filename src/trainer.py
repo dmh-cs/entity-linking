@@ -100,7 +100,7 @@ class Trainer(object):
                                              batch['entity_page_mentions']))
           logits_test = self.calc_logits(encoded_test, batch['candidate_ids'])
           mention_probas, desc_probas = self.model.calc_scores(logits_test,
-                                               batch['candidate_mention_sim'])
+                                                               batch['candidate_mention_sim'])
           mention_context_error = self._classification_error(mention_probas, labels)
           document_context_error = self._classification_error(desc_probas, labels)
         self.experiment.record_metrics({'mention_context_error': mention_context_error,

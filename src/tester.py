@@ -11,7 +11,8 @@ def collate(batch):
           'embedded_page_content': [sample['embedded_page_content'] for sample in batch],
           'entity_page_mentions': [sample['entity_page_mentions'] for sample in batch],
           'candidate_ids': torch.stack([sample['candidate_ids'] for sample in batch]),
-          'p_prior': torch.stack([sample['p_prior'] for sample in batch])}
+          'p_prior': torch.stack([sample['p_prior'] for sample in batch]),
+          'candidate_mention_sim': torch.stack([torch.tensor(sample['candidate_mention_sim']) for sample in batch])}
 
 class Tester(object):
   def __init__(self,
