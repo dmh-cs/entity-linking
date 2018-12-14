@@ -110,8 +110,9 @@ class CoNLLDataset(Dataset):
     self.num_candidates = num_candidates
     with open(path, 'r') as fh:
       self.lines = fh.read().strip().split('\n')[:-1]
-    self.documents = [embed_page_content(self.embedding, self.token_idx_lookup, document)
-                      for document in _get_documents(self.lines)]
+    self.documents = _get_documents(self.lines)
+    self.embedded_documents = [embed_page_content(self.embedding, self.token_idx_lookup, document)
+                               for document in self.documents]
     self.mentions = _get_mentions(self.lines)
     self.sentence_splits = _get_splits(self.documents, self.mentions)
     self.entity_page_ids = _get_entity_page_ids(self.lines)
@@ -135,7 +136,7 @@ class CoNLLDataset(Dataset):
     candidates = get_candidate_strs(self.cursor, [self.entity_id_lookup[cand_id] for cand_id in candidate_ids.tolist()])
     return {'sentence_splits': self.sentence_splits[idx],
             'label': label,
-            'embedded_page_content': self.documents[self.mention_doc_id[idx]],
+            'embedded_page_content': self.embedded_documents[self.mention_doc_id[idx]],
             'entity_page_mentions': self.mentions_by_doc_id[self.mention_doc_id[idx]],
             'p_prior': get_p_prior(self.entity_candidates_prior, mention, candidate_ids),
             'candidate_ids': candidate_ids,
