@@ -126,7 +126,7 @@ class CoNLLDataset(Dataset):
     return len(self.labels)
 
   def __getitem__(self, idx):
-    label = self.labels[idx]
+    label = self.entity_label_lookup.get(self.labels[idx]) or -1
     mention = self.mentions[idx]
     candidate_ids = get_candidate_ids(self.entity_candidates_prior,
                                       self.num_entities,
