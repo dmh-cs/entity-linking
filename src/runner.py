@@ -147,7 +147,7 @@ class Runner(object):
 
   def _get_sampler(self, cursor, is_test, limit=None):
     if self.use_conll:
-      return BatchSampler(RandomSampler(self._trainer._dataset),
+      return BatchSampler(RandomSampler(self._dataset),
                           self.train_params.batch_size,
                           False)
     else:
@@ -217,6 +217,7 @@ class Runner(object):
   def _get_tester(self, cursor, model):
     logits_and_softmax = self._get_logits_and_softmax()
     test_dataset = self._get_dataset(cursor, is_test=True)
+    self._dataset = test_dataset
     batch_sampler = self._get_sampler(cursor, is_test=True)
     return Tester(dataset=test_dataset,
                   batch_sampler=batch_sampler,
