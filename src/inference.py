@@ -21,7 +21,7 @@ def predict(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity
       mention_embeds = model.encoder.relu(model.projection(torch.cat((local_context,
                                                                       torch.zeros_like(local_context)), 1)))
     logits = Logits()
-    calc_logits = lambda embeds, ids: logits(ids, entity_embeds(ids))
+    calc_logits = lambda embeds, ids: logits(embeds, entity_embeds(ids))
     men_logits = calc_logits(mention_embeds, batch['candidate_ids'])
     p_text, __ = model.calc_scores((men_logits, torch.zeros_like(men_logits)),
                                    batch['candidate_mention_sim'])
