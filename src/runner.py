@@ -147,7 +147,9 @@ class Runner(object):
 
   def _get_sampler(self, cursor, is_test, limit=None):
     if self.use_conll:
-      return BatchSampler(RandomSampler(self._trainer._dataset), self.batch_size, False)
+      return BatchSampler(RandomSampler(self._trainer._dataset),
+                          self.train_params.batch_size,
+                          False)
     else:
       page_ids = self.page_id_order_test if is_test else self.page_id_order_train
       return MentionContextBatchSampler(cursor,
