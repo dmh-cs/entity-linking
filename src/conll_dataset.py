@@ -74,7 +74,7 @@ def _get_entity_page_ids(lines):
 def _from_page_ids_to_entity_ids(cursor, page_ids):
   entity_ids = []
   for page_id in page_ids:
-    cursor.execute('select entity_id from entity_by_page where page_id = %s', page_id)
+    cursor.execute('select entity_id from entity_by_page where source_id = %s', page_id)
     result = cursor.fetchone()
     if result:
       entity_ids.append(result['entity_id'])
