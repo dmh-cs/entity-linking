@@ -57,7 +57,9 @@ def _get_splits(documents, mentions):
       mention_start_offset = _.index_of(doc[seek:], mention)
       if mention_start_offset == -1:
         mention_start_offset = _.index_of(doc[seek:], ' '.join(mention.split('.')))
-        if mention_start_offset == -1: break
+        if mention_start_offset == -1:
+          mention_start_offset = _.index_of(doc[seek:], ' '.join(mention.split(',')))
+          if mention_start_offset == -1: break
       mention_start_idx = mention_start_offset + seek
       mention_end_idx = mention_start_idx + len(mention)
       span = _create_span(spans, mention_start_idx, mention_end_idx)
