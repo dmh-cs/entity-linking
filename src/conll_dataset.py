@@ -1,4 +1,5 @@
 import Levenshtein
+import re
 
 import numpy as np
 import torch
@@ -56,7 +57,7 @@ def _get_splits(documents, mentions):
       mention = mentions[mention_idx]
       mention_start_offset = _.index_of(doc[seek:], mention)
       if mention_start_offset == -1:
-        mention_start_offset = _.index_of(doc[seek:], ' '.join(' '.join(mention.split('.')).split(',')))
+        mention_start_offset = _.index_of(doc[seek:], re.sub(' +', ' ', ' , '.join(' . '.join(mention.split('.')).split(','))).replace('D . C .', 'D.C.'))
         if mention_start_offset == -1: break
       mention_start_idx = mention_start_offset + seek
       mention_end_idx = mention_start_idx + len(mention)
@@ -121,15 +122,17 @@ class CoNLLDataset(Dataset):
     self.sentence_splits = _get_splits(self.documents, self.mentions)
     self.entity_page_ids = _get_entity_page_ids(self.lines)
     self.labels = _from_page_ids_to_entity_ids(cursor, self.entity_page_ids)
+    self.with_label = [i for i, x in enumerate(self.labels) if x != -1]
     self.mention_doc_id = _get_doc_id_per_mention(self.lines)
     self.mentions_by_doc_id = _get_mentions_by_doc_id(self.lines)
     self.entity_label_lookup = entity_label_lookup
     self.entity_id_lookup = {int(label): entity_id for entity_id, label in self.entity_label_lookup.items()}
 
   def __len__(self):
-    return len(self.labels)
+    return len(self.with_label)
 
   def __getitem__(self, idx):
+    idx = self.with_label[idx]
     label = self.entity_label_lookup.get(self.labels[idx]) or -1
     mention = self.mentions[idx]
     candidate_ids = get_candidate_ids(self.entity_candidates_prior,
