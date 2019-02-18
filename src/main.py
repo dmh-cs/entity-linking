@@ -24,6 +24,7 @@ args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param
                      {'name': 'word_embed_len'             , 'for': 'model_param', 'type': int},
                      {'name': 'word_embedding_set'         , 'for': 'model_param', 'type': str},
                      {'name': 'adaptive_softmax_cutoffs'   , 'for': 'model_param', 'type': lambda string: [int(cutoff) for cutoff in string.split(',')]},
+                     {'name': 'load_path'   , 'for': 'run_param', 'type': lambda string: str(string) if string is not None else string},
                      {'name': 'comments'                   , 'for': 'run_param', 'type': str}]
 
 runner = None

@@ -70,12 +70,12 @@ class Runner(object):
     return [row['entity_id'] for row in sorted_rows]
 
   def load_caches(self):
+    self.log.status('Loading entity candidate_ids lookup')
+    lookups = load_entity_candidate_ids_and_label_lookup(self.paths.lookups, self.train_params.train_size)
     if not hasattr(self.model_params, 'num_entities'):
       self.log.status('Getting number of entities')
       self.model_params = self.model_params.set('num_entities',
-                                                get_num_entities())
-    self.log.status('Loading entity candidate_ids lookup')
-    lookups = load_entity_candidate_ids_and_label_lookup(self.paths.lookups, self.train_params.train_size)
+                                                len(lookups['entity_labels']))
     self.log.status('Loading word embedding lookup')
     embedding_dict = get_embedding_dict(self.paths.word_embedding,
                                         embedding_dim=self.model_params.word_embed_len)
@@ -280,7 +280,8 @@ class Runner(object):
             trainer.train()
             torch.save(self.encoder.state_dict(), './' + self.experiment.model_name)
         else:
-          self.encoder.load_state_dict(torch.load('./' + self.experiment.model_name))
+          path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
+          self.encoder.load_state_dict(torch.load(path))
           self.encoder = nn.DataParallel(self.encoder)
           self.encoder = self.encoder.to(self.device).module
         with self.experiment.test(['accuracy', 'TP', 'num_samples']):
