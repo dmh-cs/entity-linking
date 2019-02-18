@@ -78,6 +78,8 @@ def _from_page_ids_to_entity_ids(cursor, page_ids):
     result = cursor.fetchone()
     if result:
       entity_ids.append(result['entity_id'])
+    else:
+      entity_ids.append(-1)
   return entity_ids
 
 def _get_doc_id_per_mention(lines):
