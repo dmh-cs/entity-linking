@@ -56,12 +56,11 @@ class Runner(object):
     self.use_conll = self.run_params.use_conll
 
   def _get_word_embedding_path(self):
-    if self.model_params.word_embedding_set.lower() == 'glove' and self.model_params.word_embed_len == 100:
-      return'./glove.6B.100d.txt'
-    elif self.model_params.word_embedding_set.lower() == 'glove' and self.model_params.word_embed_len == 300:
-      return './glove.840B.300d.txt'
+    dim = self.model_params.word_embed_len
+    if self.model_params.word_embedding_set.lower() == 'glove':
+      return f'./glove.6B.{dim}d.txt'
     else:
-      raise NotImplementedError('Only loading from glove 100d or 300d is currently supported')
+      raise NotImplementedError('Only loading from glove is currently supported')
 
   def _get_entity_ids_by_freq(self, cursor):
     query = 'select entity_id, count(*) from entity_mentions group by `entity_id` order by count(*) desc'
