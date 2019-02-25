@@ -1,4 +1,5 @@
 import Levenshtein
+from collections import defaultdict
 
 from torch.utils.data import Dataset
 import torch
@@ -91,10 +92,10 @@ class MentionContextDataset(Dataset):
   def _get_mention_infos_by_page_id(self, page_ids):
     self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id in (' + str(page_ids)[1:-1] + ')')
     rows = self.cursor.fetchall()
-    result = {}
+    result = defaultdict(list)
     for row in rows:
-      result[row['page_id']] = row
-    return result
+      result[row['page_id']].append(row)
+    return dict(result)
 
   def _get_batch_mention_infos(self, closeby_page_ids):
     self._candidate_strs_lookup = {}
