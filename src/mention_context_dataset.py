@@ -92,7 +92,7 @@ class MentionContextDataset(Dataset):
     self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id in (' + str(page_ids)[1:-1] + ')')
     rows = self.cursor.fetchall()
     result = {}
-    for row in result:
+    for row in rows:
       result[row['page_id']] = row
     return result
 
