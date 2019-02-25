@@ -167,8 +167,5 @@ def get_p_prior(entity_candidates_prior, mention, candidate_ids):
   return torch.tensor(candidate_counts, dtype=torch.float) / sum(candidate_counts)
 
 def get_candidate_strs(cursor, candidate_ids):
-  strs = []
-  for candidate_id in candidate_ids:
-    cursor.execute('select text from entities where id = %s', candidate_id)
-    strs.append(cursor.fetchone()['text'])
-  return strs
+  cursor.execute('select text from entities where id in (' + str(candidate_ids)[1:-1] + ')')
+  return [row['text'] for row in cursor.fetchall()]

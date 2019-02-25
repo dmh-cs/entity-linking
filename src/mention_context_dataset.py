@@ -88,16 +88,20 @@ class MentionContextDataset(Dataset):
             if candidate_id in self._candidate_strs_lookup else ''
             for candidate_id in candidate_ids]
 
-  def _get_mention_infos_by_page_id(self, page_id):
-    self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id = %s', page_id)
-    return self.cursor.fetchall()
+  def _get_mention_infos_by_page_id(self, page_ids):
+    self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id in (' + str(page_ids)[1:-1] + ')')
+    rows = self.cursor.fetchall()
+    result = {}
+    for row in result:
+      result[row['page_id']] = row
+    return result
 
   def _get_batch_mention_infos(self, closeby_page_ids):
     self._candidate_strs_lookup = {}
     mention_infos = {}
     mentions_covered = set()
-    for page_id in closeby_page_ids:
-      mentions = self._get_mention_infos_by_page_id(page_id)
+    mentions_by_page_id = self._get_mention_infos_by_page_id(closeby_page_ids)
+    for page_id, mentions in mentions_by_page_id.items():
       for mention_info in mentions:
         if mention_info['mention'] in mentions_covered: continue
         mentions_covered.add(mention_info['mention'])
@@ -112,18 +116,17 @@ class MentionContextDataset(Dataset):
 
   def _get_batch_sentence_spans_lookup(self, page_ids):
     lookup = {}
-    for page_id in page_ids:
-      self.cursor.execute('select content from pages where id = %s', page_id)
-      lookup[page_id] = parse_for_sentence_spans(self.cursor.fetchone()['content'])
+    self.cursor.execute('select id, content from pages where id in (' + str(page_ids)[1:-1] + ')')
+    for row in self.cursor.fetchall():
+      lookup[row['id']] = parse_for_sentence_spans(row['content'])
     return lookup
 
   def _get_batch_page_content_lookup(self, page_ids):
     lookup = {}
-    for page_id in page_ids:
-      self.cursor.execute('select content from pages where id = %s', page_id)
-      lookup[page_id] = self.cursor.fetchone()['content']
+    self.cursor.execute('select id, content from pages where id in (' + str(page_ids)[1:-1] + ')')
+    for row in self.cursor.fetchall():
+      lookup[row['id']] = row['content']
     return lookup
-
   def _get_batch_entity_page_mentions_lookup(self, page_ids):
     lookup = {}
     for page_id in page_ids:
