@@ -19,4 +19,5 @@ default_model_params = m(num_cnn_local_filters=50,
                          ablation=['prior', 'local_context', 'document_context'])
 default_run_params = m(load_model=False,
                        cheat=False,
-                       comments='')
+                       comments='',
+                       buffer_scale=1)

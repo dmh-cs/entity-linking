@@ -143,7 +143,8 @@ class Runner(object):
                                    self.train_params.batch_size,
                                    self.model_params.num_entities,
                                    self.model_params.num_candidates,
-                                   cheat=self.run_params.cheat)
+                                   cheat=self.run_params.cheat,
+                                   buffer_scale=self.run_params.buffer_scale)
 
   def _get_sampler(self, cursor, is_test, limit=None):
     if self.use_conll:
