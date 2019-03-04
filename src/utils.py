@@ -40,3 +40,17 @@ def append_create(obj, key, val):
     obj[key].append(val)
   else:
     obj[key] = [val]
+
+def chunk_apply(fn, coll, chunk_size):
+  start = 0
+  result = []
+  while start < len(coll):
+    result.extend(fn(coll[start : start + chunk_size]))
+    start += chunk_size
+  return result
+
+def chunk_apply_at_lim(fn, coll, lim):
+  if len(coll) > lim:
+    return chunk_apply(fn, coll, lim)
+  else:
+    return fn(coll)

@@ -9,6 +9,7 @@ import pydash as _
 from data_transformers import get_mention_sentence_splits, embed_page_content
 from data_fetchers import get_candidate_ids, get_p_prior, get_candidate_strs
 from parsers import parse_for_sentence_spans
+import utils as u
 
 
 class MentionContextDataset(Dataset):
@@ -112,8 +113,9 @@ class MentionContextDataset(Dataset):
       self._mentions_per_page_ctr[page_id] = len(mentions)
       mention_infos.update({mention['mention_id']: mention for mention in mentions})
     self._candidate_strs_lookup.update(dict(zip(candidate_ids,
-                                                get_candidate_strs(self.cursor,
-                                                                   [self.entity_id_lookup[cand_id] for cand_id in candidate_ids]))))
+                                                u.chunk_apply_at_lim(lambda ids: get_candidate_strs(self.cursor, ids),
+                                                                     [self.entity_id_lookup[cand_id] for cand_id in candidate_ids],
+                                                                     10000))))
     return mention_infos
 
   def _to_sentence_spans_lookup(self, content_lookup):
