@@ -29,11 +29,11 @@ class MentionContextBatchSampler(Sampler):
       yield batch
       self.num_mentions_seen += len(batch)
 
-  def _get_page_mention_ids(self, page_id):
+  def _get_page_mention_ids(self, page_id, page_ctr):
     if page_id in self._page_mention_ids:
       return self._page_mention_ids[page_id]
     else:
-      self.cursor.execute('select id, page_id from mentions where page_id in (' + str(self.page_id_order[page_id : page_id + 1000]) + ')')
+      self.cursor.execute('select id, page_id from mentions where page_id in (' + str(self.page_id_order[page_ctr : page_ctr + 1000])[1:-1] + ')')
       self._page_mention_ids = defaultdict(list)
       for row in self.cursor.fetchall():
         self._page_mention_ids[row['page_id']].append(row['id'])
@@ -54,7 +54,7 @@ class MentionContextBatchSampler(Sampler):
           return ids
       for page_id in self.page_id_order[self.page_ctr:]:
         self.page_ctr += 1
-        page_mention_ids = self._get_page_mention_ids(page_id)
+        page_mention_ids = self._get_page_mention_ids(page_id, self.page_ctr)
         ids.extend(page_mention_ids)
         if len(ids) >= self.batch_size:
           self.ids_from_last_page = set(ids[self.batch_size:])
