@@ -102,24 +102,24 @@ class MentionContextDataset(Dataset):
     mention_infos = {}
     mentions_covered = set()
     mentions_by_page_id = self._get_mention_infos_by_page_id(closeby_page_ids)
+    candidate_ids = []
     for page_id, mentions in mentions_by_page_id.items():
       for mention_info in mentions:
         if mention_info['mention'] in mentions_covered: continue
         mentions_covered.add(mention_info['mention'])
         label = self.entity_label_lookup[mention_info['entity_id']]
-        candidate_ids = self._get_candidate_ids(mention_info['mention'], label).tolist()
-        self._candidate_strs_lookup.update(dict(zip(candidate_ids,
-                                                    get_candidate_strs(self.cursor,
-                                                                       [self.entity_id_lookup[cand_id] for cand_id in candidate_ids]))))
+        candidate_ids.extend(self._get_candidate_ids(mention_info['mention'], label).tolist())
       self._mentions_per_page_ctr[page_id] = len(mentions)
       mention_infos.update({mention['mention_id']: mention for mention in mentions})
+    self._candidate_strs_lookup.update(dict(zip(candidate_ids,
+                                                get_candidate_strs(self.cursor,
+                                                                   [self.entity_id_lookup[cand_id] for cand_id in candidate_ids]))))
     return mention_infos
 
-  def _get_batch_sentence_spans_lookup(self, page_ids):
+  def _to_sentence_spans_lookup(self, content_lookup):
     lookup = {}
-    self.cursor.execute('select id, content from pages where id in (' + str(page_ids)[1:-1] + ')')
-    for row in self.cursor.fetchall():
-      lookup[row['id']] = parse_for_sentence_spans(row['content'])
+    for page_id, content in content_lookup.items():
+      lookup[page_id] = parse_for_sentence_spans(content)
     return lookup
 
   def _get_batch_page_content_lookup(self, page_ids):
@@ -128,6 +128,7 @@ class MentionContextDataset(Dataset):
     for row in self.cursor.fetchall():
       lookup[row['id']] = row['content']
     return lookup
+
   def _get_batch_entity_page_mentions_lookup(self, page_ids):
     lookup = {}
     for page_id in page_ids:
@@ -166,8 +167,9 @@ class MentionContextDataset(Dataset):
 
   def _next_batch(self):
     closeby_page_ids = self._next_page_id_batch()
-    self._sentence_spans_lookup.update(self._get_batch_sentence_spans_lookup(closeby_page_ids))
-    self._page_content_lookup.update(self._get_batch_page_content_lookup(closeby_page_ids))
+    page_content = self._get_batch_page_content_lookup(closeby_page_ids)
+    self._page_content_lookup.update(page_content)
+    self._sentence_spans_lookup.update(self._to_sentence_spans_lookup(page_content))
     self._mention_infos.update(self._get_batch_mention_infos(closeby_page_ids))
     self._entity_page_mentions_lookup.update(self._get_batch_entity_page_mentions_lookup(closeby_page_ids))
     self._embedded_page_content_lookup.update(self._get_batch_embedded_page_content_lookup(closeby_page_ids))
