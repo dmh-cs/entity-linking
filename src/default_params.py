@@ -7,7 +7,8 @@ default_train_params = m(batch_size=100,
                          debug=False,
                          num_epochs=1,
                          train_size=0.8,
-                         dropout_drop_prob=0.4)
+                         dropout_drop_prob=0.4,
+                         clip_grad=0.01)
 default_model_params = m(num_cnn_local_filters=50,
                          embed_len=100,
                          word_embed_len=100,

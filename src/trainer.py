@@ -33,7 +33,8 @@ class Trainer(object):
                calc_logits,
                logits_and_softmax,
                adaptive_logits,
-               use_adaptive_softmax):
+               use_adaptive_softmax,
+               clip_grad):
     self.device = device
     self.model = nn.DataParallel(model)
     self.model = model.to(self.device)
@@ -49,6 +50,7 @@ class Trainer(object):
     self.adaptive_logits = adaptive_logits
     self.optimizer = self._create_optimizer('adam')
     self.use_adaptive_softmax = use_adaptive_softmax
+    self.clip_grad = clip_grad
 
   def _create_optimizer(self, optimizer: str, params=None):
     return optim.Adam(itertools.chain(self.model.parameters(),
@@ -92,7 +94,7 @@ class Trainer(object):
         torch.nn.utils.clip_grad_norm_(itertools.chain(self.model.parameters(),
                                                        self.adaptive_logits['desc'].parameters(),
                                                        self.adaptive_logits['mention'].parameters()),
-                                       0.01)
+                                       self.clip_grad)
         self.optimizer.step()
         with torch.no_grad():
           self.model.eval()

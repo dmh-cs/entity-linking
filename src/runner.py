@@ -199,7 +199,8 @@ class Runner(object):
                             calc_logits=self._calc_logits,
                             logits_and_softmax=self._get_logits_and_softmax(),
                             adaptive_logits=self.adaptive_logits,
-                            use_adaptive_softmax=self.model_params.use_adaptive_softmax)
+                            use_adaptive_softmax=self.model_params.use_adaptive_softmax,
+                            clip_grad=self.train_params.clip_grad)
     return self._trainer
 
   def _get_logits_and_softmax(self):
