@@ -47,6 +47,10 @@ class MentionContextDataset(Dataset):
     self.cheat = cheat
     self.buffer_scale = buffer_scale
     self.min_mentions = min_mentions
+    if self.min_mentions > 1:
+      query = 'select entity_id, count(entity_id) as c from entity_mentions group by entity_id having c >= ' + str(self.min_mentions)
+      cursor.execute(query)
+      self.valid_entity_ids = set(row['entity_id'] for row in cursor.fetchall())
 
   def _get_candidate_ids(self, mention, label):
     return get_candidate_ids(self.entity_candidates_prior,
@@ -97,7 +101,8 @@ class MentionContextDataset(Dataset):
     rows = self.cursor.fetchall()
     result = defaultdict(list)
     for row in rows:
-      result[row['page_id']].append(row)
+      if row['entity_id'] in self.valid_entity_ids:
+        result[row['page_id']].append(row)
     return dict(result)
 
   def _get_batch_mention_infos(self, closeby_page_ids):
