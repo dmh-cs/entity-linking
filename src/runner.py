@@ -1,5 +1,6 @@
 from typing import Optional
 import math
+from collections import defaultdict
 
 from experiment import Experiment
 from pyrsistent import m, ny
@@ -76,13 +77,16 @@ class Runner(object):
       if self.train_params.min_mentions > 1:
         query = 'select entity_id, count(entity_id) as c from entity_mentions group by entity_id having c >= ' + str(self.train_params.min_mentions)
         cursor.execute(query)
+        valid_old_entity_labels_to_ids = {lookups['entity_labels'][row['entity_id']]: row['entity_id'] for row in cursor.fetchall()}
         new_labels = {}
-        new_prior = {}
-        for entity_id in (row['entity_id'] for row in cursor.fetchall()):
-          old_label = lookups['entity_labels'][entity_id]
-          new_label = len(new_labels)
-          new_labels[entity_id] = new_label
-          new_prior[new_label] = lookups['entity_candidates_prior'][old_label]
+        new_prior = defaultdict(dict)
+        for entity, counts in lookups['entity_candidates_prior'].items():
+          for old_label in counts.keys():
+            if old_label in valid_old_entity_labels_to_ids:
+              entity_id = valid_old_entity_labels_to_ids[old_label]
+              new_label = len(new_labels)
+              new_labels[entity_id] = new_label
+              new_prior[entity][new_label] = counts[old_label]
         lookups = {'entity_candidates_prior': new_prior, 'entity_labels': new_labels}
       self.model_params = self.model_params.set('num_entities',
                                                 len(lookups['entity_labels']))
