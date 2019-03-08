@@ -15,6 +15,7 @@ args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param
                      {'name': 'train_size'                 , 'for': 'train_param', 'type': float},
                      {'name': 'clip_grad'                  , 'for': 'train_param', 'type': float},
                      {'name': 'num_epochs'                 , 'for': 'train_param', 'type': int},
+                     {'name': 'min_mentions'               , 'for': 'train_param', 'type': int},
                      {'name': 'ablation'                   , 'for': 'model_param', 'type': lambda string: string.split(',')},
                      {'name': 'document_encoder_lstm_size' , 'for': 'model_param', 'type': int},
                      {'name': 'embed_len'                  , 'for': 'model_param', 'type': int},

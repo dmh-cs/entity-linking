@@ -68,11 +68,22 @@ class Runner(object):
     sorted_rows = cursor.fetchall()
     return [row['entity_id'] for row in sorted_rows]
 
-  def load_caches(self):
+  def load_caches(self, cursor):
     self.log.status('Loading entity candidate_ids lookup')
     lookups = load_entity_candidate_ids_and_label_lookup(self.paths.lookups, self.train_params.train_size)
     if not hasattr(self.model_params, 'num_entities'):
       self.log.status('Getting number of entities')
+      if self.train_params.min_mentions > 1:
+        query = 'select entity_id, count(entity_id) as c from entity_mentions group by entity_id having c >= ' + str(self.train_params.min_mentions)
+        cursor.execute(query)
+        new_labels = {}
+        new_prior = {}
+        for entity_id in (row['entity_id'] for row in cursor.fetchall()):
+          old_label = lookups['entity_labels'][entity_id]
+          new_label = len(new_labels)
+          new_labels[entity_id] = new_label
+          new_prior[new_label] = lookups['entity_candidates_prior'][old_label]
+        lookups = {'entity_candidates_prior': new_prior, 'entity_labels': new_labels}
       self.model_params = self.model_params.set('num_entities',
                                                 len(lookups['entity_labels']))
     self.log.status('Loading word embedding lookup')
@@ -246,13 +257,14 @@ class Runner(object):
     return {context: calc for context in ['desc', 'mention']}
 
   def run(self):
-    self.load_caches()
-    pad_vector = self.lookups.embedding(torch.tensor([self.lookups.token_idx_lookup['<PAD>']],
-                                                     device=self.lookups.embedding.weight.device)).squeeze()
-    self.init_entity_embeds()
     try:
       db_connection = get_connection()
       with db_connection.cursor() as cursor:
+        self.load_caches(cursor)
+        pad_vector = self.lookups.embedding(torch.tensor([self.lookups.token_idx_lookup['<PAD>']],
+                                                         device=self.lookups.embedding.weight.device)).squeeze()
+        self.init_entity_embeds()
+
         entity_ids_by_freq = self._get_entity_ids_by_freq(cursor)
         if self.model_params.use_adaptive_softmax:
           self.lookups = self.lookups.set('entity_labels',
