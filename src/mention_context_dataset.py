@@ -24,7 +24,8 @@ class MentionContextDataset(Dataset):
                num_entities,
                num_candidates,
                cheat=False,
-               buffer_scale=1):
+               buffer_scale=1,
+               min_mentions=1):
     self.page_id_order = page_id_order
     self.entity_candidates_prior = entity_candidates_prior
     self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
@@ -45,6 +46,7 @@ class MentionContextDataset(Dataset):
     self.page_ctr = 0
     self.cheat = cheat
     self.buffer_scale = buffer_scale
+    self.min_mentions = min_mentions
 
   def _get_candidate_ids(self, mention, label):
     return get_candidate_ids(self.entity_candidates_prior,
@@ -161,8 +163,12 @@ class MentionContextDataset(Dataset):
     page_ids = []
     while num_mentions_in_batch < self.batch_size * self.buffer_scale and self.page_ctr < len(self.page_id_order):
       page_id_to_add = self.page_id_order[self.page_ctr]
-      self.cursor.execute('select count(*) from mentions where page_id = %s', page_id_to_add)
-      num_mentions_in_batch += self.cursor.fetchone()['count(*)']
+      if self.min_mentions > 1:
+        self.cursor.execute('select count(*) from (select em.entity_id, count(entity_id) as c from mentions m join entity_mentions em on m.id = em.mention_id where m.page_id = %s group by entity_id having c > %s) tab', page_id_to_add, self.min_mentions)
+        num_mentions_in_batch += self.cursor.fetchone()['count(*)']
+      else:
+        self.cursor.execute('select count(*) from mentions where page_id = %s', page_id_to_add)
+        num_mentions_in_batch += self.cursor.fetchone()['count(*)']
       page_ids.append(page_id_to_add)
       self.page_ctr += 1
     return page_ids
