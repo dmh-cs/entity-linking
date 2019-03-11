@@ -166,16 +166,20 @@ class MentionContextDataset(Dataset):
   def _next_page_id_batch(self):
     num_mentions_in_batch = 0
     page_ids = []
+    num_page_batch_size = 100
     while num_mentions_in_batch < self.batch_size * self.buffer_scale and self.page_ctr < len(self.page_id_order):
-      page_id_to_add = self.page_id_order[self.page_ctr]
       if self.min_mentions > 1:
-        self.cursor.execute(f'select count(*) from (select em.entity_id, count(entity_id) as c from mentions m join entity_mentions em on m.id = em.mention_id where m.page_id = {page_id_to_add} group by entity_id having c > {self.min_mentions}) tab')
+        page_ids_to_add = self.page_id_order[self.page_ctr : self.page_ctr + num_page_batch_size]
+        self.cursor.execute(f'select count(*) from (select em.entity_id, count(entity_id) as c from mentions m join entity_mentions em on m.id = em.mention_id where m.page_id in {str(page_ids_to_add)[1:-1]} group by entity_id having c > {self.min_mentions}) tab')
         num_mentions_in_batch += self.cursor.fetchone()['count(*)']
+        page_ids.extend(page_ids_to_add)
+        self.page_ctr += num_page_batch_size
       else:
+        page_id_to_add = self.page_id_order[self.page_ctr]
         self.cursor.execute('select count(*) from mentions where page_id = %s', page_id_to_add)
         num_mentions_in_batch += self.cursor.fetchone()['count(*)']
-      page_ids.append(page_id_to_add)
-      self.page_ctr += 1
+        page_ids.append(page_id_to_add)
+        self.page_ctr += 1
     return page_ids
 
   def _next_batch(self):
