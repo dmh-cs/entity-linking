@@ -172,6 +172,7 @@ class Runner(object):
       return MentionContextBatchSampler(cursor,
                                         page_ids,
                                         self.train_params.batch_size,
+                                        self.train_params.min_mentions,
                                         limit=limit)
 
   def _calc_logits(self, encoded, candidate_entity_ids):

@@ -7,7 +7,7 @@ import pydash as _
 
 
 class MentionContextBatchSampler(Sampler):
-  def __init__(self, cursor, page_id_order, batch_size, limit=None):
+  def __init__(self, cursor, page_id_order, batch_size, min_mentions, limit=None):
     super(MentionContextBatchSampler, self).__init__([])
     self.cursor = cursor
     self.page_id_order = page_id_order
@@ -18,6 +18,11 @@ class MentionContextBatchSampler(Sampler):
     self.limit = limit
     self.num_mentions_seen = 0
     self._page_mention_ids = defaultdict(list)
+    self.min_mentions = min_mentions
+    if self.min_mentions > 1:
+      query = 'select entity_id, count(entity_id) as c from entity_mentions group by entity_id having c >= ' + str(self.min_mentions)
+      cursor.execute(query)
+      self.valid_entity_ids = set(row['entity_id'] for row in cursor.fetchall())
 
   def __len__(self):
     raise NotImplementedError
@@ -33,7 +38,7 @@ class MentionContextBatchSampler(Sampler):
     if page_id in self._page_mention_ids:
       return self._page_mention_ids[page_id]
     else:
-      self.cursor.execute('select id, page_id from mentions where page_id in (' + str(self.page_id_order[page_ctr : page_ctr + 1000])[1:-1] + ')')
+      self.cursor.execute('select mention_id as id, page_id from entity_mentions_text where page_id in (' + str(self.page_id_order[page_ctr : page_ctr + 1000])[1:-1] + ')')
       self._page_mention_ids = defaultdict(list)
       for row in self.cursor.fetchall():
         self._page_mention_ids[row['page_id']].append(row['id'])
