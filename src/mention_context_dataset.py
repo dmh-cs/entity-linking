@@ -48,9 +48,9 @@ class MentionContextDataset(Dataset):
     self.buffer_scale = buffer_scale
     self.min_mentions = min_mentions
     if self.min_mentions > 1:
-      query = 'select entity_id, count(entity_id) as c from entity_mentions group by entity_id having c >= ' + str(self.min_mentions)
+      query = 'select id from entities where num_mentions >= ' + str(self.min_mentions)
       cursor.execute(query)
-      self.valid_entity_ids = set(row['entity_id'] for row in cursor.fetchall())
+      self.valid_entity_ids = set(row['id'] for row in cursor.fetchall())
 
   def _get_candidate_ids(self, mention, label):
     return get_candidate_ids(self.entity_candidates_prior,
@@ -170,7 +170,7 @@ class MentionContextDataset(Dataset):
     while num_mentions_in_batch < self.batch_size * self.buffer_scale and self.page_ctr < len(self.page_id_order):
       if self.min_mentions > 1:
         page_ids_to_add = self.page_id_order[self.page_ctr : self.page_ctr + num_page_batch_size]
-        self.cursor.execute(f'select count(*) from (select em.entity_id, count(entity_id) as c from mentions m join entity_mentions em on m.id = em.mention_id where m.page_id in ({str(page_ids_to_add)[1:-1]}) group by entity_id having c > {self.min_mentions}) tab')
+        self.cursor.execute(f'select count(*) from (select 1 from mentions m inner join entity_mentions em on m.id = em.mention_id inner join entities e on e.id = em.entity_id where m.page_id in ({str(page_ids_to_add)[1:-1]}) and e.num_mentions > {self.min_mentions}) tab')
         num_mentions_in_batch += self.cursor.fetchone()['count(*)']
         page_ids.extend(page_ids_to_add)
         self.page_ctr += num_page_batch_size

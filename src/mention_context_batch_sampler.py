@@ -20,9 +20,9 @@ class MentionContextBatchSampler(Sampler):
     self._page_mention_ids = defaultdict(list)
     self.min_mentions = min_mentions
     if self.min_mentions > 1:
-      query = 'select entity_id, count(entity_id) as c from entity_mentions group by entity_id having c >= ' + str(self.min_mentions)
+      query = 'select id from entities where num_mentions >= ' + str(self.min_mentions)
       cursor.execute(query)
-      self.valid_entity_ids = set(row['entity_id'] for row in cursor.fetchall())
+      self.valid_entity_ids = set(row['id'] for row in cursor.fetchall())
 
   def __len__(self):
     raise NotImplementedError

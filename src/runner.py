@@ -75,9 +75,9 @@ class Runner(object):
     if not hasattr(self.model_params, 'num_entities'):
       self.log.status('Getting number of entities')
       if self.train_params.min_mentions > 1:
-        query = 'select entity_id, count(entity_id) as c from entity_mentions group by entity_id having c >= ' + str(self.train_params.min_mentions)
+        query = 'select id from entities where num_mentions >= ' + str(self.train_params.min_mentions)
         cursor.execute(query)
-        valid_old_entity_labels_to_ids = {lookups['entity_labels'][row['entity_id']]: row['entity_id'] for row in cursor.fetchall()}
+        valid_old_entity_labels_to_ids = {lookups['entity_labels'][row['id']]: row['id'] for row in cursor.fetchall()}
         new_labels = {}
         new_prior = defaultdict(dict)
         for entity, counts in lookups['entity_candidates_prior'].items():
