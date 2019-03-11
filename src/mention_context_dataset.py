@@ -170,7 +170,7 @@ class MentionContextDataset(Dataset):
     while num_mentions_in_batch < self.batch_size * self.buffer_scale and self.page_ctr < len(self.page_id_order):
       if self.min_mentions > 1:
         page_ids_to_add = self.page_id_order[self.page_ctr : self.page_ctr + num_page_batch_size]
-        self.cursor.execute(f'select count(*) from (select em.entity_id, count(entity_id) as c from mentions m join entity_mentions em on m.id = em.mention_id where m.page_id in {str(page_ids_to_add)[1:-1]} group by entity_id having c > {self.min_mentions}) tab')
+        self.cursor.execute(f'select count(*) from (select em.entity_id, count(entity_id) as c from mentions m join entity_mentions em on m.id = em.mention_id where m.page_id in ({str(page_ids_to_add)[1:-1]}) group by entity_id having c > {self.min_mentions}) tab')
         num_mentions_in_batch += self.cursor.fetchone()['count(*)']
         page_ids.extend(page_ids_to_add)
         self.page_ctr += num_page_batch_size
