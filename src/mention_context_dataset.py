@@ -166,7 +166,7 @@ class MentionContextDataset(Dataset):
   def _next_page_id_batch(self):
     num_mentions_in_batch = 0
     page_ids = []
-    num_page_batch_size = 100
+    num_page_batch_size = 10000
     while num_mentions_in_batch < self.batch_size * self.buffer_scale and self.page_ctr < len(self.page_id_order):
       if self.min_mentions > 1:
         page_ids_to_add = self.page_id_order[self.page_ctr : self.page_ctr + num_page_batch_size]
