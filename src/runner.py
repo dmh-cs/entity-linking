@@ -84,7 +84,7 @@ class Runner(object):
           for old_label in counts.keys():
             if old_label in valid_old_entity_labels_to_ids:
               entity_id = valid_old_entity_labels_to_ids[old_label]
-              new_label = len(new_labels)
+              new_label = new_labels.get(entity_id, len(new_labels))
               new_labels[entity_id] = new_label
               new_prior[entity][new_label] = counts[old_label]
         lookups = {'entity_candidates_prior': new_prior, 'entity_labels': new_labels}
