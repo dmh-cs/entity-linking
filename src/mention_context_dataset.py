@@ -140,9 +140,11 @@ class MentionContextDataset(Dataset):
 
   def _get_batch_entity_page_mentions_lookup(self, page_ids):
     lookup = {}
+    page_mention_infos_lookup = defaultdict(list)
+    for mention_info in self._mention_infos.values():
+      page_mention_infos_lookup[mention_info['page_id']].append(mention_info)
     for page_id in page_ids:
-      page_mention_infos = list(filter(lambda mention_info: mention_info['page_id'] == page_id,
-                                       self._mention_infos.values()))
+      page_mention_infos = page_mention_infos_lookup[page_id]
       content = ' '.join([mention_info['mention'] for mention_info in page_mention_infos])
       if _.is_empty(page_mention_infos):
         lookup[page_id] = torch.tensor([])
