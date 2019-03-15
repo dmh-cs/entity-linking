@@ -163,7 +163,7 @@ class Runner(object):
                                    min_mentions=self.train_params.min_mentions,
                                    use_fast_sampler=use_fast_sampler)
 
-  def _get_sampler(self, cursor, is_test, limit=None):
+  def _get_sampler(self, cursor, is_test, limit=None, use_fast_sampler=False):
     if self.use_conll:
       return BatchSampler(RandomSampler(self._dataset),
                           self.train_params.batch_size,
@@ -174,7 +174,8 @@ class Runner(object):
                                         page_ids,
                                         self.train_params.batch_size,
                                         self.train_params.min_mentions,
-                                        limit=limit)
+                                        limit=limit,
+                                        use_fast_sampler=use_fast_sampler)
 
   def _calc_logits(self, encoded, candidate_entity_ids):
     desc_embeds, mention_context_embeds = encoded
@@ -212,7 +213,8 @@ class Runner(object):
                                                                   use_fast_sampler=self.train_params.use_fast_sampler),
                             get_batch_sampler=lambda: self._get_sampler(cursor,
                                                                         is_test=False,
-                                                                        limit=self.train_params.dataset_limit),
+                                                                        limit=self.train_params.dataset_limit,
+                                                                        use_fast_sampler=self.train_params.use_fast_sampler),
                             num_epochs=self.train_params.num_epochs,
                             experiment=self.experiment,
                             calc_loss=self._calc_loss,
