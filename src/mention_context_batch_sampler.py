@@ -38,10 +38,11 @@ class MentionContextBatchSampler(Sampler):
     if page_id in self._page_mention_ids:
       return self._page_mention_ids[page_id]
     else:
-      self.cursor.execute('select mention_id as id, page_id from entity_mentions_text where page_id in (' + str(self.page_id_order[page_ctr : page_ctr + 1000])[1:-1] + ')')
+      self.cursor.execute('select mention_id, entity_id, page_id from entity_mentions_text where page_id in (' + str(self.page_id_order[page_ctr : page_ctr + 1000])[1:-1] + ')')
       self._page_mention_ids = defaultdict(list)
       for row in self.cursor.fetchall():
-        self._page_mention_ids[row['page_id']].append(row['id'])
+        if row['entity_id'] in self.valid_entity_ids:
+          self._page_mention_ids[row['page_id']].append(row['mention_id'])
       return self._page_mention_ids[page_id]
 
   def _get_next_batch(self):
