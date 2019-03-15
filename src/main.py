@@ -37,6 +37,7 @@ def main():
   load_dotenv(dotenv_path='.env')
   flag_argnames = ['load_model',
                    'use_adaptive_softmax',
+                   'use_fast_sampler',
                    'dont_use_hardcoded_cutoffs',
                    'use_ranking_loss',
                    'dont_use_deep_network',
@@ -47,7 +48,7 @@ def main():
                    'use_conll']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
   flags = [_.head(arg) for arg in args]
-  train_params = m()
+  train_params = m(use_fast_sampler='--use_fast_sampler' in flags)
   run_params = m(load_model='--load_model' in flags,
                  cheat='--cheat' in flags,
                  use_conll='--use_conll' in flags)

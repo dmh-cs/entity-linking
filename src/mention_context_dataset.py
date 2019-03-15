@@ -25,7 +25,8 @@ class MentionContextDataset(Dataset):
                num_candidates,
                cheat=False,
                buffer_scale=1,
-               min_mentions=1):
+               min_mentions=1,
+               use_fast_sampler=False):
     self.page_id_order = page_id_order
     self.entity_candidates_prior = entity_candidates_prior
     self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
@@ -47,6 +48,7 @@ class MentionContextDataset(Dataset):
     self.cheat = cheat
     self.buffer_scale = buffer_scale
     self.min_mentions = min_mentions
+    self.use_fast_sampler = use_fast_sampler
     if self.min_mentions > 1:
       query = 'select id from entities where num_mentions >= ' + str(self.min_mentions)
       cursor.execute(query)
@@ -64,6 +66,9 @@ class MentionContextDataset(Dataset):
     raise NotImplementedError
 
   def __getitem__(self, idx):
+    if self.use_fast_sampler:
+      if len(self._mention_infos) == 0: self._next_batch()
+      idx = next(iter(self._mention_infos.keys()))
     if idx not in self._mention_infos:
       self._next_batch()
     mention_info = self._mention_infos.pop(idx)

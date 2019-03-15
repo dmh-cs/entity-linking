@@ -138,7 +138,7 @@ class Runner(object):
                                       self.model_params.embed_len,
                                       _weight=entity_embed_weights).to(self.device)
 
-  def _get_dataset(self, cursor, is_test):
+  def _get_dataset(self, cursor, is_test, use_fast_sampler=False):
     page_ids = self.page_id_order_test if is_test else self.page_id_order_train
     if self.use_conll:
       return CoNLLDataset(cursor,
@@ -160,7 +160,8 @@ class Runner(object):
                                    self.model_params.num_candidates,
                                    cheat=self.run_params.cheat,
                                    buffer_scale=self.run_params.buffer_scale,
-                                   min_mentions=self.train_params.min_mentions)
+                                   min_mentions=self.train_params.min_mentions,
+                                   use_fast_sampler=use_fast_sampler)
 
   def _get_sampler(self, cursor, is_test, limit=None):
     if self.use_conll:
@@ -206,7 +207,9 @@ class Runner(object):
                             embedding=self.lookups.embedding,
                             token_idx_lookup=self.lookups.token_idx_lookup,
                             model=model,
-                            get_dataset=lambda: self._get_dataset(cursor, is_test=False),
+                            get_dataset=lambda: self._get_dataset(cursor,
+                                                                  is_test=False,
+                                                                  use_fast_sampler=self.train_params.use_fast_sampler),
                             get_batch_sampler=lambda: self._get_sampler(cursor,
                                                                         is_test=False,
                                                                         limit=self.train_params.dataset_limit),
