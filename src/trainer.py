@@ -60,10 +60,16 @@ class Trainer(object):
     self.clip_grad = clip_grad
     self.use_wiki2vec = use_wiki2vec
 
+  def _get_adaptive_logits_params(self):
+    if self.adaptive_logits['desc'] is not None:
+      return itertools.chain(self.adaptive_logits['desc'].parameters(),
+                             self.adaptive_logits['mention'].parameters())
+    else:
+      return []
+
   def _create_optimizer(self, optimizer: str, params=None):
     return optim.Adam(itertools.chain(self.model.parameters(),
-                                      self.adaptive_logits['desc'].parameters(),
-                                      self.adaptive_logits['mention'].parameters()))
+                                      self._get_adaptive_logits_params()))
 
   def _classification_error(self, logits, labels):
     predictions = torch.argmax(logits, 1)
@@ -106,8 +112,7 @@ class Trainer(object):
         loss = self.calc_loss(scores, labels)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(itertools.chain(self.model.parameters(),
-                                                       self.adaptive_logits['desc'].parameters(),
-                                                       self.adaptive_logits['mention'].parameters()),
+                                                       self._get_adaptive_logits_params()),
                                        self.clip_grad)
         self.optimizer.step()
         with torch.no_grad():
@@ -145,8 +150,7 @@ class Trainer(object):
         loss = self.calc_loss(scores, labels)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(itertools.chain(self.model.parameters(),
-                                                       self.adaptive_logits['desc'].parameters(),
-                                                       self.adaptive_logits['mention'].parameters()),
+                                                       self._get_adaptive_logits_params()),
                                        self.clip_grad)
         self.optimizer.step()
         with torch.no_grad():
