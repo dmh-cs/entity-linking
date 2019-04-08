@@ -334,7 +334,7 @@ class Runner(object):
       with db_connection.cursor() as cursor:
         self.load_caches(cursor)
         wiki2vec = load_wiki2vec()
-        self.context_encoder = ContextEncoder(wiki2vec, self.lookups.token_idx_lookup)
+        self.context_encoder = ContextEncoder(wiki2vec, self.lookups.token_idx_lookup, self.device)
         self.encoder = SimpleJointModel(self.context_encoder)
         if not self.run_params.load_model:
           with self.experiment.train(['error', 'loss']):
