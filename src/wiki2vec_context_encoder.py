@@ -1,3 +1,5 @@
+from itertools import zip_longest
+
 import torch.nn as nn
 import numpy as np
 
@@ -11,9 +13,11 @@ class ContextEncoder(nn.Module):
     self.device = device
 
   def _bag_to_tens(self, bag_of_nouns):
+    longest = max(map(len, bag_of_nouns))
     token_idxs_by_bag = np.array([[self.token_idx_lookup[token]
-                                   for token in bag
-                                   if token in self.token_idx_lookup]
+                                   if (token is not None) and (token in self.token_idx_lookup)
+                                   else 0
+                                   for token, i in zip_longest(bag, range(longest))]
                                   for bag in bag_of_nouns])
     return self.wiki2vec(token_idxs_by_bag).to(self.device)
 
