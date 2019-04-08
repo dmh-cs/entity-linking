@@ -58,7 +58,8 @@ def main():
                    use_cnn_local='--use_cnn_local' in flags,
                    use_lstm_local='--use_lstm_local' in flags,
                    use_deep_network='--dont_use_deep_network' not in flags,
-                   freeze_word_embeddings='--dont_freeze_word_embeddings' not in flags)
+                   freeze_word_embeddings='--dont_freeze_word_embeddings' not in flags,
+                   use_wiki2vec='--use_wiki2vec' not in flags)
   paths = m(lookups=os.getenv("LOOKUPS_PATH"),
             page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
   for arg in args_with_values:

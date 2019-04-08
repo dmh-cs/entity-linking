@@ -72,3 +72,9 @@ class JointModel(nn.Module):
     self.word_embedding = word_embedding
     self.encoder = JointEncoder(self.desc_encoder, self.mention_context_encoder)
     self.calc_scores = Stacker()
+
+class SimpleJointModel(nn.Module):
+  def __init__(self, encoder):
+    super().__init__()
+    self.encoder = encoder
+    self.calc_scores = Stacker()

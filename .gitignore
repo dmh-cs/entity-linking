@@ -13,3 +13,4 @@ node_modules
 /.pytest_cache
 .tertestrial.tmp
 acm_data/
+*.pkl

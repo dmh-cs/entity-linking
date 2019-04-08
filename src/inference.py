@@ -4,7 +4,24 @@ import torch
 from data_transformers import embed_and_pack_batch
 from logits import Logits
 
-def predict(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds):
+def predict(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds, use_wiki2vec=False):
+  if use_wiki2vec:
+    return predict_wiki2vec(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds)
+  else:
+    return predict_deep_el(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds)
+
+def predict_wiki2vec(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds):
+  model.eval()
+  context = model.context_encoder(batch['bag_of_nouns'])
+  logits = Logits()
+  calc_logits = lambda embeds, ids: logits(embeds, entity_embeds(ids))
+  context_logits = calc_logits(context, batch['candidate_ids'])
+  p_text, __ = model.calc_scores((context_logits, torch.zeros_like(context_logits)),
+                                 batch['candidate_mention_sim'])
+  posterior = p_prior + p_text - (p_prior * p_text)
+  return torch.argmax(posterior, dim=1)
+
+def predict_deep_el(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds):
   model.eval()
   if ablation == ['prior']:
     return torch.argmax(p_prior, dim=1)

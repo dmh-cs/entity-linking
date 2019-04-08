@@ -12,7 +12,7 @@ from torch.utils.data.sampler import BatchSampler, RandomSampler
 
 from data_fetchers import get_connection, get_embedding_dict, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup, get_entity_text
 from default_params import default_train_params, default_model_params, default_run_params, default_paths
-from joint_model import JointModel
+from joint_model import JointModel, SimpleJointModel
 from logits import Logits
 from mention_context_batch_sampler import MentionContextBatchSampler
 from mention_context_dataset import MentionContextDataset
@@ -22,6 +22,8 @@ from trainer import Trainer
 from parsers import parse_for_tokens
 from data_transformers import pad_batch_list
 from conll_dataset import CoNLLDataset
+from wiki2vec_context_encoder import ContextEncoder
+from wiki2vec_helpers import load_wiki2vec
 
 from fire_extinguisher import BatchRepeater
 
@@ -55,6 +57,7 @@ class Runner(object):
     self.adaptive_logits = {'desc': None, 'mention': None}
     self.encoder = None
     self.use_conll = self.run_params.use_conll
+    self.context_encoder = None
 
   def _get_word_embedding_path(self):
     dim = self.model_params.word_embed_len
@@ -161,7 +164,8 @@ class Runner(object):
                                    cheat=self.run_params.cheat,
                                    buffer_scale=self.run_params.buffer_scale,
                                    min_mentions=self.train_params.min_mentions,
-                                   use_fast_sampler=use_fast_sampler)
+                                   use_fast_sampler=use_fast_sampler,
+                                   use_wiki2vec=self.model_params.use_wiki2vec)
 
   def _get_sampler(self, cursor, is_test, limit=None, use_fast_sampler=False):
     if self.use_conll:
@@ -178,18 +182,22 @@ class Runner(object):
                                         use_fast_sampler=use_fast_sampler)
 
   def _calc_logits(self, encoded, candidate_entity_ids):
-    desc_embeds, mention_context_embeds = encoded
-    if self.model_params.use_adaptive_softmax:
-      raise NotImplementedError('No longer supported')
-    elif self.model_params.use_ranking_loss:
-      raise NotImplementedError('No longer supported')
+    if self.model_params.use_wiki2vec:
+      return Logits()(encoded,
+                      self.entity_embeds(candidate_entity_ids))
     else:
-      logits = Logits()
-      desc_logits = logits(desc_embeds,
-                           self.entity_embeds(candidate_entity_ids))
-      mention_logits = logits(mention_context_embeds,
-                              self.entity_embeds(candidate_entity_ids))
-    return desc_logits, mention_logits
+      desc_embeds, mention_context_embeds = encoded
+      if self.model_params.use_adaptive_softmax:
+        raise NotImplementedError('No longer supported')
+      elif self.model_params.use_ranking_loss:
+        raise NotImplementedError('No longer supported')
+      else:
+        logits = Logits()
+        desc_logits = logits(desc_embeds,
+                             self.entity_embeds(candidate_entity_ids))
+        mention_logits = logits(mention_context_embeds,
+                                self.entity_embeds(candidate_entity_ids))
+      return desc_logits, mention_logits
 
   def _calc_loss(self, scores, labels_for_batch):
     desc_score, mention_score = scores
@@ -222,7 +230,8 @@ class Runner(object):
                             logits_and_softmax=self._get_logits_and_softmax(),
                             adaptive_logits=self.adaptive_logits,
                             use_adaptive_softmax=self.model_params.use_adaptive_softmax,
-                            clip_grad=self.train_params.clip_grad)
+                            clip_grad=self.train_params.clip_grad,
+                            use_wiki2vec=self.model_params.use_wiki2vec)
     return self._trainer
 
   def _get_logits_and_softmax(self):
@@ -252,7 +261,8 @@ class Runner(object):
                   device=self.device,
                   experiment=self.experiment,
                   ablation=self.model_params.ablation,
-                  use_adaptive_softmax=self.model_params.use_adaptive_softmax)
+                  use_adaptive_softmax=self.model_params.use_adaptive_softmax,
+                  use_wiki2vec=self.model_params.use_wiki2vec)
 
   def _get_adaptive_calc_logits(self):
     def get_calc(context):
@@ -267,7 +277,7 @@ class Runner(object):
     calc = get_calc('desc_and_mention')
     return {context: calc for context in ['desc', 'mention']}
 
-  def run(self):
+  def run_deep_el(self):
     try:
       db_connection = get_connection()
       with db_connection.cursor() as cursor:
@@ -275,7 +285,6 @@ class Runner(object):
         pad_vector = self.lookups.embedding(torch.tensor([self.lookups.token_idx_lookup['<PAD>']],
                                                          device=self.lookups.embedding.weight.device)).squeeze()
         self.init_entity_embeds()
-
         entity_ids_by_freq = self._get_entity_ids_by_freq(cursor)
         if self.model_params.use_adaptive_softmax:
           self.lookups = self.lookups.set('entity_labels',
@@ -298,7 +307,11 @@ class Runner(object):
                                   self.model_params.num_cnn_local_filters,
                                   self.model_params.use_cnn_local)
         if not self.run_params.load_model:
-          with self.experiment.train(['mention_context_error', 'document_context_error', 'loss']):
+          if self.model_params.use_wiki2vec:
+            fields = ['context_error', 'loss']
+          else:
+            fields = ['mention_context_error', 'document_context_error', 'loss']
+          with self.experiment.train(fields):
             self.log.status('Training')
             trainer = self._get_trainer(cursor, self.encoder)
             trainer.train()
@@ -314,3 +327,33 @@ class Runner(object):
           tester.test()
     finally:
       db_connection.close()
+
+  def run_wiki2vec(self):
+    try:
+      db_connection = get_connection()
+      with db_connection.cursor() as cursor:
+        self.load_caches(cursor)
+        wiki2vec = load_wiki2vec()
+        self.context_encoder = ContextEncoder(wiki2vec, self.lookups.token_idx_lookup)
+        self.encoder = SimpleJointModel(self.context_encoder)
+        if not self.run_params.load_model:
+          with self.experiment.train(['error', 'loss']):
+            self.log.status('Training')
+            trainer = self._get_trainer(cursor, self.encoder)
+            trainer.train()
+            torch.save(self.encoder.state_dict(), './' + self.experiment.model_name)
+        else:
+          path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
+          self.encoder.load_state_dict(torch.load(path))
+          self.encoder = nn.DataParallel(self.context_encoder)
+          self.encoder = self.context_encoder.to(self.device).module
+        with self.experiment.test(['accuracy', 'TP', 'num_samples']):
+          self.log.status('Testing')
+          tester = self._get_tester(cursor, self.context_encoder)
+          tester.test()
+    finally:
+      db_connection.close()
+
+  def run(self):
+    if self.model_params.use_wiki2vec: self.run_wiki2vec()
+    else: self.run_deep_el()

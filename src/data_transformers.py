@@ -34,7 +34,7 @@ def pad_batch_list(pad_elem, batch, min_len=0):
       to_stack.append(elem)
   return to_stack
 
-def _tokens_to_embeddings(embedding, token_idx_lookup, tokens):
+def tokens_to_embeddings(embedding, token_idx_lookup, tokens):
   text_idxs = []
   for token in tokens:
     if token in token_idx_lookup:
@@ -97,10 +97,10 @@ def embed_and_pack_batch(embedding, token_idx_lookup, sentence_splits_batch):
   for left_index, right_index in zip(left_order, right_order):
     split_left = sentence_splits_batch[left_index]
     split_right = sentence_splits_batch[right_index]
-    left_batch.append(_tokens_to_embeddings(embedding,
+    left_batch.append(tokens_to_embeddings(embedding,
                                             token_idx_lookup,
                                             split_left[0]))
-    right_batch.append(_tokens_to_embeddings(embedding,
+    right_batch.append(tokens_to_embeddings(embedding,
                                              token_idx_lookup,
                                              split_right[1]))
   left_unsort_order = sort_index(left_order)
@@ -119,4 +119,11 @@ def embed_page_content(embedding, token_idx_lookup, page_content, page_mention_i
                                            page_mention_infos,
                                            page_content)
   tokens = parse_text_for_tokens(page_content_with_mention_flags)
-  return _tokens_to_embeddings(embedding, token_idx_lookup, tokens)
+  return tokens_to_embeddings(embedding, token_idx_lookup, tokens)
+
+def get_bag_of_nouns(page_content):
+  part_of_speech_info = get_part_of_speeches(page_content)
+  page_content_with_mention_flags = reduce(_insert_mention_flags,
+                                           page_mention_infos,
+                                           page_content)
+  return tokens_to_embeddings(embedding, token_idx_lookup, tokens)
