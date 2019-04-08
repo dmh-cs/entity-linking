@@ -7,6 +7,8 @@ import torch.nn as nn
 from utils import sort_index
 from parsers import parse_text_for_tokens, parse_for_tokens
 
+import nltk
+
 
 def pad_batch(pad_vector, batch, min_len=0):
   pad_to_len = max(min_len, max(_.map_(batch, len)))
@@ -122,8 +124,6 @@ def embed_page_content(embedding, token_idx_lookup, page_content, page_mention_i
   return tokens_to_embeddings(embedding, token_idx_lookup, tokens)
 
 def get_bag_of_nouns(page_content):
-  part_of_speech_info = get_part_of_speeches(page_content)
-  page_content_with_mention_flags = reduce(_insert_mention_flags,
-                                           page_mention_infos,
-                                           page_content)
-  return tokens_to_embeddings(embedding, token_idx_lookup, tokens)
+  return [word
+          for (word, pos) in nltk.pos_tag(nltk.word_tokenize(page_content))
+          if pos[0] == 'N']
