@@ -45,7 +45,8 @@ def main():
                    'use_lstm_local',
                    'dont_freeze_word_embeddings',
                    'cheat',
-                   'use_conll']
+                   'use_conll',
+                   'use_wiki2vec']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
   flags = [_.head(arg) for arg in args]
   train_params = m(use_fast_sampler='--use_fast_sampler' in flags)
