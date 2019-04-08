@@ -52,7 +52,7 @@ class MentionContextDataset(Dataset):
     self.min_mentions = min_mentions
     self.use_fast_sampler = use_fast_sampler
     self.use_wiki2vec = use_wiki2vec
-    if self.use_fast_sampler: assert not self.use_wiki2vec, 'train wiki2vec locally'
+    # if self.use_fast_sampler: assert not self.use_wiki2vec, 'train wiki2vec locally'
     if self.min_mentions > 1:
       query = 'select id from entities where num_mentions >= ' + str(self.min_mentions)
       cursor.execute(query)
@@ -125,9 +125,9 @@ class MentionContextDataset(Dataset):
 
   def __getitem__(self, idx):
     if self.use_wiki2vec:
-      return self._getitem(idx)
-    else:
       return self._wiki2vec_getitem(idx)
+    else:
+      return self._getitem(idx)
 
   def _get_candidate_strs(self, candidate_ids):
     return [self._candidate_strs_lookup[candidate_id]

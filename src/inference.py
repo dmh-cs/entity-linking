@@ -12,7 +12,7 @@ def predict(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity
 
 def predict_wiki2vec(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds):
   model.eval()
-  context = model.context_encoder(batch['bag_of_nouns'])
+  context = model.encoder(batch['bag_of_nouns'])
   logits = Logits()
   calc_logits = lambda embeds, ids: logits(embeds, entity_embeds(ids))
   context_logits = calc_logits(context, batch['candidate_ids'])

@@ -142,7 +142,7 @@ class Trainer(object):
         self.optimizer.zero_grad()
         batch = tensors_to_device(batch, self.device)
         labels = self._get_labels_for_batch(batch['label'], batch['candidate_ids'])
-        encoded = self.model.context_encoder(batch['bag_of_nouns'])
+        encoded = self.model.encoder(batch['bag_of_nouns'])
         logits = self.calc_logits(encoded, batch['candidate_ids'])
         scores = self.model.calc_scores((logits, torch.zeros_like(logits)),
                                         batch['candidate_mention_sim'])
@@ -155,7 +155,7 @@ class Trainer(object):
         self.optimizer.step()
         with torch.no_grad():
           self.model.eval()
-          encoded_test = self.model.context_encoder(batch['bag_of_nouns'])
+          encoded_test = self.model.encoder(batch['bag_of_nouns'])
           logits_test = self.calc_logits(encoded_test, batch['candidate_ids'])
           mention_probas, __ = self.model.calc_scores((logits_test, torch.zeros_like(logits_test)),
                                                       batch['candidate_mention_sim'])
