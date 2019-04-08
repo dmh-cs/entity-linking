@@ -11,7 +11,9 @@ class ContextEncoder(nn.Module):
     self.device = device
 
   def _bag_to_tens(self, bag_of_nouns):
-    token_idxs_by_bag = np.array([[self.token_idx_lookup[token] for token in bag.values()]
+    token_idxs_by_bag = np.array([[self.token_idx_lookup[token]
+                                   for token in bag
+                                   if token in self.token_idx_lookup]
                                   for bag in bag_of_nouns])
     return self.wiki2vec(token_idxs_by_bag).to(self.device)
 

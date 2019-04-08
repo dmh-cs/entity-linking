@@ -124,6 +124,6 @@ def embed_page_content(embedding, token_idx_lookup, page_content, page_mention_i
   return tokens_to_embeddings(embedding, token_idx_lookup, tokens)
 
 def get_bag_of_nouns(page_content):
-  return [word
+  return [word.lower()
           for (word, pos) in nltk.pos_tag(nltk.word_tokenize(page_content))
           if pos[0] == 'N']
