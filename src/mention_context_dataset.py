@@ -101,6 +101,9 @@ class MentionContextDataset(Dataset):
     return sample
 
   def _wiki2vec_getitem(self, idx):
+    if self.use_fast_sampler:
+      if len(self._mention_infos) == 0: self._next_batch()
+      idx = next(iter(self._mention_infos.keys()))
     if idx not in self._mention_infos:
       self._next_batch()
     mention_info = self._mention_infos.pop(idx)
