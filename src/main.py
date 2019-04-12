@@ -16,6 +16,7 @@ args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param
                      {'name': 'clip_grad'                  , 'for': 'train_param', 'type': float},
                      {'name': 'num_epochs'                 , 'for': 'train_param', 'type': int},
                      {'name': 'min_mentions'               , 'for': 'train_param', 'type': int},
+                     {'name': 'start_from_page_num'        , 'for': 'train_param', 'type': int},
                      {'name': 'ablation'                   , 'for': 'model_param', 'type': lambda string: string.split(',')},
                      {'name': 'document_encoder_lstm_size' , 'for': 'model_param', 'type': int},
                      {'name': 'embed_len'                  , 'for': 'model_param', 'type': int},
@@ -44,6 +45,7 @@ def main():
                    'use_cnn_local',
                    'use_lstm_local',
                    'dont_freeze_word_embeddings',
+                   'dont_continue_training',
                    'cheat',
                    'use_conll',
                    'use_wiki2vec']
@@ -52,6 +54,7 @@ def main():
   train_params = m(use_fast_sampler='--use_fast_sampler' in flags)
   run_params = m(load_model='--load_model' in flags,
                  cheat='--cheat' in flags,
+                 continue_training='--dont_continue_training' not in flags,
                  use_conll='--use_conll' in flags)
   model_params = m(use_adaptive_softmax='--use_adaptive_softmax' in flags,
                    use_hardcoded_cutoffs='--dont_use_hardcoded_cutoffs' not in flags,

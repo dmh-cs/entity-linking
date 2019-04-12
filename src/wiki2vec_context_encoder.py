@@ -1,5 +1,6 @@
 from itertools import zip_longest
 
+import torch
 import torch.nn as nn
 import numpy as np
 
@@ -25,5 +26,5 @@ class ContextEncoder(nn.Module):
   def forward(self, bag_of_nouns):
     bag_tens = self._bag_to_tens(bag_of_nouns)
     sums = bag_tens.sum(1)
-    normalized = sums / torch.norm(sums, dim=1)
+    normalized = sums / torch.norm(sums, dim=1).unsqueeze(1)
     return self.lin(normalized)

@@ -13,7 +13,7 @@ class Wiki2Vec(nn.Module):
     self.device = device
 
   def forward(self, idxs):
-    return torch.from_numpy(self.wiki2vec.syn0[idxs.reshape(-1)].reshape(*idxs.shape)).to(self.device)
+    return torch.from_numpy(self.wiki2vec.syn0[idxs.reshape(-1)].reshape(*idxs.shape, -1)).to(self.device)
 
 def load_wiki2vec():
   try:

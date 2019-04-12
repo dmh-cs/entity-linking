@@ -27,7 +27,8 @@ class MentionContextDataset(Dataset):
                buffer_scale=1,
                min_mentions=1,
                use_fast_sampler=False,
-               use_wiki2vec=False):
+               use_wiki2vec=False,
+               start_from_page_num=0):
     self.page_id_order = page_id_order
     self.entity_candidates_prior = entity_candidates_prior
     self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
@@ -46,7 +47,7 @@ class MentionContextDataset(Dataset):
     self._mention_infos = {}
     self._candidate_strs_lookup = {}
     self._bag_of_nouns_lookup = {}
-    self.page_ctr = 0
+    self.page_ctr = start_from_page_num
     self.cheat = cheat
     self.buffer_scale = buffer_scale
     self.min_mentions = min_mentions

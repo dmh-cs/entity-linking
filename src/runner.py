@@ -58,6 +58,7 @@ class Runner(object):
     self.encoder = None
     self.use_conll = self.run_params.use_conll
     self.context_encoder = None
+    self.wiki2vec = None
 
   def _get_word_embedding_path(self):
     dim = self.model_params.word_embed_len
@@ -121,6 +122,15 @@ class Runner(object):
     return torch.tensor(pad_batch_list(0, entity_indexed_tokens_list),
                         device=self.device)
 
+  def _get_entity_wikivecs(self, num_entities):
+    vecs_by_label = {self.lookups.entity_labels[entity_id]: self.wiki2vec.get_entity_vector(text)
+                     for entity_id, text in get_entity_text().items()
+                     if entity_id in self.lookups.entity_labels}
+    vecs_in_order = [vecs_by_label[i]
+                     if i in vecs_by_label else torch.randn(self.model_params.embed_len)
+                     for i in range(num_entities)]
+    return torch.tensor(vecs_in_order, device=self.device)
+
   def _sum_in_batches(self, by_token):
     results = []
     for chunk in torch.chunk(by_token, 100):
@@ -128,7 +138,7 @@ class Runner(object):
       results.append(entity_word_vecs.sum(1))
     return torch.cat(results, 0)
 
-  def init_entity_embeds(self):
+  def init_entity_embeds_deep_el(self):
     if self.model_params.word_embed_len == self.model_params.embed_len:
       entities_by_token = self._get_entity_tokens(self.model_params.num_entities)
       entity_embed_weights = nn.Parameter(self._sum_in_batches(entities_by_token))
@@ -137,6 +147,13 @@ class Runner(object):
       entity_embed_weights = nn.Parameter(torch.Tensor(self.model_params.num_entities,
                                                        self.model_params.embed_len))
       entity_embed_weights.data.normal_(0, 1.0/math.sqrt(self.model_params.embed_len))
+    self.entity_embeds = nn.Embedding(self.model_params.num_entities,
+                                      self.model_params.embed_len,
+                                      _weight=entity_embed_weights).to(self.device)
+
+  def init_entity_embeds_wiki2vec(self):
+    entity_wikivecs = self._get_entity_wikivecs(self.model_params.num_entities)
+    entity_embed_weights = nn.Parameter(entity_wikivecs)
     self.entity_embeds = nn.Embedding(self.model_params.num_entities,
                                       self.model_params.embed_len,
                                       _weight=entity_embed_weights).to(self.device)
@@ -165,7 +182,8 @@ class Runner(object):
                                    buffer_scale=self.run_params.buffer_scale,
                                    min_mentions=self.train_params.min_mentions,
                                    use_fast_sampler=use_fast_sampler,
-                                   use_wiki2vec=self.model_params.use_wiki2vec)
+                                   use_wiki2vec=self.model_params.use_wiki2vec,
+                                   start_from_page_num=self.train_params.start_from_page_num)
 
   def _get_sampler(self, cursor, is_test, limit=None, use_fast_sampler=False):
     if self.use_conll:
@@ -284,7 +302,7 @@ class Runner(object):
         self.load_caches(cursor)
         pad_vector = self.lookups.embedding(torch.tensor([self.lookups.token_idx_lookup['<PAD>']],
                                                          device=self.lookups.embedding.weight.device)).squeeze()
-        self.init_entity_embeds()
+        self.init_entity_embeds_deep_el()
         entity_ids_by_freq = self._get_entity_ids_by_freq(cursor)
         if self.model_params.use_adaptive_softmax:
           self.lookups = self.lookups.set('entity_labels',
@@ -306,7 +324,12 @@ class Runner(object):
                                   self.model_params.use_lstm_local,
                                   self.model_params.num_cnn_local_filters,
                                   self.model_params.use_cnn_local)
-        if not self.run_params.load_model:
+        if self.run_params.load_model:
+          path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
+          self.encoder.load_state_dict(torch.load(path))
+          self.encoder = nn.DataParallel(self.encoder)
+          self.encoder = self.encoder.to(self.device).module
+        if self.run_params.continue_training:
           if self.model_params.use_wiki2vec:
             fields = ['context_error', 'loss']
           else:
@@ -316,11 +339,6 @@ class Runner(object):
             trainer = self._get_trainer(cursor, self.encoder)
             trainer.train()
             torch.save(self.encoder.state_dict(), './' + self.experiment.model_name)
-        else:
-          path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
-          self.encoder.load_state_dict(torch.load(path))
-          self.encoder = nn.DataParallel(self.encoder)
-          self.encoder = self.encoder.to(self.device).module
         with self.experiment.test(['accuracy', 'TP', 'num_samples']):
           self.log.status('Testing')
           tester = self._get_tester(cursor, self.encoder)
@@ -333,8 +351,9 @@ class Runner(object):
       db_connection = get_connection()
       with db_connection.cursor() as cursor:
         self.load_caches(cursor)
-        wiki2vec = load_wiki2vec()
-        self.context_encoder = ContextEncoder(wiki2vec, self.lookups.token_idx_lookup, self.device)
+        self.wiki2vec = load_wiki2vec()
+        self.init_entity_embeds_wiki2vec()
+        self.context_encoder = ContextEncoder(self.wiki2vec, self.lookups.token_idx_lookup, self.device)
         self.encoder = SimpleJointModel(self.context_encoder)
         if not self.run_params.load_model:
           with self.experiment.train(['error', 'loss']):
