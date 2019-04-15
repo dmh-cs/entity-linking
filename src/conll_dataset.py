@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 
 import pydash as _
 
-from data_transformers import embed_page_content
+from data_transformers import embed_page_content, get_bag_of_nouns
 from data_fetchers import get_candidate_ids, get_p_prior, get_candidate_strs
 from parsers import parse_for_sentence_spans, parse_for_tokens
 
@@ -77,7 +77,7 @@ def _get_entity_page_ids(lines):
 def _from_page_ids_to_entity_ids(cursor, page_ids):
   entity_ids = []
   for page_id in page_ids:
-    cursor.execute('select entity_id from entity_by_page where source_id = %s', page_id)
+    cursor.execute('select entity_id from entity_by_page e join pages p on e.`page_id` = p.id where p.source_id = %s', page_id)
     result = cursor.fetchone()
     if result:
       entity_ids.append(result['entity_id'])
@@ -106,7 +106,8 @@ class CoNLLDataset(Dataset):
                num_entities,
                num_candidates,
                entity_label_lookup,
-               path='./AIDA-YAGO2-dataset.tsv'):
+               path='./AIDA-YAGO2-dataset.tsv',
+               use_wiki2vec=False):
     self.cursor = cursor
     self.entity_candidates_prior = entity_candidates_prior
     self.embedding = embedding
@@ -127,11 +128,18 @@ class CoNLLDataset(Dataset):
     self.mentions_by_doc_id = _get_mentions_by_doc_id(self.lines)
     self.entity_label_lookup = entity_label_lookup
     self.entity_id_lookup = {int(label): entity_id for entity_id, label in self.entity_label_lookup.items()}
+    self.use_wiki2vec = use_wiki2vec
 
   def __len__(self):
     return len(self.with_label)
 
   def __getitem__(self, idx):
+    if self.use_wiki2vec:
+      return self._getitem_wiki2vec(idx)
+    else:
+      self._getitem_deep_el(idx)
+
+  def _getitem_deep_el(self, idx):
     idx = self.with_label[idx]
     label = self.entity_label_lookup.get(self.labels[idx]) or -1
     mention = self.mentions[idx]
@@ -147,6 +155,24 @@ class CoNLLDataset(Dataset):
             'entity_page_mentions': embed_page_content(self.embedding,
                                                        self.token_idx_lookup,
                                                        ' '.join(self.mentions_by_doc_id[self.mention_doc_id[idx]])),
+            'p_prior': get_p_prior(self.entity_candidates_prior, mention, candidate_ids),
+            'candidate_ids': candidate_ids,
+            'candidate_mention_sim': torch.tensor([Levenshtein.ratio(mention, candidate)
+                                                   for candidate in candidates])}
+
+  def _getitem_wiki2vec(self, idx):
+    idx = self.with_label[idx]
+    label = self.entity_label_lookup.get(self.labels[idx]) or -1
+    mention = self.mentions[idx]
+    candidate_ids = get_candidate_ids(self.entity_candidates_prior,
+                                      self.num_entities,
+                                      self.num_candidates,
+                                      mention,
+                                      label)
+    bag_of_nouns = get_bag_of_nouns(self.documents[self.mention_doc_id[idx]])
+    candidates = get_candidate_strs(self.cursor, [self.entity_id_lookup[cand_id] for cand_id in candidate_ids.tolist()])
+    return {'label': label,
+            'bag_of_nouns': bag_of_nouns,
             'p_prior': get_p_prior(self.entity_candidates_prior, mention, candidate_ids),
             'candidate_ids': candidate_ids,
             'candidate_mention_sim': torch.tensor([Levenshtein.ratio(mention, candidate)

@@ -123,11 +123,13 @@ class Runner(object):
                         device=self.device)
 
   def _get_entity_wikivecs(self, num_entities):
-    vecs_by_label = {self.lookups.entity_labels[entity_id]: self.wiki2vec.get_entity_vector(text)
+    vecs_by_label = {self.lookups.entity_labels[entity_id]: self.wiki2vec.wiki2vec.get_entity_vector(text)
+                     if (self.wiki2vec.wiki2vec.dictionary.get_entity(text) is not None)
+                     else torch.randn(self.wiki2vec.dim_len)
                      for entity_id, text in get_entity_text().items()
                      if entity_id in self.lookups.entity_labels}
     vecs_in_order = [vecs_by_label[i]
-                     if i in vecs_by_label else torch.randn(self.model_params.embed_len)
+                     if i in vecs_by_label else torch.randn(self.wiki2vec.dim_len)
                      for i in range(num_entities)]
     return torch.tensor(vecs_in_order, device=self.device)
 
@@ -155,7 +157,7 @@ class Runner(object):
     entity_wikivecs = self._get_entity_wikivecs(self.model_params.num_entities)
     entity_embed_weights = nn.Parameter(entity_wikivecs)
     self.entity_embeds = nn.Embedding(self.model_params.num_entities,
-                                      self.model_params.embed_len,
+                                      self.wiki2vec.dim_len,
                                       _weight=entity_embed_weights).to(self.device)
 
   def _get_dataset(self, cursor, is_test, use_fast_sampler=False):
@@ -167,7 +169,8 @@ class Runner(object):
                           self.lookups.token_idx_lookup,
                           self.model_params.num_entities,
                           self.model_params.num_candidates,
-                          self.lookups.entity_labels)
+                          self.lookups.entity_labels,
+                          use_wiki2vec=self.model_params.use_wiki2vec)
     else:
       return MentionContextDataset(cursor,
                                    page_ids,
@@ -330,10 +333,7 @@ class Runner(object):
           self.encoder = nn.DataParallel(self.encoder)
           self.encoder = self.encoder.to(self.device).module
         if self.run_params.continue_training:
-          if self.model_params.use_wiki2vec:
-            fields = ['context_error', 'loss']
-          else:
-            fields = ['mention_context_error', 'document_context_error', 'loss']
+          fields = ['mention_context_error', 'document_context_error', 'loss']
           with self.experiment.train(fields):
             self.log.status('Training')
             trainer = self._get_trainer(cursor, self.encoder)
@@ -355,17 +355,17 @@ class Runner(object):
         self.init_entity_embeds_wiki2vec()
         self.context_encoder = ContextEncoder(self.wiki2vec, self.lookups.token_idx_lookup, self.device)
         self.encoder = SimpleJointModel(self.context_encoder)
-        if not self.run_params.load_model:
+        if self.run_params.load_model:
+          path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
+          self.encoder.load_state_dict(torch.load(path))
+          self.encoder = nn.DataParallel(self.context_encoder)
+          self.encoder = self.context_encoder.to(self.device)
+        if self.run_params.continue_training:
           with self.experiment.train(['error', 'loss']):
             self.log.status('Training')
             trainer = self._get_trainer(cursor, self.encoder)
             trainer.train()
             torch.save(self.encoder.state_dict(), './' + self.experiment.model_name)
-        else:
-          path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
-          self.encoder.load_state_dict(torch.load(path))
-          self.encoder = nn.DataParallel(self.context_encoder)
-          self.encoder = self.context_encoder.to(self.device).module
         with self.experiment.test(['accuracy', 'TP', 'num_samples']):
           self.log.status('Testing')
           tester = self._get_tester(cursor, self.context_encoder)

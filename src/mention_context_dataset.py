@@ -191,13 +191,10 @@ class MentionContextDataset(Dataset):
     for page_id in page_ids:
       page_mention_infos = page_mention_infos_lookup[page_id]
       content = ' '.join([mention_info['mention'] for mention_info in page_mention_infos])
-      if _.is_empty(page_mention_infos):
-        lookup[page_id] = torch.tensor([])
-      else:
-        lookup[page_id] = embed_page_content(self.embedding,
-                                             self.token_idx_lookup,
-                                             content,
-                                             page_mention_infos)
+      lookup[page_id] = embed_page_content(self.embedding,
+                                           self.token_idx_lookup,
+                                           content,
+                                           page_mention_infos)
     return lookup
 
   def _get_batch_embedded_page_content_lookup(self, page_ids):
@@ -232,6 +229,7 @@ class MentionContextDataset(Dataset):
   def _next_batch(self):
     closeby_page_ids = self._next_page_id_batch()
     page_content = self._get_batch_page_content_lookup(closeby_page_ids)
+    self._mention_infos.update(self._get_batch_mention_infos(closeby_page_ids))
     if not self.use_wiki2vec:
       self._page_content_lookup.update(page_content)
       self._sentence_spans_lookup.update(self._to_sentence_spans_lookup(page_content))
@@ -239,4 +237,3 @@ class MentionContextDataset(Dataset):
       self._embedded_page_content_lookup.update(self._get_batch_embedded_page_content_lookup(closeby_page_ids))
     else:
       self._bag_of_nouns_lookup.update(self._get_batch_bag_of_nouns_lookup(page_content))
-    self._mention_infos.update(self._get_batch_mention_infos(closeby_page_ids))
