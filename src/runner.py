@@ -354,7 +354,7 @@ class Runner(object):
         self.wiki2vec = load_wiki2vec()
         self.init_entity_embeds_wiki2vec()
         self.context_encoder = ContextEncoder(self.wiki2vec, self.lookups.token_idx_lookup, self.device)
-        self.encoder = SimpleJointModel(self.context_encoder)
+        self.encoder = SimpleJointModel(self.entity_embeds, self.context_encoder)
         if self.run_params.load_model:
           path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
           self.encoder.load_state_dict(torch.load(path))
@@ -368,7 +368,7 @@ class Runner(object):
             torch.save(self.encoder.state_dict(), './' + self.experiment.model_name)
         with self.experiment.test(['accuracy', 'TP', 'num_samples']):
           self.log.status('Testing')
-          tester = self._get_tester(cursor, self.context_encoder)
+          tester = self._get_tester(cursor, self.encoder)
           tester.test()
     finally:
       db_connection.close()
