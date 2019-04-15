@@ -77,7 +77,7 @@ def _get_entity_page_ids(lines):
 def _from_page_ids_to_entity_ids(cursor, page_ids):
   cursor.execute('select entity_id, p.source_id from entity_by_page e join pages p on e.`page_id` = p.id where p.source_id in (' + str(page_ids)[1:-1] + ')')
   lookup = {row['p.source_id']: row['entity_id']
-            for row in cursor.fetchall()}
+            for row in cursor.fetchall() if row is not None}
   return [lookup[page_id] if page_id in lookup else -1 for page_id in page_ids]
 
 def _get_doc_id_per_mention(lines):
