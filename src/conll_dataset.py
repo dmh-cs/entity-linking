@@ -75,15 +75,10 @@ def _get_entity_page_ids(lines):
           if len(line.split('\t')) >= 5 and line.split('\t')[1] == 'B']
 
 def _from_page_ids_to_entity_ids(cursor, page_ids):
-  entity_ids = []
-  for page_id in page_ids:
-    cursor.execute('select entity_id from entity_by_page e join pages p on e.`page_id` = p.id where p.source_id = %s', page_id)
-    result = cursor.fetchone()
-    if result:
-      entity_ids.append(result['entity_id'])
-    else:
-      entity_ids.append(-1)
-  return entity_ids
+  cursor.execute('select entity_id, p.source_id from entity_by_page e join pages p on e.`page_id` = p.id where p.source_id in (' + str(page_ids)[1:-1] + ')')
+  lookup = {row['p.source_id']: row['entity_id']
+            for row in cursor.fetchall()}
+  return [lookup[page_id] for page_id in page_ids if page_id in lookup else -1]
 
 def _get_doc_id_per_mention(lines):
   doc_lines = _get_doc_lines(lines)
