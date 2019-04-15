@@ -160,6 +160,6 @@ class Trainer(object):
           mention_probas, __ = self.model.calc_scores((logits_test, torch.zeros_like(logits_test)),
                                                       batch['candidate_mention_sim'])
           context_error = self._classification_error(mention_probas, labels)
-        self.experiment.record_metrics({'mention_context_error': context_error,
+        self.experiment.record_metrics({'error': context_error,
                                         'loss': loss.item()},
                                        batch_num=batch_num)
