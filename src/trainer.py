@@ -43,7 +43,6 @@ class Trainer(object):
                clip_grad,
                use_wiki2vec=False):
     self.device = device
-    self.model = nn.DataParallel(model)
     self.model = model.to(self.device)
     self.get_dataset = get_dataset
     self.get_batch_sampler = get_batch_sampler

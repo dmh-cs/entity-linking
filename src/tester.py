@@ -36,7 +36,6 @@ class Tester(object):
                use_adaptive_softmax,
                use_wiki2vec=False):
     self.dataset = dataset
-    self.model = nn.DataParallel(model)
     self.model = model.to(device)
     self.embedding = embedding
     self.token_idx_lookup = token_idx_lookup
