@@ -358,8 +358,8 @@ class Runner(object):
         if self.run_params.load_model:
           path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
           self.encoder.load_state_dict(torch.load(path))
-          self.encoder = nn.DataParallel(self.context_encoder)
-          self.encoder = self.context_encoder.to(self.device)
+          self.encoder = nn.DataParallel(self.encoder)
+          self.encoder = self.encoder.to(self.device)
         if self.run_params.continue_training:
           with self.experiment.train(['error', 'loss']):
             self.log.status('Training')
