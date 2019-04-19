@@ -22,7 +22,6 @@ class Stacker(nn.Module):
     self.num_features = 2
     self.men_linear = nn.Linear(self.num_features, 1)
     self.desc_linear = nn.Linear(self.num_features, 1)
-    self.no_trans = no_trans
 
   def forward(self, logits, str_sim):
     men_lin_result = self.men_linear(torch.stack([logits[0], str_sim],
