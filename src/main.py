@@ -46,6 +46,7 @@ def main():
                    'use_lstm_local',
                    'dont_freeze_word_embeddings',
                    'dont_continue_training',
+                   'no_trans',
                    'cheat',
                    'use_conll',
                    'use_wiki2vec']
@@ -60,6 +61,7 @@ def main():
                    use_hardcoded_cutoffs='--dont_use_hardcoded_cutoffs' not in flags,
                    use_ranking_loss='--use_ranking_loss' in flags,
                    use_cnn_local='--use_cnn_local' in flags,
+                   no_trans='--no_trans' in flags,
                    use_lstm_local='--use_lstm_local' in flags,
                    use_deep_network='--dont_use_deep_network' not in flags,
                    freeze_word_embeddings='--dont_freeze_word_embeddings' not in flags,

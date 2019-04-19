@@ -351,8 +351,8 @@ class Runner(object):
         self.load_caches(cursor)
         self.wiki2vec = load_wiki2vec()
         self.init_entity_embeds_wiki2vec()
-        self.context_encoder = ContextEncoder(self.wiki2vec, self.lookups.token_idx_lookup, self.device)
-        self.encoder = SimpleJointModel(self.entity_embeds, self.context_encoder)
+        self.context_encoder = ContextEncoder(self.wiki2vec, self.lookups.token_idx_lookup, self.device, no_trans=self.model_params.no_trans)
+        self.encoder = SimpleJointModel(self.entity_embeds, self.context_encoder, no_trans=self.model_params.no_trans)
         if self.run_params.load_model:
           path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
           self.encoder.load_state_dict(torch.load(path))

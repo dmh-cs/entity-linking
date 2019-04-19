@@ -17,20 +17,24 @@ class JointEncoder(nn.Module):
     return (desc_embeds, mention_context_embeds)
 
 class Stacker(nn.Module):
-  def __init__(self):
+  def __init__(self, no_trans=False):
     super().__init__()
     self.num_features = 2
     self.men_linear = nn.Linear(self.num_features, 1)
     self.desc_linear = nn.Linear(self.num_features, 1)
+    self.no_trans = no_trans
 
   def forward(self, logits, str_sim):
-    men_lin_result = self.men_linear(torch.stack([logits[0], str_sim],
-                                                 2).reshape(-1, self.num_features))
-    # prior.reshape(-1)]))
-    desc_lin_result = self.desc_linear(torch.stack([logits[1], str_sim],
+    if self.no_trans:
+      return logits
+    else:
+      men_lin_result = self.men_linear(torch.stack([logits[0], str_sim],
                                                    2).reshape(-1, self.num_features))
-    # prior.reshape(-1)]))
-    return men_lin_result.reshape(*logits[0].shape), desc_lin_result.reshape(*logits[1].shape)
+      # prior.reshape(-1)]))
+      desc_lin_result = self.desc_linear(torch.stack([logits[1], str_sim],
+                                                     2).reshape(-1, self.num_features))
+      # prior.reshape(-1)]))
+      return men_lin_result.reshape(*logits[0].shape), desc_lin_result.reshape(*logits[1].shape)
 
 class JointModel(nn.Module):
   def __init__(self,
@@ -74,8 +78,8 @@ class JointModel(nn.Module):
     self.calc_scores = Stacker()
 
 class SimpleJointModel(nn.Module):
-  def __init__(self, entity_embeds, encoder):
+  def __init__(self, entity_embeds, encoder, no_trans=False):
     super().__init__()
     self.encoder = encoder
     self.entity_embeds = entity_embeds
-    self.calc_scores = Stacker()
+    self.calc_scores = Stacker(no_trans=no_trans)

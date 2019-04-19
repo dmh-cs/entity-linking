@@ -5,13 +5,14 @@ import torch.nn as nn
 import numpy as np
 
 class ContextEncoder(nn.Module):
-  def __init__(self, wiki2vec, token_idx_lookup, device):
+  def __init__(self, wiki2vec, token_idx_lookup, device, no_trans=False):
     super().__init__()
     self.wiki2vec = wiki2vec
     self.token_idx_lookup = token_idx_lookup
     self.dim_len = self.wiki2vec.dim_len
     self.lin = nn.Linear(self.dim_len, self.dim_len)
     self.device = device
+    self.no_trans = no_trans
 
   def _bag_to_tens(self, bag_of_nouns):
     longest = max(map(len, bag_of_nouns))
@@ -27,4 +28,7 @@ class ContextEncoder(nn.Module):
     bag_tens = self._bag_to_tens(bag_of_nouns)
     sums = bag_tens.sum(1)
     normalized = sums / torch.norm(sums, dim=1).unsqueeze(1)
-    return self.lin(normalized)
+    if self.no_trans:
+      return normalized
+    else:
+      return self.lin(normalized)
