@@ -75,7 +75,7 @@ class JointModel(nn.Module):
     self.calc_scores = Stacker()
 
 class SimpleJointModel(nn.Module):
-  def __init__(self, entity_embeds, encoder, no_trans=False):
+  def __init__(self, entity_embeds, encoder):
     super().__init__()
     self.encoder = encoder
     self.entity_embeds = entity_embeds
