@@ -132,7 +132,7 @@ class CoNLLDataset(Dataset):
     if self.use_wiki2vec:
       return self._getitem_wiki2vec(idx)
     else:
-      self._getitem_deep_el(idx)
+      return self._getitem_deep_el(idx)
 
   def _getitem_deep_el(self, idx):
     idx = self.with_label[idx]
