@@ -136,7 +136,7 @@ class CoNLLDataset(Dataset):
 
   def _getitem_deep_el(self, idx):
     idx = self.with_label[idx]
-    label = self.entity_label_lookup.get(self.labels[idx]) or -1
+    label = self.entity_label_lookup.get(self.labels[idx], -1)
     mention = self.mentions[idx]
     candidate_ids = get_candidate_ids(self.entity_candidates_prior,
                                       self.num_entities,
@@ -157,7 +157,7 @@ class CoNLLDataset(Dataset):
 
   def _getitem_wiki2vec(self, idx):
     idx = self.with_label[idx]
-    label = self.entity_label_lookup.get(self.labels[idx]) or -1
+    label = self.entity_label_lookup.get(self.labels[idx], -1)
     mention = self.mentions[idx]
     candidate_ids = get_candidate_ids(self.entity_candidates_prior,
                                       self.num_entities,
