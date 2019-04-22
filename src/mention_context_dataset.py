@@ -1,5 +1,6 @@
 import Levenshtein
 from collections import defaultdict
+import unidecode
 
 from torch.utils.data import Dataset
 import torch
@@ -54,13 +55,22 @@ class MentionContextDataset(Dataset):
     self.use_fast_sampler = use_fast_sampler
     self.use_wiki2vec = use_wiki2vec
     # if self.use_fast_sampler: assert not self.use_wiki2vec, 'train wiki2vec locally'
+    self.prior_approx_mapping = self._get_prior_approx_mapping(self.entity_candidates_prior)
     if self.min_mentions > 1:
       query = 'select id from entities where num_mentions >= ' + str(self.min_mentions)
       cursor.execute(query)
       self.valid_entity_ids = set(row['id'] for row in cursor.fetchall())
 
+  def _get_prior_approx_mapping(self, entity_candidates_prior):
+    approx_mapping = defaultdict(list)
+    for mention in entity_candidates_prior.keys():
+      approx_mention = unidecode.unidecode(mention).lower()
+      approx_mapping[approx_mention].append(mention)
+    return approx_mapping
+
   def _get_candidate_ids(self, mention, label):
     return get_candidate_ids(self.entity_candidates_prior,
+                             self.prior_approx_mapping,
                              self.num_entities,
                              self.num_candidates,
                              mention,

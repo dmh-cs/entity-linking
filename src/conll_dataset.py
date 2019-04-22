@@ -124,6 +124,14 @@ class CoNLLDataset(Dataset):
     self.entity_label_lookup = entity_label_lookup
     self.entity_id_lookup = {int(label): entity_id for entity_id, label in self.entity_label_lookup.items()}
     self.use_wiki2vec = use_wiki2vec
+    self.prior_approx_mapping = self._get_prior_approx_mapping(self.entity_candidates_prior)
+
+  def _get_prior_approx_mapping(self, entity_candidates_prior):
+    approx_mapping = defaultdict(list)
+    for mention in entity_candidates_prior.keys():
+      approx_mention = unidecode.unidecode(mention).lower()
+      approx_mapping[approx_mention].append(mention)
+    return approx_mapping
 
   def __len__(self):
     return len(self.with_label)
@@ -139,6 +147,7 @@ class CoNLLDataset(Dataset):
     label = self.entity_label_lookup.get(self.labels[idx], -1)
     mention = self.mentions[idx]
     candidate_ids = get_candidate_ids(self.entity_candidates_prior,
+                                      self.prior_approx_mapping,
                                       self.num_entities,
                                       self.num_candidates,
                                       mention,
@@ -150,7 +159,7 @@ class CoNLLDataset(Dataset):
             'entity_page_mentions': embed_page_content(self.embedding,
                                                        self.token_idx_lookup,
                                                        ' '.join(self.mentions_by_doc_id[self.mention_doc_id[idx]])),
-            'p_prior': get_p_prior(self.entity_candidates_prior, mention, candidate_ids),
+            'p_prior': get_p_prior(self.entity_candidates_prior, self.prior_approx_mapping, mention, candidate_ids),
             'candidate_ids': candidate_ids,
             'candidate_mention_sim': torch.tensor([Levenshtein.ratio(mention, candidate)
                                                    for candidate in candidates])}
@@ -160,6 +169,7 @@ class CoNLLDataset(Dataset):
     label = self.entity_label_lookup.get(self.labels[idx], -1)
     mention = self.mentions[idx]
     candidate_ids = get_candidate_ids(self.entity_candidates_prior,
+                                      self.prior_approx_mapping,
                                       self.num_entities,
                                       self.num_candidates,
                                       mention,
@@ -168,7 +178,7 @@ class CoNLLDataset(Dataset):
     candidates = get_candidate_strs(self.cursor, [self.entity_id_lookup[cand_id] for cand_id in candidate_ids.tolist()])
     return {'label': label,
             'bag_of_nouns': bag_of_nouns,
-            'p_prior': get_p_prior(self.entity_candidates_prior, mention, candidate_ids),
+            'p_prior': get_p_prior(self.entity_candidates_prior, self.prior_approx_mapping, mention, candidate_ids),
             'candidate_ids': candidate_ids,
             'candidate_mention_sim': torch.tensor([Levenshtein.ratio(mention, candidate)
                                                    for candidate in candidates])}

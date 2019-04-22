@@ -1,6 +1,8 @@
 import os
 import random
 import pickle
+import unidecode
+from collections import defaultdict
 
 from dotenv import load_dotenv
 import numpy as np
@@ -86,6 +88,7 @@ def get_random_indexes(max_value, exclude, num_to_generate):
   return result
 
 def get_candidate_ids(entity_candidates_prior,
+                      prior_approx_mapping,
                       num_entities,
                       num_candidates,
                       mention,
@@ -100,10 +103,12 @@ def get_candidate_ids(entity_candidates_prior,
                                         dtype=torch.long)
   else:
     if entity_candidates_prior.get(mention) is None:
-      base_candidate_ids = torch.tensor([], dtype=torch.long)
+      approx_mentions = prior_approx_mapping.get(unidecode.unidecode(mention).lower(), [])
+      ids = sum([entity_candidates_prior.get(approx_mention, [])
+                 for approx_mention in approx_mentions], [])
     else:
       ids = list(entity_candidates_prior[mention].keys())
-      base_candidate_ids = torch.tensor(ids, dtype=torch.long)
+    base_candidate_ids = torch.tensor(ids, dtype=torch.long)
   if len(base_candidate_ids) < num_candidates:
     num_candidates_to_generate = num_candidates - len(base_candidate_ids)
     random_candidate_ids = get_random_indexes(num_entities,
@@ -159,10 +164,16 @@ def get_entity_text():
   finally:
     db_connection.close()
 
-def get_p_prior(entity_candidates_prior, mention, candidate_ids):
+def get_p_prior(entity_candidates_prior, prior_approx_mapping, mention, candidate_ids):
   if mention not in entity_candidates_prior:
-    return torch.zeros(len(candidate_ids))
-  entity_counts = entity_candidates_prior[mention]
+    approx_mentions = prior_approx_mapping.get(unidecode.unidecode(mention).lower(), [])
+    entity_counts = defaultdict(int)
+    for approx_mention in approx_mentions:
+      mention_entity_counts = entity_candidates_prior[approx_mention]
+      for entity, counts in mention_entity_counts.items():
+        entity_counts[entity] += counts
+  else:
+    entity_counts = entity_candidates_prior[mention]
   candidate_counts = [entity_counts[entity] if entity in entity_counts else 0 for entity in candidate_ids.tolist()]
   return torch.tensor(candidate_counts, dtype=torch.float) / sum(candidate_counts)
 
