@@ -104,8 +104,8 @@ def get_candidate_ids(entity_candidates_prior,
   else:
     if entity_candidates_prior.get(mention) is None:
       approx_mentions = prior_approx_mapping.get(unidecode.unidecode(mention).lower(), [])
-      ids = sum([list(entity_candidates_prior.get(approx_mention, {}).keys())
-                 for approx_mention in approx_mentions], [])
+      ids = list(set(sum([list(entity_candidates_prior.get(approx_mention, {}).keys())
+                          for approx_mention in approx_mentions], [])))
     else:
       ids = list(entity_candidates_prior[mention].keys())
     base_candidate_ids = torch.tensor(ids, dtype=torch.long)
