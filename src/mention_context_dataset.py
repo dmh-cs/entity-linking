@@ -91,7 +91,7 @@ class MentionContextDataset(Dataset):
     page_content = self._page_content_lookup[mention_info['page_id']]
     label = self.entity_label_lookup[mention_info['entity_id']]
     candidate_ids = self._get_candidate_ids(mention_info['mention'], label)
-    p_prior = get_p_prior(self.entity_candidates_prior, mention_info['mention'], candidate_ids)
+    p_prior = get_p_prior(self.entity_candidates_prior, self.prior_approx_mapping, mention_info['mention'], candidate_ids)
     candidates = self._get_candidate_strs(candidate_ids.tolist())
     sample = {'sentence_splits': get_mention_sentence_splits(page_content,
                                                              sentence_spans,
@@ -121,7 +121,7 @@ class MentionContextDataset(Dataset):
     bag_of_nouns = self._bag_of_nouns_lookup[mention_info['page_id']]
     label = self.entity_label_lookup[mention_info['entity_id']]
     candidate_ids = self._get_candidate_ids(mention_info['mention'], label)
-    p_prior = get_p_prior(self.entity_candidates_prior, mention_info['mention'], candidate_ids)
+    p_prior = get_p_prior(self.entity_candidates_prior, self.prior_approx_mapping, mention_info['mention'], candidate_ids)
     candidates = self._get_candidate_strs(candidate_ids.tolist())
     sample = {'bag_of_nouns': bag_of_nouns,
               'label': label,
