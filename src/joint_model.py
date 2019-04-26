@@ -4,6 +4,8 @@ import torch.nn as nn
 from description_encoder_model import DescriptionEncoder
 from mention_context_encoder_model import MentionContextEncoder
 
+from toolz import pipe
+
 class JointEncoder(nn.Module):
   def __init__(self, desc_encoder, mention_context_encoder):
     super().__init__()
@@ -20,14 +22,22 @@ class Stacker(nn.Module):
   def __init__(self):
     super().__init__()
     self.num_features = 3
-    self.men_linear = nn.Linear(self.num_features, 1)
-    self.desc_linear = nn.Linear(self.num_features, 1)
+    self.men_linear_1 = nn.Linear(self.num_features, 100)
+    self.men_linear_2 = nn.Linear(100, 1)
+    self.desc_linear_1 = nn.Linear(self.num_features, 100)
+    self.desc_linear_2 = nn.Linear(100, 1)
 
   def forward(self, logits, str_sim, prior):
-    men_lin_result = self.men_linear(torch.stack([logits[0], str_sim, prior.reshape(*str_sim.shape)],
-                                                 2).reshape(-1, self.num_features))
-    desc_lin_result = self.desc_linear(torch.stack([logits[1], str_sim, prior.reshape(*str_sim.shape)],
-                                                   2).reshape(-1, self.num_features))
+    men_lin_result = pipe((torch.stack([logits[0], str_sim, prior.reshape(*str_sim.shape)],
+                                                 2).reshape(-1, self.num_features)),
+                          self.men_linear_1,
+                          torch.relu,
+                          self.men_linear_2)
+    desc_lin_result = pipe(self.desc_linear(torch.stack([logits[1], str_sim, prior.reshape(*str_sim.shape)],
+                                                        2).reshape(-1, self.num_features)),
+                           self.desc_linear_1,
+                           torch.relu,
+                           self.desc_linear_2)
     return men_lin_result.reshape(*logits[0].shape), desc_lin_result.reshape(*logits[1].shape)
 
 class JointModel(nn.Module):
