@@ -33,8 +33,8 @@ class Stacker(nn.Module):
                           self.men_linear_1,
                           torch.relu,
                           self.men_linear_2)
-    desc_lin_result = pipe(self.desc_linear(torch.stack([logits[1], str_sim, prior.reshape(*str_sim.shape)],
-                                                        2).reshape(-1, self.num_features)),
+    desc_lin_result = pipe((torch.stack([logits[1], str_sim, prior.reshape(*str_sim.shape)],
+                                        2).reshape(-1, self.num_features)),
                            self.desc_linear_1,
                            torch.relu,
                            self.desc_linear_2)
