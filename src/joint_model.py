@@ -23,13 +23,11 @@ class Stacker(nn.Module):
     self.men_linear = nn.Linear(self.num_features, 1)
     self.desc_linear = nn.Linear(self.num_features, 1)
 
-  def forward(self, logits, str_sim):
-    men_lin_result = self.men_linear(torch.stack([logits[0], str_sim],
+  def forward(self, logits, str_sim, prior):
+    men_lin_result = self.men_linear(torch.stack([logits[0], str_sim, prior.reshape(-1)],
                                                  2).reshape(-1, self.num_features))
-    # prior.reshape(-1)]))
-    desc_lin_result = self.desc_linear(torch.stack([logits[1], str_sim],
+    desc_lin_result = self.desc_linear(torch.stack([logits[1], str_sim, prior.reshape(-1)],
                                                    2).reshape(-1, self.num_features))
-    # prior.reshape(-1)]))
     return men_lin_result.reshape(*logits[0].shape), desc_lin_result.reshape(*logits[1].shape)
 
 class JointModel(nn.Module):

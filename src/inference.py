@@ -17,9 +17,9 @@ def predict_wiki2vec(embedding, token_idx_lookup, p_prior, model, batch, ablatio
   calc_logits = lambda embeds, ids: logits(embeds, entity_embeds(ids))
   context_logits = calc_logits(context, batch['candidate_ids'])
   p_text, __ = model.calc_scores((context_logits, torch.zeros_like(context_logits)),
-                                 batch['candidate_mention_sim'])
-  posterior = p_prior + p_text - (p_prior * p_text)
-  return torch.argmax(posterior, dim=1)
+                                 batch['candidate_mention_sim'],
+                                 p_prior)
+  return torch.argmax(p_text, dim=1)
 
 def predict_deep_el(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds):
   model.eval()
@@ -41,11 +41,8 @@ def predict_deep_el(embedding, token_idx_lookup, p_prior, model, batch, ablation
     calc_logits = lambda embeds, ids: logits(embeds, entity_embeds(ids))
     men_logits = calc_logits(mention_embeds, batch['candidate_ids'])
     p_text, __ = model.calc_scores((men_logits, torch.zeros_like(men_logits)),
-                                   batch['candidate_mention_sim'])
-    if 'prior' in ablation:
-      posterior = p_prior + p_text - (p_prior * p_text)
-      return torch.argmax(posterior, dim=1)
-    else:
-      return torch.argmax(p_text, dim=1)
+                                   batch['candidate_mention_sim'],
+                                   p_prior)
+    return torch.argmax(p_text, dim=1)
   else:
     raise NotImplementedError

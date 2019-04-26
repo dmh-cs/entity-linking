@@ -107,7 +107,7 @@ class Trainer(object):
         logits = self.calc_logits(encoded, batch['candidate_ids'])
         scores = self.model.calc_scores(logits,
                                         batch['candidate_mention_sim'])
-                                        # batch['prior'])
+                                        batch['prior'])
         loss = self.calc_loss(scores, labels)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(itertools.chain(self.model.parameters(),
@@ -121,7 +121,8 @@ class Trainer(object):
                                              batch['entity_page_mentions']))
           logits_test = self.calc_logits(encoded_test, batch['candidate_ids'])
           mention_probas, desc_probas = self.model.calc_scores(logits_test,
-                                                               batch['candidate_mention_sim'])
+                                                               batch['candidate_mention_sim'],
+                                                               batch['prior'])
           mention_context_error = self._classification_error(mention_probas, labels)
           document_context_error = self._classification_error(desc_probas, labels)
         self.experiment.record_metrics({'mention_context_error': mention_context_error,
@@ -145,7 +146,7 @@ class Trainer(object):
         logits = self.calc_logits(encoded, batch['candidate_ids'])
         scores = self.model.calc_scores((logits, torch.zeros_like(logits)),
                                         batch['candidate_mention_sim'])
-                                        # batch['prior'])
+                                        batch['prior'])
         loss = self.calc_loss(scores, labels)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(itertools.chain(self.model.parameters(),
@@ -157,7 +158,8 @@ class Trainer(object):
           encoded_test = self.model.encoder(batch['bag_of_nouns'])
           logits_test = self.calc_logits(encoded_test, batch['candidate_ids'])
           mention_probas, __ = self.model.calc_scores((logits_test, torch.zeros_like(logits_test)),
-                                                      batch['candidate_mention_sim'])
+                                                      batch['candidate_mention_sim'],
+                                                      batch['prior'])
           context_error = self._classification_error(mention_probas, labels)
         self.experiment.record_metrics({'error': context_error,
                                         'loss': loss.item()},
