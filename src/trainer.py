@@ -145,7 +145,7 @@ class Trainer(object):
         encoded = self.model.encoder(batch['bag_of_nouns'])
         logits = self.calc_logits(encoded, batch['candidate_ids'])
         scores = self.model.calc_scores((logits, torch.zeros_like(logits)),
-                                        batch['candidate_mention_sim'])
+                                        batch['candidate_mention_sim'],
                                         batch['prior'])
         loss = self.calc_loss(scores, labels)
         loss.backward()
