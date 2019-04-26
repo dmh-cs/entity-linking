@@ -19,7 +19,7 @@ class JointEncoder(nn.Module):
 class Stacker(nn.Module):
   def __init__(self):
     super().__init__()
-    self.num_features = 2
+    self.num_features = 3
     self.men_linear = nn.Linear(self.num_features, 1)
     self.desc_linear = nn.Linear(self.num_features, 1)
 
