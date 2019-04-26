@@ -17,12 +17,14 @@ def collate_deep_el(batch):
           'embedded_page_content': [sample['embedded_page_content'] for sample in batch],
           'entity_page_mentions': [sample['entity_page_mentions'] for sample in batch],
           'candidate_ids': torch.stack([sample['candidate_ids'] for sample in batch]),
+          'prior': torch.stack([sample['p_prior'] for sample in batch]),
           'candidate_mention_sim': torch.stack([torch.tensor(sample['candidate_mention_sim']) for sample in batch])}
 
 def collate_wiki2vec(batch):
   return {'bag_of_nouns': [sample['bag_of_nouns'] for sample in batch],
           'label': torch.tensor([sample['label'] for sample in batch]),
           'candidate_ids': torch.stack([sample['candidate_ids'] for sample in batch]),
+          'prior': torch.stack([sample['p_prior'] for sample in batch]),
           'candidate_mention_sim': torch.stack([torch.tensor(sample['candidate_mention_sim']) for sample in batch])}
 
 class Trainer(object):
