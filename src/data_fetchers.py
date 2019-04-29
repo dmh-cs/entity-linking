@@ -3,6 +3,7 @@ import random
 import pickle
 import unidecode
 from collections import defaultdict
+import warnings
 
 from dotenv import load_dotenv
 import numpy as np
@@ -136,10 +137,11 @@ def get_candidate_ids(entity_candidates_prior,
 def load_entity_candidate_ids_and_label_lookup(path, train_size):
   with open(path, 'rb') as lookup_file:
     data = pickle.load(lookup_file)
-    assert data['train_size'] == train_size, 'The prior at path ' + path + ' uses train size of ' + \
-      str(data['train_size']) + \
-      '. Please run `create_candidate_and_entity_lookups.py` with a train size of ' +\
-      str(train_size)
+    if data['train_size'] != train_size:
+      warnings.warn('The prior at path ' + path + ' uses train size of ' + \
+                    str(data['train_size']) + \
+                    '. Please run `create_candidate_and_entity_lookups.py` with a train size of ' +\
+                    str(train_size))
     return data['lookups']
 
 def load_page_id_order(path):
