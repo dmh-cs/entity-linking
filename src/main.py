@@ -68,8 +68,7 @@ def main():
                    use_deep_network='--dont_use_deep_network' not in flags,
                    freeze_word_embeddings='--dont_freeze_word_embeddings' not in flags,
                    use_wiki2vec='--use_wiki2vec' in flags)
-  paths = m(lookups=os.getenv("LOOKUPS_PATH"),
-            page_id_order=os.getenv("PAGE_ID_ORDER_PATH"))
+  paths = default_paths
   for arg in args_with_values:
     name = arg['name']
     pair = _.find(args, lambda pair: name in pair[0])
@@ -86,6 +85,8 @@ def main():
       else:
         raise ValueError('`args_with_values` contains unsupported param group ' + arg['for'])
   load_dotenv(dotenv_path=paths.env)
+  paths = paths.set('lookups', os.getenv("LOOKUPS_PATH"))
+  paths = paths.set('page_id_order', os.getenv("PAGE_ID_ORDER_PATH"))
   name_pair = _.find(args, lambda pair: 'name' in pair[0])
   name = name_pair[1] if name_pair else ''
   runner = Runner(device=device,
