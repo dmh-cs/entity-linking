@@ -51,6 +51,7 @@ def main():
                    'no_trans',
                    'cheat',
                    'use_conll',
+                   'use_custom',
                    'use_wiki2vec']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
   flags = [_.head(arg) for arg in args]
@@ -58,6 +59,7 @@ def main():
   run_params = m(load_model='--load_model' in flags,
                  cheat='--cheat' in flags,
                  continue_training='--dont_continue_training' not in flags,
+                 use_custom='--use_custom' in flags,
                  use_conll='--use_conll' in flags)
   model_params = m(use_adaptive_softmax='--use_adaptive_softmax' in flags,
                    use_hardcoded_cutoffs='--dont_use_hardcoded_cutoffs' not in flags,

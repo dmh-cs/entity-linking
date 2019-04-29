@@ -57,6 +57,7 @@ class Runner(object):
     self.adaptive_logits = {'desc': None, 'mention': None}
     self.encoder = None
     self.use_conll = self.run_params.use_conll
+    self.use_custom = self.run_params.use_custom
     self.context_encoder = None
     self.wiki2vec = None
 
@@ -163,6 +164,7 @@ class Runner(object):
   def _get_dataset(self, cursor, is_test, use_fast_sampler=False):
     page_ids = self.page_id_order_test if is_test else self.page_id_order_train
     if self.use_conll:
+      conll_path = 'custom.tsv' if self.use_custom else None
       return CoNLLDataset(cursor,
                           self.lookups.entity_candidates_prior,
                           self.lookups.embedding,
@@ -170,7 +172,9 @@ class Runner(object):
                           self.model_params.num_entities,
                           self.model_params.num_candidates,
                           self.lookups.entity_labels,
-                          use_wiki2vec=self.model_params.use_wiki2vec)
+                          path=conll_path,
+                          use_wiki2vec=self.model_params.use_wiki2vec,
+                          use_custom=self.use_custom)
     else:
       return MentionContextDataset(cursor,
                                    page_ids,
@@ -189,7 +193,7 @@ class Runner(object):
                                    start_from_page_num=self.train_params.start_from_page_num)
 
   def _get_sampler(self, cursor, is_test, limit=None, use_fast_sampler=False):
-    if self.use_conll:
+    if self.use_conll or self.use_custom:
       return BatchSampler(RandomSampler(self._dataset),
                           self.train_params.batch_size,
                           False)
