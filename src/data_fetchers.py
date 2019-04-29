@@ -15,8 +15,8 @@ from progressbar import progressbar
 
 import utils as u
 
-def get_connection():
-  load_dotenv(dotenv_path='.env')
+def get_connection(path):
+  load_dotenv(dotenv_path=path)
   DATABASE_NAME = os.getenv("DBNAME")
   DATABASE_USER = os.getenv("DBUSER")
   DATABASE_PASSWORD = os.getenv("DBPASS")
@@ -157,9 +157,9 @@ def get_num_entities():
   finally:
     db_connection.close()
 
-def get_entity_text():
+def get_entity_text(path):
   try:
-    db_connection = get_connection()
+    db_connection = get_connection(path)
     with db_connection.cursor() as cursor:
       cursor.execute('select id, text from entities')
       return {row['id']: row['text'] for row in cursor.fetchall()}

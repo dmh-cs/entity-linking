@@ -114,7 +114,7 @@ class Runner(object):
   def _get_entity_tokens(self, num_entities):
     mapper = lambda token: self.lookups.token_idx_lookup[token] if token in self.lookups.token_idx_lookup else self.lookups.token_idx_lookup['<UNK>']
     entity_indexed_tokens = {self.lookups.entity_labels[entity_id]: _.map_(parse_for_tokens(text), mapper)
-                             for entity_id, text in get_entity_text().items()
+                             for entity_id, text in get_entity_text(self.paths.env).items()
                              if entity_id in self.lookups.entity_labels}
     entity_indexed_tokens_list = [entity_indexed_tokens[i]
                                   if i in entity_indexed_tokens else [1]
@@ -126,7 +126,7 @@ class Runner(object):
     vecs_by_label = {self.lookups.entity_labels[entity_id]: self.wiki2vec.wiki2vec.get_entity_vector(text)
                      if (self.wiki2vec.wiki2vec.dictionary.get_entity(text) is not None)
                      else torch.randn(self.wiki2vec.dim_len)
-                     for entity_id, text in get_entity_text().items()
+                     for entity_id, text in get_entity_text(self.paths.env).items()
                      if entity_id in self.lookups.entity_labels}
     vecs_in_order = [vecs_by_label[i]
                      if i in vecs_by_label else torch.randn(self.wiki2vec.dim_len)
@@ -300,7 +300,7 @@ class Runner(object):
 
   def run_deep_el(self):
     try:
-      db_connection = get_connection()
+      db_connection = get_connection(self.paths.env)
       with db_connection.cursor() as cursor:
         self.load_caches(cursor)
         pad_vector = self.lookups.embedding(torch.tensor([self.lookups.token_idx_lookup['<PAD>']],
@@ -346,7 +346,7 @@ class Runner(object):
 
   def run_wiki2vec(self):
     try:
-      db_connection = get_connection()
+      db_connection = get_connection(self.paths.env)
       with db_connection.cursor() as cursor:
         self.load_caches(cursor)
         self.wiki2vec = load_wiki2vec()
