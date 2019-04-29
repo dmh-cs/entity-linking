@@ -150,7 +150,7 @@ class MentionContextDataset(Dataset):
     rows = self.cursor.fetchall()
     result = defaultdict(list)
     for row in rows:
-      if row['entity_id'] in self.valid_entity_ids:
+      if (self.min_mentions == 1) or (row['entity_id'] in self.valid_entity_ids):
         result[row['page_id']].append(row)
     return dict(result)
 
