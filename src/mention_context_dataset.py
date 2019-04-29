@@ -191,7 +191,7 @@ class MentionContextDataset(Dataset):
     lookup = {}
     self.cursor.execute('select id, content from pages where id in (' + str(page_ids)[1:-1] + ')')
     for row in self.cursor.fetchall():
-      lookup[row['id']] = row['content'][:self.page_content_lim]
+      lookup[row['id']] = row['content']
     return lookup
 
   def _get_batch_entity_page_mentions_lookup(self, page_ids):
@@ -215,7 +215,7 @@ class MentionContextDataset(Dataset):
       if len(page_content.strip()) > 5:
         lookup[page_id] = embed_page_content(self.embedding,
                                              self.token_idx_lookup,
-                                             page_content)
+                                             page_content[:self.page_content_lim])
     return lookup
 
   def _next_page_id_batch(self):
