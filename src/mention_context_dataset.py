@@ -204,8 +204,7 @@ class MentionContextDataset(Dataset):
       content = ' '.join([mention_info['mention'] for mention_info in page_mention_infos])
       lookup[page_id] = embed_page_content(self.embedding,
                                            self.token_idx_lookup,
-                                           content,
-                                           page_mention_infos)
+                                           content[:self.page_content_lim])
     return lookup
 
   def _get_batch_embedded_page_content_lookup(self, page_ids):
