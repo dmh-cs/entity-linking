@@ -7,6 +7,8 @@ from pyrsistent import m
 import pydash as _
 import torch
 
+from default_params import default_paths
+
 from runner import Runner
 
 args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param', 'type': int},
@@ -66,7 +68,7 @@ def main():
                    use_deep_network='--dont_use_deep_network' not in flags,
                    freeze_word_embeddings='--dont_freeze_word_embeddings' not in flags,
                    use_wiki2vec='--use_wiki2vec' in flags)
-  paths = m()
+  paths = default_paths
   for arg in args_with_values:
     name = arg['name']
     pair = _.find(args, lambda pair: name in pair[0])
