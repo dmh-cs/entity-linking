@@ -97,6 +97,14 @@ if __name__ == "__main__":
   import ipdb
   import traceback
   import sys
+  import signal, os
+
+  def handler(signum, frame):
+    if (runner is not None) and (runner.encoder is not None):
+      torch.save(runner.encoder.state_dict(), './' + runner.experiment.model_name + '_debug')
+    print('saved to ' + './' + runner.experiment.model_name + '_debug')
+
+  signal.signal(signal.SIGUSR2, handler)
 
   try:
     main()
