@@ -56,6 +56,7 @@ class MentionContextDataset(Dataset):
     self.use_wiki2vec = use_wiki2vec
     # if self.use_fast_sampler: assert not self.use_wiki2vec, 'train wiki2vec locally'
     self.prior_approx_mapping = self._get_prior_approx_mapping(self.entity_candidates_prior)
+    self.page_content_lim = 500
     if self.min_mentions > 1:
       query = 'select id from entities where num_mentions >= ' + str(self.min_mentions)
       cursor.execute(query)
@@ -190,7 +191,7 @@ class MentionContextDataset(Dataset):
     lookup = {}
     self.cursor.execute('select id, content from pages where id in (' + str(page_ids)[1:-1] + ')')
     for row in self.cursor.fetchall():
-      lookup[row['id']] = row['content']
+      lookup[row['id']] = row['content'][:self.page_content_lim]
     return lookup
 
   def _get_batch_entity_page_mentions_lookup(self, page_ids):
