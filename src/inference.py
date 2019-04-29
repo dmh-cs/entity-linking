@@ -34,11 +34,9 @@ def predict_deep_el(embedding, token_idx_lookup, p_prior, model, batch, ablation
                                                    batch['embedded_page_content'],
                                                    batch['entity_page_mentions']))
     else:
-      local_context = model.encoder.mention_context_encoder(((left_splits, right_splits),
+      mention_embeds = model.encoder.mention_context_encoder(((left_splits, right_splits),
                                                              batch['embedded_page_content'],
                                                              batch['entity_page_mentions']))
-      mention_embeds = model.encoder.relu(model.projection(torch.cat((local_context,
-                                                                      torch.zeros_like(local_context)), 1)))
     logits = Logits()
     calc_logits = lambda embeds, ids: logits(embeds, entity_embeds(ids))
     men_logits = calc_logits(mention_embeds, batch['candidate_ids'])
