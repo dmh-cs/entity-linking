@@ -35,7 +35,6 @@ runner = None
 def main():
   global runner
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-  load_dotenv(dotenv_path='.env')
   flag_argnames = ['load_model',
                    'use_adaptive_softmax',
                    'use_fast_sampler',
@@ -83,6 +82,7 @@ def main():
         run_params = run_params.set(name, parsed)
       else:
         raise ValueError('`args_with_values` contains unsupported param group ' + arg['for'])
+  load_dotenv(dotenv_path=paths.env)
   name_pair = _.find(args, lambda pair: 'name' in pair[0])
   name = name_pair[1] if name_pair else ''
   runner = Runner(device=device,
