@@ -36,7 +36,10 @@ class MentionContextBatchSampler(Sampler):
     if page_id in self._page_mention_ids:
       return self._page_mention_ids[page_id]
     else:
-      self.cursor.execute(f'select mention_id, entity_id, page_id from entity_mentions_text em join entities e on em.entity_id = e.id where e.num_mentions > {self.min_mentions} and page_id in (' + str(self.page_id_order[page_ctr : page_ctr + 10000])[1:-1] + ')')
+      if self.min_mentions > 1:
+        self.cursor.execute(f'select mention_id, entity_id, page_id from entity_mentions_text em join entities e on em.entity_id = e.id where e.num_mentions > {self.min_mentions} and page_id in (' + str(self.page_id_order[page_ctr : page_ctr + 10000])[1:-1] + ')')
+      else:
+        self.cursor.execute(f'select mention_id, entity_id, page_id from entity_mentions_text em join entities e on em.entity_id = e.id where page_id in (' + str(self.page_id_order[page_ctr : page_ctr + 10000])[1:-1] + ')')
       self._page_mention_ids = defaultdict(list)
       for row in self.cursor.fetchall():
         self._page_mention_ids[row['page_id']].append(row['mention_id'])
