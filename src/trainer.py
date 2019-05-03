@@ -129,7 +129,7 @@ class Trainer(object):
                                              batch['embedded_page_content'],
                                              batch['entity_page_mentions']))
           logits_test = self.calc_logits(encoded_test, batch['candidate_ids'])
-          mention_probas, desc_probas = self.model.calc_scores(logits_test,
+          desc_probas, mention_probas = self.model.calc_scores(logits_test,
                                                                batch['candidate_mention_sim'],
                                                                batch['prior'])
           mention_context_error = self._classification_error(mention_probas, labels)

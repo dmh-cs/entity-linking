@@ -233,7 +233,12 @@ class Runner(object):
       criterion = nn.CrossEntropyLoss()
       desc_loss = criterion(desc_score, labels_for_batch)
       mention_loss = criterion(mention_score, labels_for_batch)
-    return desc_loss + mention_loss
+    loss = 0
+    if 'document_context' in self.model_params.ablation:
+      loss += desc_loss
+    if 'local_context' in self.model_params.ablation:
+      loss += mention_loss
+    return loss
 
   def _get_trainer(self, cursor, model):
     self._trainer = Trainer(device=self.device,
