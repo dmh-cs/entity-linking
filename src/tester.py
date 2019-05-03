@@ -87,7 +87,8 @@ class Tester(object):
                             use_wiki2vec=self.use_wiki2vec)
       missed_idxs = (labels_for_batch != predictions).nonzero().reshape(-1).tolist()
       missed_entity_ids = [self.label_to_entity_id.get(batch['label'][idx]) for idx in missed_idxs]
-      missed_sentences = [sum(' '.join(s) for s in batch['sentence_splits'][idx]) for idx in missed_idxs]
+      missed_sentences = [sum((' '.join(s) for s in batch['sentence_splits'][idx]), '')
+                          for idx in missed_idxs]
       guessed_missed = [self.label_to_entity_id.get(predictions[idx]) for idx in missed_idxs]
       with open('./log', 'a') as fh:
         fh.write(reduce(lambda acc, elem: acc + str(elem) + '|',
