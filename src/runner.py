@@ -164,7 +164,7 @@ class Runner(object):
   def _get_dataset(self, cursor, is_test, use_fast_sampler=False):
     page_ids = self.page_id_order_test if is_test else self.page_id_order_train
     if self.use_conll or self.use_custom:
-      conll_path = 'custom.tsv' if self.use_custom else None
+      conll_path = 'custom.tsv' if self.use_custom else './AIDA-YAGO2-dataset.tsv'
       return CoNLLDataset(cursor,
                           self.lookups.entity_candidates_prior,
                           self.lookups.embedding,

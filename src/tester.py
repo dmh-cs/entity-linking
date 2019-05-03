@@ -1,3 +1,5 @@
+from functools import reduce
+
 from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
@@ -83,6 +85,14 @@ class Tester(object):
                             ablation=self.ablation,
                             entity_embeds=self.model.entity_embeds,
                             use_wiki2vec=self.use_wiki2vec)
+      missed_idxs = (labels_for_batch != predictions).nonzero().reshape(-1).tolist()
+      missed_entity_ids = [self.label_to_entity_id.get(batch['label'][idx]) for idx in missed_idxs]
+      missed_sentences = [sum(s.join(' ') for s in batch['sentence_splits']) for idx in missed_idxs]
+      guessed_missed = [self.label_to_entity_id.get(predictions[idx]) for idx in missed_idxs]
+      with open('./log', 'a') as fh:
+        fh.write(reduce(lambda acc, elem: acc + str(elem) + '|',
+                        zip(missed_entity_ids, missed_sentences, guessed_missed),
+                        ''))
       acc += int((labels_for_batch == predictions).sum())
       batch_size = len(predictions)
       n += batch_size
