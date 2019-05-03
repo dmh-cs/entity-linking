@@ -96,7 +96,8 @@ class MentionContextDataset(Dataset):
     candidates = self._get_candidate_strs(candidate_ids.tolist())
     sample = {'sentence_splits': get_mention_sentence_splits(page_content,
                                                              sentence_spans,
-                                                             mention_info),
+                                                             mention_info,
+                                                             lim=self.page_content_lim),
               'label': label,
               'embedded_page_content': self._embedded_page_content_lookup[mention_info['page_id']],
               'entity_page_mentions': self._entity_page_mentions_lookup[mention_info['page_id']],

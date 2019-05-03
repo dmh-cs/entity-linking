@@ -80,13 +80,17 @@ def _merge_sentences_across_mention(sentence_spans, mention_offset, mention_len)
   span = [span[0], end_offset]
   return span
 
-def get_mention_sentence_splits(page_content, sentence_spans, mention_info):
+def get_mention_sentence_splits(page_content, sentence_spans, mention_info, lim=None):
   mention_len = len(mention_info['mention'])
   sentence_span = _merge_sentences_across_mention(sentence_spans, mention_info['offset'], mention_len)
   sentence = page_content[sentence_span[0] : sentence_span[1]]
   mention_index = sentence.index(mention_info['mention'])
-  return [parse_for_tokens(sentence[:mention_index + mention_len]),
-          parse_for_tokens(sentence[mention_index:])]
+  if lim is not None:
+    return [parse_for_tokens(sentence[:mention_index + mention_len])[-lim // 2:],
+            parse_for_tokens(sentence[mention_index:])[:lim // 2]]
+  else:
+    return [parse_for_tokens(sentence[:mention_index + mention_len]),
+            parse_for_tokens(sentence[mention_index:])]
 
 def get_splits_and_order(packed):
   return packed['embeddings'], packed['order']

@@ -163,7 +163,7 @@ class Runner(object):
 
   def _get_dataset(self, cursor, is_test, use_fast_sampler=False):
     page_ids = self.page_id_order_test if is_test else self.page_id_order_train
-    if self.use_conll:
+    if self.use_conll or self.use_custom:
       conll_path = 'custom.tsv' if self.use_custom else None
       return CoNLLDataset(cursor,
                           self.lookups.entity_candidates_prior,
@@ -173,8 +173,7 @@ class Runner(object):
                           self.model_params.num_candidates,
                           self.lookups.entity_labels,
                           path=conll_path,
-                          use_wiki2vec=self.model_params.use_wiki2vec,
-                          use_custom=self.use_custom)
+                          use_wiki2vec=self.model_params.use_wiki2vec)
     else:
       return MentionContextDataset(cursor,
                                    page_ids,
@@ -287,7 +286,8 @@ class Runner(object):
                   experiment=self.experiment,
                   ablation=self.model_params.ablation,
                   use_adaptive_softmax=self.model_params.use_adaptive_softmax,
-                  use_wiki2vec=self.model_params.use_wiki2vec)
+                  use_wiki2vec=self.model_params.use_wiki2vec,
+                  label_to_entity_id=_.invert(self.lookups.entity_labels))
 
   def _get_adaptive_calc_logits(self):
     def get_calc(context):

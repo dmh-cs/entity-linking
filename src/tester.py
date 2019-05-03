@@ -34,7 +34,8 @@ class Tester(object):
                experiment,
                ablation,
                use_adaptive_softmax,
-               use_wiki2vec=False):
+               use_wiki2vec=False,
+               label_to_entity_id=None):
     self.dataset = dataset
     self.model = model.to(device)
     self.embedding = embedding
@@ -46,6 +47,7 @@ class Tester(object):
     self.logits_and_softmax = logits_and_softmax
     self.use_adaptive_softmax = use_adaptive_softmax
     self.use_wiki2vec = use_wiki2vec
+    self.label_to_entity_id = label_to_entity_id
 
   def _get_labels_for_batch(self, labels, candidate_ids):
     device = labels.device

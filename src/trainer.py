@@ -77,7 +77,14 @@ class Trainer(object):
     return int(((predictions - labels) != 0).sum())
 
   def _get_labels_for_batch(self, labels, candidate_ids):
-    return (torch.unsqueeze(labels, 1) == candidate_ids).nonzero()[:, 1]
+    device = labels.device
+    batch_labels = []
+    for label, row_candidate_ids in zip(labels, candidate_ids):
+      if label not in row_candidate_ids:
+        batch_labels.append(-1)
+      else:
+        batch_labels.append(int((row_candidate_ids == label).nonzero().squeeze()))
+    return torch.tensor(batch_labels, device=device)
 
   def train(self):
     if self.use_wiki2vec:
