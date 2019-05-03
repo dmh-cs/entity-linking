@@ -43,7 +43,8 @@ class Trainer(object):
                adaptive_logits,
                use_adaptive_softmax,
                clip_grad,
-               use_wiki2vec=False):
+               use_wiki2vec=False,
+               use_stacker=True):
     self.device = device
     self.model = model.to(self.device)
     self.get_dataset = get_dataset
@@ -60,6 +61,7 @@ class Trainer(object):
     self.use_adaptive_softmax = use_adaptive_softmax
     self.clip_grad = clip_grad
     self.use_wiki2vec = use_wiki2vec
+    self.use_stacker = use_stacker
 
   def _get_adaptive_logits_params(self):
     if self.adaptive_logits['desc'] is not None:

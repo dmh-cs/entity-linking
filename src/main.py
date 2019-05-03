@@ -51,6 +51,7 @@ def main():
                    'no_trans',
                    'cheat',
                    'use_conll',
+                   'dont_use_stacker',
                    'use_custom',
                    'use_wiki2vec']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
@@ -69,7 +70,8 @@ def main():
                    use_lstm_local='--use_lstm_local' in flags,
                    use_deep_network='--dont_use_deep_network' not in flags,
                    freeze_word_embeddings='--dont_freeze_word_embeddings' not in flags,
-                   use_wiki2vec='--use_wiki2vec' in flags)
+                   use_wiki2vec='--use_wiki2vec' in flags,
+                   use_stacker='--dont_use_stacker' not in flags)
   paths = default_paths
   for arg in args_with_values:
     name = arg['name']

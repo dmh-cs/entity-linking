@@ -37,7 +37,8 @@ class Tester(object):
                ablation,
                use_adaptive_softmax,
                use_wiki2vec=False,
-               label_to_entity_id=None):
+               label_to_entity_id=None,
+               use_stacker=True):
     self.dataset = dataset
     self.model = model.to(device)
     self.embedding = embedding
@@ -50,6 +51,7 @@ class Tester(object):
     self.use_adaptive_softmax = use_adaptive_softmax
     self.use_wiki2vec = use_wiki2vec
     self.label_to_entity_id = label_to_entity_id
+    self.use_stacker = use_stacker
 
   def _get_labels_for_batch(self, labels, candidate_ids):
     device = labels.device
@@ -84,7 +86,8 @@ class Tester(object):
                             batch=batch,
                             ablation=self.ablation,
                             entity_embeds=self.model.entity_embeds,
-                            use_wiki2vec=self.use_wiki2vec)
+                            use_wiki2vec=self.use_wiki2vec,
+                            use_stacker=self.use_stacker)
       missed_idxs = (labels_for_batch != predictions).nonzero().reshape(-1).tolist()
       missed_entity_ids = [self.label_to_entity_id.get(int(batch['label'][idx])) for idx in missed_idxs]
       missed_sentences = [''.join(' '.join(s) for s in batch['sentence_splits'][idx])

@@ -260,7 +260,8 @@ class Runner(object):
                             adaptive_logits=self.adaptive_logits,
                             use_adaptive_softmax=self.model_params.use_adaptive_softmax,
                             clip_grad=self.train_params.clip_grad,
-                            use_wiki2vec=self.model_params.use_wiki2vec)
+                            use_wiki2vec=self.model_params.use_wiki2vec,
+                            use_stacker=self.model_params.use_stacker)
     return self._trainer
 
   def _get_logits_and_softmax(self):
@@ -292,7 +293,8 @@ class Runner(object):
                   ablation=self.model_params.ablation,
                   use_adaptive_softmax=self.model_params.use_adaptive_softmax,
                   use_wiki2vec=self.model_params.use_wiki2vec,
-                  label_to_entity_id=_.invert(self.lookups.entity_labels))
+                  label_to_entity_id=_.invert(self.lookups.entity_labels),
+                  use_stacker=self.model_params.use_stacker)
 
   def _get_adaptive_calc_logits(self):
     def get_calc(context):
