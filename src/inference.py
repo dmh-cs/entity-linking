@@ -8,7 +8,7 @@ def predict(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity
   if use_wiki2vec:
     return predict_wiki2vec(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds)
   else:
-    return predict_deep_el(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds)
+    return predict_deep_el(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds, use_stacker)
 
 def predict_wiki2vec(embedding, token_idx_lookup, p_prior, model, batch, ablation, entity_embeds):
   model.eval()
