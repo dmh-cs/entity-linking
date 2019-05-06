@@ -56,7 +56,8 @@ class JointModel(nn.Module):
                use_deep_network,
                use_lstm_local,
                num_cnn_local_filters,
-               use_cnn_local):
+               use_cnn_local,
+               use_stacker=True):
     super().__init__()
     self.entity_embeds = entity_embeds
     self.desc_encoder = DescriptionEncoder(word_embed_len,
@@ -79,7 +80,10 @@ class JointModel(nn.Module):
     self.mention = adaptive_logits['mention']
     self.word_embedding = word_embedding
     self.encoder = JointEncoder(self.desc_encoder, self.mention_context_encoder)
-    self.calc_scores = Stacker()
+    if use_stacker:
+      self.calc_scores = Stacker()
+    else:
+      self.calc_scores = lambda *args: args[0]
 
 class SimpleJointModel(nn.Module):
   def __init__(self, entity_embeds, encoder):

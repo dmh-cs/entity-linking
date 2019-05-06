@@ -337,7 +337,8 @@ class Runner(object):
                                   self.model_params.use_deep_network,
                                   self.model_params.use_lstm_local,
                                   self.model_params.num_cnn_local_filters,
-                                  self.model_params.use_cnn_local)
+                                  self.model_params.use_cnn_local,
+                                  use_stacker=self.model_params.use_stacker)
         if self.run_params.load_model:
           path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
           self.encoder.load_state_dict(torch.load(path))
