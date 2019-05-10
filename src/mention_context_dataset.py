@@ -224,7 +224,7 @@ class MentionContextDataset(Dataset):
     return lookup
 
   def _get_batch_embedded_page_content_lookup(self, page_ids):
-    lim = self.page_content_lim if 'document_context' in self.ablation else 1
+    lim = self.page_content_lim
     lookup = {}
     for page_id in page_ids:
       page_content = self._page_content_lookup[page_id]
