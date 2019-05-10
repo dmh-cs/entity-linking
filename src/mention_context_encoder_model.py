@@ -29,7 +29,7 @@ class MentionContextEncoder(nn.Module):
                                                      num_cnn_local_filters,
                                                      use_cnn_local)
     self.document_context_encoder = DocumentContextEncoder(document_encoder_lstm_size,
-                                                           word_embed_len,
+                                                           embed_len,
                                                            context_embed_len,
                                                            pad_vector,
                                                            use_deep_network)
