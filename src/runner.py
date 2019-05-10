@@ -24,6 +24,7 @@ from data_transformers import pad_batch_list
 from conll_dataset import CoNLLDataset
 from wiki2vec_context_encoder import ContextEncoder
 from wiki2vec_helpers import load_wiki2vec
+from losses import hinge_loss
 
 from fire_extinguisher import BatchRepeater
 
@@ -215,8 +216,6 @@ class Runner(object):
       desc_embeds, mention_context_embeds = encoded
       if self.model_params.use_adaptive_softmax:
         raise NotImplementedError('No longer supported')
-      elif self.model_params.use_ranking_loss:
-        raise NotImplementedError('No longer supported')
       else:
         logits = Logits()
         desc_logits = logits(desc_embeds,
@@ -230,15 +229,15 @@ class Runner(object):
     if self.model_params.use_adaptive_softmax:
       raise NotImplementedError('No longer supported')
     elif self.model_params.use_ranking_loss:
-      raise NotImplementedError('No longer supported')
+      criterion = hinge_loss
     else:
       criterion = nn.CrossEntropyLoss()
-      desc_loss = criterion(desc_score, labels_for_batch)
-      mention_loss = criterion(mention_score, labels_for_batch)
     loss = 0
     if 'document_context' in self.model_params.ablation:
+      desc_loss = criterion(desc_score, labels_for_batch)
       loss += desc_loss
     if 'local_context' in self.model_params.ablation:
+      mention_loss = criterion(mention_score, labels_for_batch)
       loss += mention_loss
     return loss
 
