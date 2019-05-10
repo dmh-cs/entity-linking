@@ -263,7 +263,8 @@ class Runner(object):
                             use_adaptive_softmax=self.model_params.use_adaptive_softmax,
                             clip_grad=self.train_params.clip_grad,
                             use_wiki2vec=self.model_params.use_wiki2vec,
-                            use_stacker=self.model_params.use_stacker)
+                            use_stacker=self.model_params.use_stacker,
+                            dont_clip_grad=self.train_params.dont_clip_grad)
     return self._trainer
 
   def _get_logits_and_softmax(self):

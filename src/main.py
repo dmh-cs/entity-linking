@@ -48,6 +48,7 @@ def main():
                    'use_lstm_local',
                    'dont_freeze_word_embeddings',
                    'dont_continue_training',
+                   'dont_clip_grad',
                    'no_trans',
                    'cheat',
                    'use_conll',
@@ -56,7 +57,8 @@ def main():
                    'use_wiki2vec']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
   flags = [_.head(arg) for arg in args]
-  train_params = m(use_fast_sampler='--use_fast_sampler' in flags)
+  train_params = m(dont_clip_grad='--dont_clip_grad' in flags,
+                   use_fast_sampler='--use_fast_sampler' in flags)
   run_params = m(load_model='--load_model' in flags,
                  cheat='--cheat' in flags,
                  continue_training='--dont_continue_training' not in flags,
