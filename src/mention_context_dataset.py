@@ -104,7 +104,7 @@ class MentionContextDataset(Dataset):
                                                              lim=self.page_content_lim),
               'label': label,
               'embedded_page_content': self._embedded_page_content_lookup[mention_info['page_id']],
-              'entity_page_mentions': self._entity_page_mentions_lookup[mention_info['page_id']],
+              'entity_page_mentions': self.entity_embeds(self._entity_page_mentions_lookup[mention_info['page_id']]),
               'p_prior': p_prior,
               'candidate_ids': candidate_ids,
               'candidate_mention_sim': torch.tensor([Levenshtein.ratio(mention_info['mention'], candidate)
