@@ -92,10 +92,7 @@ class JointModel(nn.Module):
     self.mention = adaptive_logits['mention']
     self.word_embedding = word_embedding
     self.encoder = JointEncoder(self.desc_encoder, self.mention_context_encoder)
-    if use_stacker:
-      self.calc_scores = Stacker()
-    else:
-      self.calc_scores = lambda *args: args[0]
+    self.calc_scores = Stacker()
 
 class SimpleJointModel(nn.Module):
   def __init__(self, entity_embeds, encoder):

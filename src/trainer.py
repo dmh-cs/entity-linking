@@ -116,9 +116,14 @@ class Trainer(object):
                                       batch['embedded_page_content'],
                                       batch['entity_page_mentions']))
         logits = self.calc_logits(encoded, batch['candidate_ids'])
-        scores = self.model.calc_scores(logits,
-                                        batch['candidate_mention_sim'],
-                                        batch['prior'])
+        if self.use_stacker:
+          scores = self.model.calc_scores(logits,
+                                          batch['candidate_mention_sim'],
+                                          batch['prior'])
+        else:
+          scores = logits
+        scores = [scores[(labels != -1).nonzero().reshape(-1)] for scores in scores]
+        labels = labels[(labels != -1).nonzero().reshape(-1)]
         loss = self.calc_loss(scores, labels)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(itertools.chain(self.model.parameters(),
@@ -131,15 +136,19 @@ class Trainer(object):
                                              batch['embedded_page_content'],
                                              batch['entity_page_mentions']))
           logits_test = self.calc_logits(encoded_test, batch['candidate_ids'])
-          desc_probas, mention_probas = self.model.calc_scores(logits_test,
-                                                               batch['candidate_mention_sim'],
-                                                               batch['prior'])
+          if self.use_stacker:
+            desc_probas, mention_probas = self.model.calc_scores(logits_test,
+                                                                 batch['candidate_mention_sim'],
+                                                                 batch['prior'])
+          else:
+            desc_probas, mention_probas = logits_test
           mention_context_error = self._classification_error(mention_probas, labels)
           document_context_error = self._classification_error(desc_probas, labels)
         self.experiment.record_metrics({'mention_context_error': mention_context_error,
                                         'document_context_error': document_context_error,
                                         'loss': loss.item()},
                                        batch_num=batch_num)
+      torch.save(self.model.state_dict(), './' + self.experiment.model_name + '_epoch_' + str(epoch_num))
 
   def train_wiki2vec(self):
     for epoch_num in range(self.num_epochs):
