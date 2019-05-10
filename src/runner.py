@@ -184,12 +184,14 @@ class Runner(object):
                                    self.train_params.batch_size,
                                    self.model_params.num_entities,
                                    self.model_params.num_candidates,
+                                   self.entity_embeds,
                                    cheat=self.run_params.cheat,
                                    buffer_scale=self.run_params.buffer_scale,
                                    min_mentions=self.train_params.min_mentions,
                                    use_fast_sampler=use_fast_sampler,
                                    use_wiki2vec=self.model_params.use_wiki2vec,
-                                   start_from_page_num=self.train_params.start_from_page_num)
+                                   start_from_page_num=self.train_params.start_from_page_num,
+                                   ablation=self.model_params.ablation)
 
   def _get_sampler(self, cursor, is_test, limit=None, use_fast_sampler=False):
     if self.use_conll or self.use_custom:
@@ -338,6 +340,7 @@ class Runner(object):
                                   self.model_params.use_lstm_local,
                                   self.model_params.num_cnn_local_filters,
                                   self.model_params.use_cnn_local,
+                                  self.model_params.ablation,
                                   use_stacker=self.model_params.use_stacker)
         if self.run_params.load_model:
           path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path

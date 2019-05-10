@@ -24,12 +24,14 @@ class MentionContextDataset(Dataset):
                batch_size,
                num_entities,
                num_candidates,
+               entity_embeds,
                cheat=False,
                buffer_scale=1,
                min_mentions=1,
                use_fast_sampler=False,
                use_wiki2vec=False,
-               start_from_page_num=0):
+               start_from_page_num=0,
+               ablation=['local_context', 'document_context', 'prior']):
     self.page_id_order = page_id_order
     self.entity_candidates_prior = entity_candidates_prior
     self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
@@ -61,6 +63,8 @@ class MentionContextDataset(Dataset):
       query = 'select id from entities where num_mentions >= ' + str(self.min_mentions)
       cursor.execute(query)
       self.valid_entity_ids = set(row['id'] for row in cursor.fetchall())
+    self.ablation = ablation
+    self.entity_embeds = entity_embeds
 
   def _get_prior_approx_mapping(self, entity_candidates_prior):
     approx_mapping = defaultdict(list)
@@ -202,20 +206,32 @@ class MentionContextDataset(Dataset):
       page_mention_infos_lookup[mention_info['page_id']].append(mention_info)
     for page_id in page_ids:
       page_mention_infos = page_mention_infos_lookup[page_id]
-      content = ' '.join([mention_info['mention'] for mention_info in page_mention_infos])
-      lookup[page_id] = embed_page_content(self.embedding,
-                                           self.token_idx_lookup,
-                                           content[:self.page_content_lim])
+      entity_ids_for_page = []
+      for mention_info in page_mention_infos:
+        mention = mention_info['mention']
+        if self.entity_candidates_prior.get(mention) is None:
+          approx_mentions = self.prior_approx_mapping.get(unidecode.unidecode(mention).lower(), [])
+          candidate_ids = list(set(sum([list(self.entity_candidates_prior.get(approx_mention, {}).keys())
+                              for approx_mention in approx_mentions], [])))
+        else:
+          candidate_ids = list(self.entity_candidates_prior[mention].keys())
+        prior = get_p_prior(self.entity_candidates_prior, self.prior_approx_mapping, mention_info['mention'], torch.tensor(candidate_ids))
+        if len(prior) > 0:
+          most_common_idx = int(torch.argmax(prior))
+          entity_ids_for_page.append(candidate_ids[most_common_idx])
+      lookup[page_id] = torch.tensor(entity_ids_for_page,
+                                     device=self.entity_embeds.weight.device)
     return lookup
 
   def _get_batch_embedded_page_content_lookup(self, page_ids):
+    lim = self.page_content_lim if 'document_context' in self.ablation else 1
     lookup = {}
     for page_id in page_ids:
       page_content = self._page_content_lookup[page_id]
       if len(page_content.strip()) > 5:
         lookup[page_id] = embed_page_content(self.embedding,
                                              self.token_idx_lookup,
-                                             page_content[:self.page_content_lim])
+                                             page_content[:lim])
     return lookup
 
   def _next_page_id_batch(self):

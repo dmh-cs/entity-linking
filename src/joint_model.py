@@ -40,6 +40,14 @@ class Stacker(nn.Module):
                           self.men_linear_2)
     return desc_lin_result.reshape(*logits[1].shape), men_lin_result.reshape(*logits[0].shape)
 
+class Junk(nn.Module):
+  def __init__(self, target_len):
+    super().__init__()
+    self.target_len = target_len
+
+  def forward(self, x):
+    return torch.zeros(len(x), self.target_len, device=x[0].device)
+
 class JointModel(nn.Module):
   def __init__(self,
                embed_len,
@@ -57,12 +65,16 @@ class JointModel(nn.Module):
                use_lstm_local,
                num_cnn_local_filters,
                use_cnn_local,
+               ablation,
                use_stacker=True):
     super().__init__()
     self.entity_embeds = entity_embeds
-    self.desc_encoder = DescriptionEncoder(word_embed_len,
-                                           entity_embeds,
-                                           pad_vector)
+    if 'document_context' in ablation:
+      self.desc_encoder = DescriptionEncoder(word_embed_len,
+                                             entity_embeds,
+                                             pad_vector)
+    else:
+      self.desc_encoder = Junk(embed_len)
     self.mention_context_encoder = MentionContextEncoder(embed_len,
                                                          context_embed_len,
                                                          word_embed_len,
