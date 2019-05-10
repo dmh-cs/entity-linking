@@ -26,7 +26,9 @@ class MentionContextBatchSampler(Sampler):
 
   def __iter__(self):
     while self.page_ctr < len(self.page_id_order) or not _.is_empty(self.ids_from_last_page):
-      if self.use_fast_sampler: yield [None] * self.batch_size
+      if self.use_fast_sampler:
+        yield [None] * self.batch_size
+        continue
       if (self.limit is not None) and (self.num_mentions_seen >= self.limit): return
       batch = self._get_next_batch()
       yield batch

@@ -104,6 +104,8 @@ class Trainer(object):
                               batch_sampler=self.get_batch_sampler(),
                               collate_fn=collate_deep_el)
       for batch_num, batch in enumerate(dataloader):
+        if self._dataset.use_fast_sampler:
+          dataloader.batch_sampler.page_ctr = dataloader.dataset.page_ctr
         self.model.train()
         self.optimizer.zero_grad()
         batch = tensors_to_device(batch, self.device)
