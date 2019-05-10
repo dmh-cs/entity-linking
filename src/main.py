@@ -78,7 +78,7 @@ def main():
   paths = default_paths
   for arg in args_with_values:
     name = arg['name']
-    pair = _.find(args, lambda pair: name in pair[0])
+    pair = _.find(args, lambda pair: name == pair[0][2:])
     if pair:
       parsed = arg['type'](pair[1])
       if arg['for'] == 'path':
