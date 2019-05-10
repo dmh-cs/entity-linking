@@ -16,6 +16,7 @@ args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param
                      {'name': 'dropout_drop_prob'          , 'for': 'train_param', 'type': float},
                      {'name': 'train_size'                 , 'for': 'train_param', 'type': float},
                      {'name': 'clip_grad'                  , 'for': 'train_param', 'type': float},
+                     {'name': 'margin'                     , 'for': 'train_param', 'type': float},
                      {'name': 'num_epochs'                 , 'for': 'train_param', 'type': int},
                      {'name': 'min_mentions'               , 'for': 'train_param', 'type': int},
                      {'name': 'start_from_page_num'        , 'for': 'train_param', 'type': int},

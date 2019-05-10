@@ -229,7 +229,9 @@ class Runner(object):
     if self.model_params.use_adaptive_softmax:
       raise NotImplementedError('No longer supported')
     elif self.model_params.use_ranking_loss:
-      criterion = hinge_loss
+      criterion = lambda scores, labels_for_batch: hinge_loss(scores,
+                                                              labels_for_batch,
+                                                              self.train_params.margin)
     else:
       criterion = nn.CrossEntropyLoss()
     loss = 0
