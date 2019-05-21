@@ -1,5 +1,5 @@
 import Levenshtein
-from collections import defaultdict
+from collections import defaultdict, Counter
 import unidecode
 
 from torch.utils.data import Dataset
@@ -7,9 +7,9 @@ import torch
 
 import pydash as _
 
-from data_transformers import get_mention_sentence_splits, embed_page_content, get_bag_of_nouns, tokens_to_embeddings
+from data_transformers import get_mention_sentence_splits, embed_page_content, get_bag_of_nouns, tokens_to_embeddings, get_mention_sentence
 from data_fetchers import get_candidate_ids, get_p_prior, get_candidate_strs
-from parsers import parse_for_sentence_spans
+from parsers import parse_for_sentence_spans, parse_text_for_tokens
 import utils as u
 
 
@@ -30,6 +30,7 @@ class MentionContextDataset(Dataset):
                min_mentions=1,
                use_fast_sampler=False,
                use_wiki2vec=False,
+               use_sum_encoder=False,
                start_from_page_num=0,
                ablation=['local_context', 'document_context', 'prior']):
     self.page_id_order = page_id_order
@@ -45,6 +46,7 @@ class MentionContextDataset(Dataset):
     self._sentence_spans_lookup = {}
     self._page_content_lookup = {}
     self._embedded_page_content_lookup = {}
+    self._page_token_cnts_lookup = {}
     self._entity_page_mentions_lookup = {}
     self._mentions_per_page_ctr = {}
     self._mention_infos = {}
@@ -56,6 +58,7 @@ class MentionContextDataset(Dataset):
     self.min_mentions = min_mentions
     self.use_fast_sampler = use_fast_sampler
     self.use_wiki2vec = use_wiki2vec
+    self.use_sum_encoder = use_sum_encoder
     # if self.use_fast_sampler: assert not self.use_wiki2vec, 'train wiki2vec locally'
     self.prior_approx_mapping = self._get_prior_approx_mapping(self.entity_candidates_prior)
     self.page_content_lim = 5000
@@ -117,6 +120,36 @@ class MentionContextDataset(Dataset):
       self._entity_page_mentions_lookup.pop(mention_info['page_id'])
     return sample
 
+  def _sum_encoder_getitem(self, idx):
+    if self.use_fast_sampler:
+      if len(self._mention_infos) == 0: self._next_batch()
+      idx = next(iter(self._mention_infos.keys()))
+    if idx not in self._mention_infos:
+      self._next_batch()
+    mention_info = self._mention_infos.pop(idx)
+    sentence_spans = self._sentence_spans_lookup[mention_info['page_id']]
+    page_content = self._page_content_lookup[mention_info['page_id']]
+    label = self.entity_label_lookup[mention_info['entity_id']]
+    candidate_ids = self._get_candidate_ids(mention_info['mention'], label)
+    p_prior = get_p_prior(self.entity_candidates_prior, self.prior_approx_mapping, mention_info['mention'], candidate_ids)
+    candidates = self._get_candidate_strs(candidate_ids.tolist())
+    sample = {'mention_sentence': get_mention_sentence(page_content,
+                                                       sentence_spans,
+                                                       mention_info,
+                                                       lim=self.page_content_lim),
+              'label': label,
+              'page_token_cnts': self._page_token_cnts_lookup[mention_info['page_id']],
+              'p_prior': p_prior,
+              'candidate_ids': candidate_ids,
+              'candidate_mention_sim': torch.tensor([Levenshtein.ratio(mention_info['mention'], candidate)
+                                                     for candidate in candidates])}
+    self._mentions_per_page_ctr[mention_info['page_id']] -= 1
+    if self._mentions_per_page_ctr[mention_info['page_id']] == 0:
+      self._sentence_spans_lookup.pop(mention_info['page_id'])
+      self._page_content_lookup.pop(mention_info['page_id'])
+      self._page_token_cnts_lookup.pop(mention_info['page_id'])
+    return sample
+
   def _wiki2vec_getitem(self, idx):
     if self.use_fast_sampler:
       if len(self._mention_infos) == 0: self._next_batch()
@@ -143,6 +176,8 @@ class MentionContextDataset(Dataset):
   def __getitem__(self, idx):
     if self.use_wiki2vec:
       return self._wiki2vec_getitem(idx)
+    elif self.use_sum_encoder:
+      return self._sum_encoder_getitem(idx)
     else:
       return self._getitem(idx)
 
@@ -234,6 +269,16 @@ class MentionContextDataset(Dataset):
                                              page_content[:lim])
     return lookup
 
+  def _get_batch_page_token_cnts_lookup(self, page_ids):
+    lim = self.page_content_lim
+    lookup = {}
+    for page_id in page_ids:
+      page_content = self._page_content_lookup[page_id]
+      if len(page_content.strip()) > 5:
+        lookup[page_id] = dict(Counter(u.to_idx(self.token_idx_lookup, token)
+                                       for token in parse_text_for_tokens(page_content[:lim])))
+    return lookup
+
   def _next_page_id_batch(self):
     num_mentions_in_batch = 0
     page_ids = []
@@ -257,7 +302,11 @@ class MentionContextDataset(Dataset):
     closeby_page_ids = self._next_page_id_batch()
     page_content = self._get_batch_page_content_lookup(closeby_page_ids)
     self._mention_infos.update(self._get_batch_mention_infos(closeby_page_ids))
-    if not self.use_wiki2vec:
+    if self.use_sum_encoder:
+      self._page_content_lookup.update(page_content)
+      self._sentence_spans_lookup.update(self._to_sentence_spans_lookup(page_content))
+      self._page_token_cnts_lookup.update(self._get_batch_page_token_cnts_lookup(closeby_page_ids))
+    elif not self.use_wiki2vec:
       self._page_content_lookup.update(page_content)
       self._sentence_spans_lookup.update(self._to_sentence_spans_lookup(page_content))
       self._entity_page_mentions_lookup.update(self._get_batch_entity_page_mentions_lookup(closeby_page_ids))

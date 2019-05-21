@@ -17,6 +17,14 @@ def collate_deep_el(batch):
           'p_prior': torch.stack([sample['p_prior'] for sample in batch]),
           'candidate_mention_sim': torch.stack([torch.tensor(sample['candidate_mention_sim']) for sample in batch])}
 
+def collate_sum_encoder(batch):
+  return {'mention_sentence': [sample['mention_sentence'] for sample in batch],
+          'label': torch.tensor([sample['label'] for sample in batch]),
+          'page_token_cnts': [sample['page_token_cnts'] for sample in batch],
+          'candidate_ids': torch.stack([sample['candidate_ids'] for sample in batch]),
+          'prior': torch.stack([sample['p_prior'] for sample in batch]),
+          'candidate_mention_sim': torch.stack([torch.tensor(sample['candidate_mention_sim']) for sample in batch])}
+
 def collate_wiki2vec(batch):
   return {'bag_of_nouns': [sample['bag_of_nouns'] for sample in batch],
           'label': torch.tensor([sample['label'] for sample in batch]),
@@ -37,6 +45,7 @@ class Tester(object):
                ablation,
                use_adaptive_softmax,
                use_wiki2vec=False,
+               use_sum_encoder=False,
                label_to_entity_id=None,
                use_stacker=True):
     self.dataset = dataset
@@ -50,6 +59,7 @@ class Tester(object):
     self.logits_and_softmax = logits_and_softmax
     self.use_adaptive_softmax = use_adaptive_softmax
     self.use_wiki2vec = use_wiki2vec
+    self.use_sum_encoder = use_sum_encoder
     self.label_to_entity_id = label_to_entity_id
     self.use_stacker = use_stacker
 
@@ -66,6 +76,8 @@ class Tester(object):
   def test(self):
     if self.use_wiki2vec:
       self.test_wiki2vec()
+    elif self.use_sum_encoder:
+      self.test_sum_encoder()
     else:
       self.test_deep_el()
 
@@ -91,6 +103,44 @@ class Tester(object):
       missed_idxs = (labels_for_batch != predictions).nonzero().reshape(-1).tolist()
       missed_entity_ids = [self.label_to_entity_id.get(int(batch['label'][idx])) for idx in missed_idxs]
       missed_sentences = [''.join(' '.join(s) for s in batch['sentence_splits'][idx])
+                          for idx in missed_idxs]
+      guessed_missed = [self.label_to_entity_id.get(int(batch['candidate_ids'][idx][predictions[idx]]))
+                        for idx in missed_idxs]
+      with open('./log', 'a') as fh:
+        fh.write(reduce(lambda acc, elem: acc + str(elem) + '|',
+                        zip(missed_entity_ids, missed_sentences, guessed_missed),
+                        ''))
+      acc += int((labels_for_batch == predictions).sum())
+      batch_size = len(predictions)
+      n += batch_size
+      self.experiment.record_metrics({'accuracy': acc / n,
+                                      'TP': acc,
+                                      'num_samples': n})
+    return acc, n
+
+  def test_sum_encoder(self):
+    acc = 0
+    n = 0
+    dataloader = DataLoader(dataset=self.dataset,
+                            batch_sampler=self.batch_sampler,
+                            collate_fn=collate_sum_encoder)
+    for batch_num, batch in enumerate(dataloader):
+      batch = u.tensors_to_device(batch, self.device)
+      labels_for_batch = self._get_labels_for_batch(batch['label'],
+                                                    batch['candidate_ids'])
+      predictions = predict(embedding=self.embedding,
+                            token_idx_lookup=self.token_idx_lookup,
+                            p_prior=0 if self.use_adaptive_softmax else batch['p_prior'],
+                            model=self.model,
+                            batch=batch,
+                            ablation=self.ablation,
+                            entity_embeds=self.model.entity_embeds,
+                            use_wiki2vec=self.use_wiki2vec,
+                            use_sum_encoder=self.use_sum_encoder,
+                            use_stacker=self.use_stacker)
+      missed_idxs = (labels_for_batch != predictions).nonzero().reshape(-1).tolist()
+      missed_entity_ids = [self.label_to_entity_id.get(int(batch['label'][idx])) for idx in missed_idxs]
+      missed_sentences = [''.join(' '.join(s) for s in batch['mention_sentence'][idx])
                           for idx in missed_idxs]
       guessed_missed = [self.label_to_entity_id.get(int(batch['candidate_ids'][idx][predictions[idx]]))
                         for idx in missed_idxs]

@@ -2,6 +2,14 @@ import torch
 
 import pydash as _
 
+def to_idx(token_idx_lookup, token):
+  if token in token_idx_lookup:
+    return token_idx_lookup[token]
+  elif token.lower() in token_idx_lookup:
+    return token_idx_lookup[token.lower()]
+  else:
+    return token_idx_lookup['<UNK>']
+
 def build_cursor_generator(cursor, buff_len=1000):
   while True:
     results = cursor.fetchmany(buff_len)

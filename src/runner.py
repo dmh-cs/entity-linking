@@ -29,6 +29,7 @@ from losses import hinge_loss
 from entity_sum_encoder import EntitySumEncoder
 from parsers import parse_text_for_tokens
 from sum_encoder_model import MentionEncoderModel
+from utils import to_idx
 
 from fire_extinguisher import BatchRepeater
 
@@ -166,14 +167,7 @@ class Runner(object):
       for row in cursor.fetchmany(1000):
         if row is None: return entity_desc_bow
         tokens = parse_text_for_tokens(row['text'])
-        text_idxs = []
-        for token in tokens:
-          if token in token_idx_lookup:
-            text_idxs.append(token_idx_lookup[token])
-          elif token.lower() in token_idx_lookup:
-            text_idxs.append(token_idx_lookup[token.lower()])
-          else:
-            text_idxs.append(token_idx_lookup['<UNK>'])
+        text_idxs = [to_idx(token_idx_lookup, token) for token in tokens]
         entity_desc_bow[row['entity_id']] = dict(Counter(tokens))
 
   def init_entity_embeds_sum_encoder(self, cursor):
@@ -388,6 +382,34 @@ class Runner(object):
     finally:
       db_connection.close()
 
+  def run_sum_encoder(self):
+    try:
+      db_connection = get_connection(self.paths.env)
+      with db_connection.cursor() as cursor:
+        self.load_caches(cursor)
+        pad_vector = self.lookups.embedding(torch.tensor([self.lookups.token_idx_lookup['<PAD>']],
+                                                         device=self.lookups.embedding.weight.device)).squeeze()
+        self.init_entity_embeds_sum_encoder(cursor)
+        self.context_encoder = MentionEncoderModel(self.lookups.embedding,
+                                                   (1 - self.model_params.dropout_drop_prob))
+        self.encoder = SimpleJointModel(self.entity_embeds, self.context_encoder)
+        if self.run_params.load_model:
+          path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
+          self.encoder.load_state_dict(torch.load(path))
+        if self.run_params.continue_training:
+          fields = ['error', 'loss']
+          with self.experiment.train(fields):
+            self.log.status('Training')
+            trainer = self._get_trainer(cursor, self.encoder)
+            trainer.train()
+            torch.save(self.encoder.state_dict(), './' + self.experiment.model_name)
+        with self.experiment.test(['accuracy', 'TP', 'num_samples']):
+          self.log.status('Testing')
+          tester = self._get_tester(cursor, self.encoder)
+          tester.test()
+    finally:
+      db_connection.close()
+
   def run_wiki2vec(self):
     try:
       db_connection = get_connection(self.paths.env)
@@ -414,5 +436,9 @@ class Runner(object):
       db_connection.close()
 
   def run(self):
-    if self.model_params.use_wiki2vec: self.run_wiki2vec()
-    else: self.run_deep_el()
+    if self.model_params.use_wiki2vec:
+      self.run_wiki2vec()
+    elif self.model_params.use_sum_encoder:
+      self.run_sum_encoder()
+    else:
+      self.run_deep_el()

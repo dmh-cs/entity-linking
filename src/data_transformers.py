@@ -92,6 +92,11 @@ def get_mention_sentence_splits(page_content, sentence_spans, mention_info, lim=
     return [parse_for_tokens(sentence[:mention_index + mention_len]),
             parse_for_tokens(sentence[mention_index:])]
 
+def get_mention_sentence(page_content, sentence_spans, mention_info, lim=None):
+  mention_len = len(mention_info['mention'])
+  sentence_span = _merge_sentences_across_mention(sentence_spans, mention_info['offset'], mention_len)
+  return parse_for_tokens(page_content[sentence_span[0] : sentence_span[1]])[:lim]
+
 def get_splits_and_order(packed):
   return packed['embeddings'], packed['order']
 
