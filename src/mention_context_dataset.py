@@ -58,7 +58,7 @@ class MentionContextDataset(Dataset):
     self.use_wiki2vec = use_wiki2vec
     # if self.use_fast_sampler: assert not self.use_wiki2vec, 'train wiki2vec locally'
     self.prior_approx_mapping = self._get_prior_approx_mapping(self.entity_candidates_prior)
-    self.page_content_lim = 500
+    self.page_content_lim = 5000
     if self.min_mentions > 1:
       query = 'select id from entities where num_mentions >= ' + str(self.min_mentions)
       cursor.execute(query)

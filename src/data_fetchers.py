@@ -27,7 +27,7 @@ def get_connection(path):
                                db=DATABASE_NAME,
                                charset='utf8mb4',
                                use_unicode=True,
-                               cursorclass=pymysql.cursors.DictCursor)
+                               cursorclass=pymysql.cursors.SSDictCursor)
   return connection
 
 def get_cursor(db_connection):

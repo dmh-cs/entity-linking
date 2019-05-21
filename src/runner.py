@@ -1,6 +1,6 @@
 from typing import Optional
 import math
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 from experiment import Experiment
 from pyrsistent import m, ny
@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from torch.nn.modules.adaptive import AdaptiveLogSoftmaxWithLoss
 from torch.utils.data.sampler import BatchSampler, RandomSampler
+from pymysql.cursors import Cursor
 
 from data_fetchers import get_connection, get_embedding_dict, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup, get_entity_text
 from default_params import default_train_params, default_model_params, default_run_params, default_paths
@@ -25,6 +26,8 @@ from conll_dataset import CoNLLDataset
 from wiki2vec_context_encoder import ContextEncoder
 from wiki2vec_helpers import load_wiki2vec
 from losses import hinge_loss
+from entity_sum_encoder import EntitySumEncoder
+from parsers import parse_text_for_tokens
 
 from fire_extinguisher import BatchRepeater
 
@@ -154,6 +157,27 @@ class Runner(object):
     self.entity_embeds = nn.Embedding(self.model_params.num_entities,
                                       self.model_params.embed_len,
                                       _weight=entity_embed_weights).to(self.device)
+
+  def _get_token_ctr_by_entity_id(self, cursor: Cursor, token_idx_lookup):
+    cursor.excute('select e.id as entity_id, left(p.content, 1500) as text from entities e join pages p on e.text = p.title')
+    entity_desc_bow = {}
+    while True:
+      for row in cursor.fetchmany(1000):
+        if row is None: return entity_desc_bow
+        tokens = parse_text_for_tokens(row['text'])
+        text_idxs = []
+        for token in tokens:
+          if token in token_idx_lookup:
+            text_idxs.append(token_idx_lookup[token])
+          elif token.lower() in token_idx_lookup:
+            text_idxs.append(token_idx_lookup[token.lower()])
+          else:
+            text_idxs.append(token_idx_lookup['<UNK>'])
+        entity_desc_bow[row['entity_id']] = dict(Counter(tokens))
+
+  def init_entity_embeds_sum_encoder(self, cursor):
+    token_ctr_by_entity_id = self._get_token_ctr_by_entity_id(cursor, self.lookups.token_idx_lookup)
+    self.entity_embeds = EntitySumEncoder(self.lookups.embedding, token_ctr_by_entity_id)
 
   def init_entity_embeds_wiki2vec(self):
     entity_wikivecs = self._get_entity_wikivecs(self.model_params.num_entities)
