@@ -47,6 +47,7 @@ def main():
                    'dont_use_deep_network',
                    'use_cnn_local',
                    'use_lstm_local',
+                   'desc_is_avg',
                    'dont_freeze_word_embeddings',
                    'dont_continue_training',
                    'dont_clip_grad',
@@ -55,7 +56,8 @@ def main():
                    'use_conll',
                    'dont_use_stacker',
                    'use_custom',
-                   'use_wiki2vec']
+                   'use_wiki2vec',
+                   'use_sum_encoder']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
   flags = [_.head(arg) for arg in args]
   train_params = m(dont_clip_grad='--dont_clip_grad' in flags,
@@ -74,7 +76,9 @@ def main():
                    use_deep_network='--dont_use_deep_network' not in flags,
                    freeze_word_embeddings='--dont_freeze_word_embeddings' not in flags,
                    use_wiki2vec='--use_wiki2vec' in flags,
-                   use_stacker='--dont_use_stacker' not in flags)
+                   use_sum_encoder='--use_sum_encoder' in flags,
+                   use_stacker='--dont_use_stacker' not in flags,
+                   desc_is_avg='--desc_is_avg' in flags)
   paths = default_paths
   for arg in args_with_values:
     name = arg['name']

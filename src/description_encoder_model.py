@@ -7,7 +7,7 @@ from data_transformers import pad_batch
 
 
 class DescriptionEncoder(nn.Module):
-  def __init__(self, word_embed_len, entity_embeds, pad_vector):
+  def __init__(self, word_embed_len, entity_embeds, pad_vector, desc_is_avg=False):
     super(DescriptionEncoder, self).__init__()
     self.pad_vector = pad_vector
     self.kernel_size = 5
@@ -17,17 +17,21 @@ class DescriptionEncoder(nn.Module):
     self.relu = nn.ReLU()
     self.dropout = nn.Dropout(p=self.dropout_drop_prob)
     self.global_avg_pooling = nn.AdaptiveAvgPool1d(1)
+    self.desc_is_avg = desc_is_avg
 
   def forward(self, embedded_page_contents):
-    desc_embeds = pad_batch(self.pad_vector,
-                            [embeds[:100] for embeds in embedded_page_contents],
-                            min_len=100)
-    encoded = pipe(desc_embeds,
-                   lambda embed: torch.transpose(embed, 1, 2),
-                   self.conv,
-                   self.relu,
-                   self.dropout,
-                   self.global_avg_pooling,
-                   lambda embed: torch.transpose(embed, 1, 2),
-                   torch.squeeze)
-    return encoded / torch.norm(encoded, 2, 1).unsqueeze(1)
+    if self.desc_is_avg:
+      desc_embeds = pad_batch(self.pad_vector,
+                              [embeds[:100] for embeds in embedded_page_contents],
+                              min_len=100)
+      encoded = pipe(desc_embeds,
+                     lambda embed: torch.transpose(embed, 1, 2),
+                     self.conv,
+                     self.relu,
+                     self.dropout,
+                     self.global_avg_pooling,
+                     lambda embed: torch.transpose(embed, 1, 2),
+                     torch.squeeze)
+      return encoded / torch.norm(encoded, 2, 1).unsqueeze(1)
+    else:
+      return torch.stack([torch.sum(page, 0) / len(page) for page in embedded_page_contents])

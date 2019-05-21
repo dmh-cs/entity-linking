@@ -66,13 +66,15 @@ class JointModel(nn.Module):
                num_cnn_local_filters,
                use_cnn_local,
                ablation,
-               use_stacker=True):
+               use_stacker=True,
+               desc_is_avg=False):
     super().__init__()
     self.entity_embeds = entity_embeds
     if 'document_context' in ablation:
       self.desc_encoder = DescriptionEncoder(word_embed_len,
                                              entity_embeds,
-                                             pad_vector)
+                                             pad_vector,
+                                             desc_is_avg=desc_is_avg)
     else:
       self.desc_encoder = Junk(embed_len)
     self.mention_context_encoder = MentionContextEncoder(embed_len,

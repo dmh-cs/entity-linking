@@ -28,6 +28,7 @@ from wiki2vec_helpers import load_wiki2vec
 from losses import hinge_loss
 from entity_sum_encoder import EntitySumEncoder
 from parsers import parse_text_for_tokens
+from sum_encoder_model import MentionEncoderModel
 
 from fire_extinguisher import BatchRepeater
 
@@ -288,6 +289,7 @@ class Runner(object):
                             use_adaptive_softmax=self.model_params.use_adaptive_softmax,
                             clip_grad=self.train_params.clip_grad,
                             use_wiki2vec=self.model_params.use_wiki2vec,
+                            use_sum_encoder=self.model_params.use_sum_encoder,
                             use_stacker=self.model_params.use_stacker,
                             dont_clip_grad=self.train_params.dont_clip_grad)
     return self._trainer
@@ -367,7 +369,8 @@ class Runner(object):
                                   self.model_params.num_cnn_local_filters,
                                   self.model_params.use_cnn_local,
                                   self.model_params.ablation,
-                                  use_stacker=self.model_params.use_stacker)
+                                  use_stacker=self.model_params.use_stacker,
+                                  desc_is_avg=self.model_params.desc_is_avg)
         if self.run_params.load_model:
           path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
           self.encoder.load_state_dict(torch.load(path))
