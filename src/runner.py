@@ -30,6 +30,7 @@ from entity_sum_encoder import EntitySumEncoder
 from parsers import parse_text_for_tokens
 from sum_encoder_model import MentionEncoderModel
 from utils import to_idx
+from cache import read_cache
 
 from fire_extinguisher import BatchRepeater
 
@@ -170,7 +171,9 @@ class Runner(object):
     return entity_desc_bow
 
   def init_entity_embeds_sum_encoder(self, cursor):
-    token_ctr_by_entity_id = self._get_token_ctr_by_entity_id(cursor, self.lookups.token_idx_lookup)
+    token_ctr_by_entity_id = read_cache('./caches/token_ctr_by_entity_id.pkl',
+                                        lambda: self._get_token_ctr_by_entity_id(cursor,
+                                                                                 self.lookups.token_idx_lookup))
     self.entity_embeds = EntitySumEncoder(self.lookups.embedding, token_ctr_by_entity_id)
 
   def init_entity_embeds_wiki2vec(self):
