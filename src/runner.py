@@ -161,14 +161,13 @@ class Runner(object):
                                       _weight=entity_embed_weights).to(self.device)
 
   def _get_token_ctr_by_entity_id(self, cursor: Cursor, token_idx_lookup):
-    cursor.excute('select e.id as entity_id, left(p.content, 1500) as text from entities e join pages p on e.text = p.title')
+    cursor.execute('select e.id as entity_id, left(p.content, 1500) as text from entities e join pages p on e.text = p.title')
     entity_desc_bow = {}
-    while True:
-      for row in cursor.fetchmany(1000):
-        if row is None: return entity_desc_bow
-        tokens = parse_text_for_tokens(row['text'])
-        text_idxs = [to_idx(token_idx_lookup, token) for token in tokens]
-        entity_desc_bow[row['entity_id']] = dict(Counter(tokens))
+    for row in cursor.fetchall():
+      tokens = parse_text_for_tokens(row['text'])
+      text_idxs = [to_idx(token_idx_lookup, token) for token in tokens]
+      entity_desc_bow[row['entity_id']] = dict(Counter(text_idxs))
+    return entity_desc_bow
 
   def init_entity_embeds_sum_encoder(self, cursor):
     token_ctr_by_entity_id = self._get_token_ctr_by_entity_id(cursor, self.lookups.token_idx_lookup)
@@ -210,6 +209,7 @@ class Runner(object):
                                    min_mentions=self.train_params.min_mentions,
                                    use_fast_sampler=use_fast_sampler,
                                    use_wiki2vec=self.model_params.use_wiki2vec,
+                                   use_sum_encoder=self.model_params.use_sum_encoder,
                                    start_from_page_num=self.train_params.start_from_page_num,
                                    ablation=self.model_params.ablation)
 
@@ -391,7 +391,7 @@ class Runner(object):
                                                          device=self.lookups.embedding.weight.device)).squeeze()
         self.init_entity_embeds_sum_encoder(cursor)
         self.context_encoder = MentionEncoderModel(self.lookups.embedding,
-                                                   (1 - self.model_params.dropout_drop_prob))
+                                                   (1 - self.train_params.dropout_drop_prob))
         self.encoder = SimpleJointModel(self.entity_embeds, self.context_encoder)
         if self.run_params.load_model:
           path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path

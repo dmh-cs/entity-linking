@@ -13,6 +13,6 @@ class MentionEncoderModel(nn.Module):
     self.mlp = MLP(2 * word_embed_len, word_embed_len, [], dropout_keep_prob)
 
   def forward(self, context, doc):
-    return self.mlp(torch.concatenate([self.context_encoder(context),
-                                       self.doc_encoder(doc)],
-                                      1))
+    return self.mlp(torch.cat([self.context_encoder(context),
+                               self.doc_encoder(doc)],
+                              1))
