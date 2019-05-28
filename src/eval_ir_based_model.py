@@ -2,6 +2,7 @@ from collections import Counter
 import json
 import wikipedia
 from progressbar import progressbar
+import sys
 
 import numpy as np
 from nltk.stem.snowball import SnowballStemmer
@@ -10,7 +11,6 @@ from simple_conll_dataset import SimpleCoNLLDataset
 from parsers import parse_text_for_tokens
 from data_fetchers import get_connection
 
-env = '.env'
 
 def get_desc_fs(cursor, stemmer, cand_id):
   try:
@@ -41,11 +41,19 @@ def load_idf():
     return json.load(fh)
 
 def main():
-  lookups_path = '../wp-preprocessing-el/lookups.pkl_local'
-  train_size = 0.8
+  if '--remote' in sys.argv:
+    env = '.env_remote'
+    lookups_path = '../wp-preprocessing-el/lookups.pkl_remote'
+    train_size = 1.0
+  else:
+    env = '.env'
+    lookups_path = '../wp-preprocessing-el/lookups.pkl'
+    train_size = 0.8
   num_correct = 0
+  total_with_entity_id = 0
   missed_idxs = []
   guessed_when_missed = []
+  all_scores = []
   idf = load_idf()
   stemmer = SnowballStemmer('english')
   db_connection = get_connection(env)
@@ -62,11 +70,13 @@ def main():
         guess = 0
       else:
         guess = row['candidate_ids'][np.argmax(cand_scores)]
+      all_scores.append(cand_scores)
       if guess == row['label']:
         num_correct += 1
       else:
         missed_idxs.append(idx)
         guessed_when_missed.append(guess)
+      if row['label'] in row['candidate_ids']: total_with_entity_id += 1
     print(num_correct / len(conll_test_set))
     import ipdb; ipdb.set_trace()
 
