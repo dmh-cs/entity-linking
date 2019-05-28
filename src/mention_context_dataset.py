@@ -1,6 +1,6 @@
 import Levenshtein
 from collections import defaultdict, Counter
-import unidecode
+from nltk.stem.snowball import SnowballStemmer
 
 from torch.utils.data import Dataset
 import torch
@@ -60,7 +60,7 @@ class MentionContextDataset(Dataset):
     self.use_wiki2vec = use_wiki2vec
     self.use_sum_encoder = use_sum_encoder
     # if self.use_fast_sampler: assert not self.use_wiki2vec, 'train wiki2vec locally'
-    self.prior_approx_mapping = self._get_prior_approx_mapping(self.entity_candidates_prior)
+    self.prior_approx_mapping = u.get_prior_approx_mapping(self.entity_candidates_prior)
     self.page_content_lim = 5000
     if self.min_mentions > 1:
       query = 'select id from entities where num_mentions >= ' + str(self.min_mentions)
@@ -68,13 +68,7 @@ class MentionContextDataset(Dataset):
       self.valid_entity_ids = set(row['id'] for row in cursor.fetchall())
     self.ablation = ablation
     self.entity_embeds = entity_embeds
-
-  def _get_prior_approx_mapping(self, entity_candidates_prior):
-    approx_mapping = defaultdict(list)
-    for mention in entity_candidates_prior.keys():
-      approx_mention = unidecode.unidecode(mention).lower()
-      approx_mapping[approx_mention].append(mention)
-    return approx_mapping
+    self.stemmer = SnowballStemmer('english')
 
   def _get_candidate_ids(self, mention, label):
     return get_candidate_ids(self.entity_candidates_prior,
@@ -275,7 +269,7 @@ class MentionContextDataset(Dataset):
     for page_id in page_ids:
       page_content = self._page_content_lookup[page_id]
       if len(page_content.strip()) > 5:
-        lookup[page_id] = dict(Counter(u.to_idx(self.token_idx_lookup, token)
+        lookup[page_id] = dict(Counter(u.to_idx(self.token_idx_lookup, self._stem(token))
                                        for token in parse_text_for_tokens(page_content[:lim])))
     return lookup
 
@@ -297,6 +291,9 @@ class MentionContextDataset(Dataset):
         page_ids.append(page_id_to_add)
         self.page_ctr += 1
     return page_ids
+
+  def _stem(self, text):
+    return self.stemmer.stem(text)
 
   def _next_batch(self):
     closeby_page_ids = self._next_page_id_batch()

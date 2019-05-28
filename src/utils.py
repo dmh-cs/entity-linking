@@ -1,4 +1,6 @@
 import torch
+from collections import defaultdict
+import unidecode
 
 import pydash as _
 
@@ -62,3 +64,10 @@ def chunk_apply_at_lim(fn, coll, lim):
     return chunk_apply(fn, coll, lim)
   else:
     return fn(coll)
+
+def get_prior_approx_mapping(entity_candidates_prior):
+  approx_mapping = defaultdict(list)
+  for mention in entity_candidates_prior.keys():
+    approx_mention = unidecode.unidecode(mention).lower()
+    approx_mapping[approx_mention].append(mention)
+  return approx_mapping

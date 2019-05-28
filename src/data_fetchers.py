@@ -88,6 +88,20 @@ def get_random_indexes(max_value, exclude, num_to_generate):
     result.append(val)
   return result
 
+def get_candidate_ids_simple(entity_candidates_prior,
+                             prior_approx_mapping,
+                             mention):
+  if entity_candidates_prior.get(mention) is None:
+    approx_mentions = prior_approx_mapping.get(unidecode.unidecode(mention).lower(), [])
+    ids = list(set(sum([list(entity_candidates_prior.get(approx_mention, {}).keys())
+                        for approx_mention in approx_mentions], [])))
+  else:
+    ids = list(entity_candidates_prior[mention].keys())
+  candidate_ids = torch.tensor(ids, dtype=torch.long)
+  order = list(range(len(candidate_ids)))
+  random.shuffle(order)
+  return candidate_ids[order]
+
 def get_candidate_ids(entity_candidates_prior,
                       prior_approx_mapping,
                       num_entities,
@@ -180,6 +194,7 @@ def get_p_prior(entity_candidates_prior, prior_approx_mapping, mention, candidat
   return torch.tensor(candidate_counts, dtype=torch.float) / sum(candidate_counts)
 
 def get_candidate_strs(cursor, candidate_ids):
+  if len(candidate_ids) == 0: return []
   cursor.execute('select id, text from entities where id in (' + str(candidate_ids)[1:-1] + ')')
   lookup = {row['id']: row['text'] for row in cursor.fetchall()}
   return [lookup[cand_id] for cand_id in candidate_ids]
