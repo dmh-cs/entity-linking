@@ -52,4 +52,5 @@ class SimpleCoNLLDataset():
              'page_token_cnts': page_token_cnts,
              'p_prior': p_prior,
              'candidate_ids': candidate_ids.tolist(),
+             'candidate_strs': candidates,
              'candidate_mention_sim': candidate_mention_sim}
