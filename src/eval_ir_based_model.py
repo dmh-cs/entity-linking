@@ -3,6 +3,8 @@ import json
 import wikipedia
 from progressbar import progressbar
 import sys
+import requests
+from pymongo import MongoClient
 
 import numpy as np
 from nltk.stem.snowball import SnowballStemmer
@@ -12,16 +14,22 @@ from parsers import parse_text_for_tokens
 from data_fetchers import get_connection
 
 
-def get_desc_fs(cursor, stemmer, cand_id):
-  cursor.execute(f'select text as text from entities where id = {cand_id}')
-  entity_text = cursor.fetchone()['text']
-  try:
-    page = wikipedia.page(entity_text)
-    page_content = page.content[:1500]
-  except:
-    page_content = ''
-  tokenized = parse_text_for_tokens(page_content)
-  return dict(Counter(stemmer.stem(token) for token in tokenized))
+def get_desc_fs(pages_db, cursor, stemmer, cand_ids):
+  cursor.execute('select id, text from entities where id in (' + str(cand_ids)[1:-1] + ')')
+  entity_text_lookup = {row['id']: row['text'] for row in cursor.fetchall()}
+  fs = {}
+  for entity_id, entity_text in entity_text_lookup.items():
+    try:
+      # page = wikipedia.page(entity_text)
+      # page_content = page.content[:2000]
+      # response = requests.get('https://en.wikipedia.org/w/api.php',params={'action': 'query', 'format': 'json', 'titles': entity_text, 'prop': 'extracts', 'redirects': True, 'exintro': True, 'explaintext': True,}).json()
+      # page_content = next(iter(response['query']['pages'].values()))
+      page_content = pages_db.find_one({'_id': entity_text})['plaintext'][:2000]
+    except:
+      page_content = ''
+    tokenized = parse_text_for_tokens(page_content)
+    fs[entity_id] = dict(Counter(stemmer.stem(token) for token in tokenized))
+  return fs
 
 def get_test_set(cursor, lookups_path, train_size, use_custom=False):
   conll_path = 'custom.tsv' if use_custom else './AIDA-YAGO2-dataset.tsv'
@@ -31,10 +39,15 @@ def get_stemmed_f(stemmer, tokens):
   return dict(Counter(stemmer.stem(token) for token in tokens))
 
 def load_idf():
-  with open('./wiki_idf.json') as fh:
+  # with open('./wiki_idf.json') as fh:
+  with open('./wiki_idf_stem.json') as fh:
     return json.load(fh)
 
 def main():
+  client = MongoClient()
+  dbname = 'enwiki'
+  db = client[dbname]
+  pages_db = db['pages']
   use_custom = '--use_custom' in sys.argv
   if '--remote' in sys.argv:
     env = '.env_remote'
@@ -58,15 +71,15 @@ def main():
     for idx, row in progressbar(enumerate(conll_test_set)):
       mention_f = get_stemmed_f(stemmer, row['mention_sentence'])
       cand_scores = []
-      for cand_id in row['candidate_ids']:
-        desc_f = get_desc_fs(cursor, stemmer, cand_id)
-        cand_scores.append(sum(cnt * desc_f.get(token, 0) * idf.get(token,
-                                                                    idf.get(token.lower(),
-                                                                            5.0))
-                               for token, cnt in mention_f.items()))
-      if len(cand_scores) == 0:
+      if len(row['candidate_ids']) == 0:
         guess = 0
       else:
+        desc_fs = get_desc_fs(pages_db, cursor, stemmer, row['candidate_ids'])
+        for cand_id in row['candidate_ids']:
+          desc_f = desc_fs[cand_id]
+          cand_scores.append(sum(cnt * desc_f.get(token, 0) * idf.get(token,
+                                                                      idf.get(token.lower(), 1.0))
+                                 for token, cnt in mention_f.items()))
         guess = row['candidate_ids'][np.argmax(cand_scores)]
       all_scores.append(cand_scores)
       all_candidates.append(row['candidate_strs'])
@@ -75,8 +88,8 @@ def main():
       else:
         missed_idxs.append(idx)
         guessed_when_missed.append(guess)
-      if row['label'] in row['candidate_ids']: total_with_entity_id += 1
-    print(num_correct / len(conll_test_set))
+      if (row['label'] in row['candidate_ids']) and (len(desc_fs[row['label']]) != 0):
+        total_with_entity_id += 1
     import ipdb; ipdb.set_trace()
 
 
