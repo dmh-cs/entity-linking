@@ -5,6 +5,7 @@ from progressbar import progressbar
 import sys
 import requests
 from pymongo import MongoClient
+import string
 
 import numpy as np
 from nltk.stem.snowball import SnowballStemmer
@@ -78,7 +79,7 @@ def main():
         for cand_id in row['candidate_ids']:
           desc_f = desc_fs[cand_id]
           cand_scores.append(sum(cnt * desc_f.get(token, 0) * idf.get(token,
-                                                                      idf.get(token.lower(), 1.0))
+                                                                      idf.get(token.lower(), 0.0))
                                  for token, cnt in mention_f.items()))
         guess = row['candidate_ids'][np.argmax(cand_scores)]
       all_scores.append(cand_scores)
