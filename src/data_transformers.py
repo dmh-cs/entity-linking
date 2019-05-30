@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from utils import sort_index
-from parsers import parse_text_for_tokens, parse_for_tokens
+from parsers import parse_text_for_tokens, parse_for_tokens, parse_for_sentence_spans
 
 import nltk
 
@@ -96,6 +96,14 @@ def get_mention_sentence(page_content, sentence_spans, mention_info, lim=None):
   mention_len = len(mention_info['mention'])
   sentence_span = _merge_sentences_across_mention(sentence_spans, mention_info['offset'], mention_len)
   return parse_for_tokens(page_content[sentence_span[0] : sentence_span[1]])[:lim]
+
+def get_mention_sentences_from_infos(document_lookup, mention_infos):
+  sentence_spans_lookup = {doc_id: parse_for_sentence_spans(content)
+                           for doc_id, content in document_lookup.items()}
+  return [get_mention_sentence(document_lookup[info['page_id']],
+                               sentence_spans_lookup[info['page_id']],
+                               info)
+          for info in mention_infos]
 
 def get_splits_and_order(packed):
   return packed['embeddings'], packed['order']
