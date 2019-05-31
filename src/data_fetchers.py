@@ -193,6 +193,19 @@ def get_p_prior(entity_candidates_prior, prior_approx_mapping, mention, candidat
   candidate_counts = [entity_counts[entity] if entity in entity_counts else 0 for entity in candidate_ids.tolist()]
   return torch.tensor(candidate_counts, dtype=torch.float) / sum(candidate_counts)
 
+def get_p_prior_cnts(entity_candidates_prior, prior_approx_mapping, mention, candidate_ids):
+  if mention not in entity_candidates_prior:
+    approx_mentions = prior_approx_mapping.get(unidecode.unidecode(mention).lower(), [])
+    entity_counts = defaultdict(int)
+    for approx_mention in approx_mentions:
+      mention_entity_counts = entity_candidates_prior[approx_mention]
+      for entity, counts in mention_entity_counts.items():
+        entity_counts[entity] += counts
+  else:
+    entity_counts = entity_candidates_prior[mention]
+  candidate_counts = [entity_counts[entity] if entity in entity_counts else 0 for entity in candidate_ids]
+  return candidate_counts
+
 def get_candidate_strs(cursor, candidate_ids):
   if len(candidate_ids) == 0: return []
   cursor.execute('select id, text from entities where id in (' + str(candidate_ids)[1:-1] + ')')
