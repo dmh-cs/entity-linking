@@ -4,34 +4,42 @@ import pickle
 import pymysql.cursors
 from dotenv import load_dotenv
 import torch
+import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 from torch.utils.data import DataLoader
 
 from utils import tensors_to_device, to_idx
 from ltr_bow import LtRBoW
-from simple_mention_dataset import SimpleMentionDataset, collate_simple_mention
+from simple_mention_dataset import SimpleMentionDataset, collate_simple_mention_pointwise, collate_simple_mention_pairwise
+from losses import hinge_loss
+
+from rabbit_ml import get_cli_args, list_arg, optional_arg
+
+args =  [{'name': 'num_epochs', '         for': 'train_params', 'type': int, 'default': 5},
+         {'name': 'batch_size', '         for': 'train_params', 'type': int, 'default': 512},
+         {'name': 'num_pages_to_use', '   for': 'train_params', 'type': int, 'default': 10000},
+         {'name': 'use_pairwise', '       for': 'train_params', 'type': 'flag', 'default': False},
+         {'name': 'use_hinge', '          for': 'train_params', 'type': 'flag', 'default': False},
+         {'name': 'page_id_order_path', ' for': 'train_params', 'type': str, 'default': '../wp-entity-preprocessing/page_id_order.pkl_local'},
+         {'name': 'lookups_path', '       for': 'train_params', 'type': str, 'default': '../wp-preprocessing-el/lookups.pkl_local'},
+         {'name': 'idf_path', '           for': 'train_params', 'type': str, 'default': './wiki_idf_stem.json'},
+         {'name': 'train_size', '         for': 'train_params', 'type': float, 'default': 1.0}]
 
 def main():
+  p = get_cli_args(args)
   model = LtRBoW()
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   model = model.to(device)
   optimizer = optim.Adam(model.parameters())
-  num_epochs = 5
-  batch_size = 100
-  num_pages_to_use = 10000
   load_dotenv(dotenv_path='.env')
-  page_id_order_path = '../wp-entity-preprocessing/page_id_order.pkl_local'
-  lookups_path = '../wp-preprocessing-el/lookups.pkl_local'
-  idf_path = './wiki_idf_stem.json'
-  train_size = 0.8
   EL_DATABASE_NAME = os.getenv("EL_DBNAME")
   DATABASE_USER = os.getenv("DBUSER")
   DATABASE_PASSWORD = os.getenv("DBPASS")
   DATABASE_HOST = os.getenv("DBHOST")
-  with open(page_id_order_path, 'b') as fh:
+  with open(p.train.page_id_order_path, 'rb') as fh:
     page_id_order = pickle.load(fh)
-  page_ids = page_id_order[:num_pages_to_use]
+  page_ids = page_id_order[:p.train.num_pages_to_use]
   connection = pymysql.connect(host=DATABASE_HOST,
                                user=DATABASE_USER,
                                password=DATABASE_PASSWORD,
@@ -43,25 +51,23 @@ def main():
     cursor.execute("SET NAMES utf8mb4;")
     cursor.execute("SET CHARACTER SET utf8mb4;")
     cursor.execute("SET character_set_connection=utf8mb4;")
-    dataset = SimpleMentionDataset(cursor, page_ids, lookups_path, idf_path, train_size)
+    collate_fn = collate_simple_mention_pairwise if p.train.use_pairwise else collate_simple_mention_pointwise
+    dataset = SimpleMentionDataset(cursor, page_ids, p.train.lookups_path, p.train.idf_path, p.train.train_size)
     dataloader = DataLoader(dataset,
-                            batch_sampler=BatchSampler(RandomSampler(dataset), batch_size, False),
-                            collate_fn=collate_simple_mention)
-    for epoch_num in range(num_epochs):
+                            batch_sampler=BatchSampler(RandomSampler(dataset), p.train.batch_size, False),
+                            collate_fn=collate_fn)
+    calc_loss = hinge_loss if p.train.use_hinge else nn.BCEWithLogitsLoss()
+    for epoch_num in range(p.train.num_epochs):
       for batch_num, batch in enumerate(dataloader):
         model.train()
         optimizer.zero_grad()
         batch = tensors_to_device(batch, device)
-        labels = _get_labels_for_batch(batch['label'], batch['candidate_ids'])
-        scores = [scores[(labels != -1).nonzero().reshape(-1)] for scores in scores]
-        labels = labels[(labels != -1).nonzero().reshape(-1)]
+        features, labels = batch
+        scores = model(features)
         loss = calc_loss(scores, labels)
         loss.backward()
         optimizer.step()
-        with torch.no_grad():
-          model.eval()
-          error = _classification_error(probas, labels)
-      torch.save(model.state_dict(), './ltr_model')
+    torch.save(model.state_dict(), './ltr_model')
 
 
 
