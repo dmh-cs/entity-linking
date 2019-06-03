@@ -9,7 +9,7 @@ import json
 from conll_helpers import get_documents, get_mentions, get_splits, get_entity_page_ids, from_page_ids_to_entity_ids, get_doc_id_per_mention, get_mentions_by_doc_id, get_mention_sentences
 from data_fetchers import load_entity_candidate_ids_and_label_lookup, get_candidate_ids_simple, get_p_prior_cnts, get_candidate_strs
 from parsers import parse_text_for_tokens
-from data_transformers import get_mention_sentences_from_infos
+from data_transformers import get_mention_sentences_from_infos, pad_batch_list
 import utils as u
 
 class SimpleMentionDataset():
@@ -83,8 +83,47 @@ class SimpleMentionDataset():
                                     candidate_mention_sim,
                                     candidate_prior,
                                     candidate_total])
-    return all_mentions_features, label
+    return all_mentions_features, candidate_ids, label
 
-def collate_simple_mention(batch):
-  features, labels = zip(*batch)
-  return torch.tensor(pad_batch_list(0, features)), torch.tensor(labels)
+def collate_simple_mention_pointwise(batch):
+  pointwise_features = []
+  pointwise_labels = []
+  features, candidate_ids, labels = zip(*batch)
+  for mention_features, mention_candidate_ids, label in zip(features, candidate_ids, labels):
+    for candidate_features, candidate_id in zip(mention_features, mention_candidate_ids):
+      pointwise_labels.append(1 if candidate_id == label else 0)
+      pointwise_features.append(candidate_features)
+  return torch.tensor(pointwise_features), torch.tensor(pointwise_labels)
+
+def collate_simple_mention_pairwise(batch):
+  pairwise_features = []
+  pair_ids = []
+  pairwise_labels = torch.zeros(len(batch))
+  features, candidate_ids, labels = zip(*batch)
+  for mention_features, mention_candidate_ids, label in zip(features, candidate_ids, labels):
+    target_idx = mention_candidate_ids.index(label)
+    target_features = features[target_idx]
+    for candidate_features, candidate_id in zip(mention_features, mention_candidate_ids):
+      if candidate_id != label:
+        pairwise_features.append(target_features + candidate_features)
+        pair_ids.append((label, candidate_id))
+  return torch.tensor(pairwise_features), pairwise_labels
+
+def collate_simple_mention_ranker(batch):
+  element_features = []
+  target_rankings = []
+  features, candidate_ids, labels = zip(*batch)
+  for mention_features, mention_candidate_ids, label in zip(features, candidate_ids, labels):
+    target_idx = mention_candidate_ids.index(label)
+    target_features = features[target_idx]
+    ranking = [label]
+    features_for_ranking = [target_features]
+    for candidate_features, candidate_id in zip(mention_features, mention_candidate_ids):
+      if candidate_id != label:
+        ranking.append(candidate_id)
+        features_for_ranking.append(candidate_features)
+    target_rankings.append(ranking)
+    element_features.append(features_for_ranking)
+  padded_features = pad_batch_list([0 for i in element_features[0]],
+                                   element_features)
+  return torch.tensor(padded_features), torch.tensor(target_rankings)
