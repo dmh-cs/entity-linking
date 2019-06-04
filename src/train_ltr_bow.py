@@ -54,7 +54,7 @@ def main():
     cursor.execute("SET CHARACTER SET utf8mb4;")
     cursor.execute("SET character_set_connection=utf8mb4;")
     collate_fn = collate_simple_mention_pairwise if p.train.use_pairwise else collate_simple_mention_pointwise
-    dataset = SimpleMentionDataset(cursor, page_ids, p.sun.lookups_path, p.run.idf_path, p.train.train_size)
+    dataset = SimpleMentionDataset(cursor, page_ids, p.run.lookups_path, p.run.idf_path, p.train.train_size)
     dataloader = DataLoader(dataset,
                             batch_sampler=BatchSampler(RandomSampler(dataset), p.train.batch_size, False),
                             collate_fn=collate_fn)

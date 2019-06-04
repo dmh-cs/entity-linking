@@ -50,7 +50,7 @@ def main():
   db_connection = get_connection(p.run.env_path)
   model = load_model(p.model)
   with db_connection.cursor() as cursor:
-    dataset = SimpleCoNLLDataset(cursor, conll_path, p.lookups_path, p.run.idf_path, p.train.train_size)
+    dataset = SimpleCoNLLDataset(cursor, conll_path, p.run.lookups_path, p.run.idf_path, p.train.train_size)
     conll_test_set = DataLoader(dataset,
                                 batch_sampler=BatchSampler(SequentialSampler(dataset),
                                                            p.run.batch_size,
