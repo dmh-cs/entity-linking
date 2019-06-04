@@ -16,15 +16,16 @@ from losses import hinge_loss
 
 from rabbit_ml import get_cli_args, list_arg, optional_arg
 
-args =  [{'name': 'num_epochs', '         for': 'train_params', 'type': int, 'default': 5},
-         {'name': 'batch_size', '         for': 'train_params', 'type': int, 'default': 512},
-         {'name': 'num_pages_to_use', '   for': 'train_params', 'type': int, 'default': 10000},
-         {'name': 'use_pairwise', '       for': 'train_params', 'type': 'flag', 'default': False},
-         {'name': 'use_hinge', '          for': 'train_params', 'type': 'flag', 'default': False},
+args =  [{'name': 'num_epochs',       'for': 'train_params', 'type': int, 'default': 5},
+         {'name': 'batch_size',       'for': 'train_params', 'type': int, 'default': 512},
+         {'name': 'num_pages_to_use', 'for': 'train_params', 'type': int, 'default': 10000},
+         {'name': 'use_pairwise',     'for': 'train_params', 'type': 'flag', 'default': False},
+         {'name': 'use_hinge',        'for': 'train_params', 'type': 'flag', 'default': False},
          {'name': 'page_id_order_path', ' for': 'train_params', 'type': str, 'default': '../wp-entity-preprocessing/page_id_order.pkl_local'},
-         {'name': 'lookups_path', '       for': 'train_params', 'type': str, 'default': '../wp-preprocessing-el/lookups.pkl_local'},
-         {'name': 'idf_path', '           for': 'train_params', 'type': str, 'default': './wiki_idf_stem.json'},
-         {'name': 'train_size', '         for': 'train_params', 'type': float, 'default': 1.0}]
+         {'name': 'lookups_path',     'for': 'run_params', 'type': str, 'default': '../wp-preprocessing-el/lookups.pkl_local'},
+         {'name': 'idf_path',         'for': 'run_params', 'type': str, 'default': './wiki_idf_stem.json'},
+         {'name': 'env_path',         'for': 'run_params', 'type': str, 'default': '.env'},
+         {'name': 'train_size',       'for': 'train_params', 'type': float, 'default': 1.0}]
 
 def main():
   p = get_cli_args(args)
@@ -32,7 +33,7 @@ def main():
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   model = model.to(device)
   optimizer = optim.Adam(model.parameters())
-  load_dotenv(dotenv_path='.env')
+  load_dotenv(dotenv_path=p.run.env_path)
   EL_DATABASE_NAME = os.getenv("EL_DBNAME")
   DATABASE_USER = os.getenv("DBUSER")
   DATABASE_PASSWORD = os.getenv("DBPASS")
@@ -52,7 +53,7 @@ def main():
     cursor.execute("SET CHARACTER SET utf8mb4;")
     cursor.execute("SET character_set_connection=utf8mb4;")
     collate_fn = collate_simple_mention_pairwise if p.train.use_pairwise else collate_simple_mention_pointwise
-    dataset = SimpleMentionDataset(cursor, page_ids, p.train.lookups_path, p.train.idf_path, p.train.train_size)
+    dataset = SimpleMentionDataset(cursor, page_ids, p.sun.lookups_path, p.run.idf_path, p.train.train_size)
     dataloader = DataLoader(dataset,
                             batch_sampler=BatchSampler(RandomSampler(dataset), p.train.batch_size, False),
                             collate_fn=collate_fn)
