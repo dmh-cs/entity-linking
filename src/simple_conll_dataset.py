@@ -26,7 +26,7 @@ def get_desc_fs(pages_db, cursor, stemmer, cand_ids):
   return fs
 
 def clean_entity_text(entity_text):
-  return re.sub('\s*\(.*\)$', '', entity_text)
+  return re.sub(r'\s*\(.*\)$', '', entity_text)
 
 class SimpleCoNLLDataset(Dataset):
   def __init__(self, cursor, conll_path, lookups_path, idf_path, train_size):
