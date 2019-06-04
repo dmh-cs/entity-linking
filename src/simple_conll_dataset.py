@@ -48,13 +48,13 @@ class SimpleCoNLLDataset(Dataset):
     self.mention_sentences = get_mention_sentences(self.documents, self.mentions)
     self.stemmer = SnowballStemmer('english')
     self.document_lookup = self.documents
-    self.with_label = [i for i, x in enumerate(self.labels) if x != -1]
+    self.with_labels = [i for i, x in enumerate(self.labels) if x != -1]
     self.mention_fs = [dict(Counter(self.stemmer.stem(token)
                                     for token in sentence))
                        for sentence in self.mention_sentences]
-    self.page_f_lookup = {page_id: dict(Counter(self.stemmer.stem(token)
-                                                for token in parse_text_for_tokens(doc)))
-                                   for page_id, doc in self.document_lookup}
+    self.page_f_lookup = [dict(Counter(self.stemmer.stem(token)
+                                       for token in parse_text_for_tokens(doc)))
+                          for doc in self.document_lookup]
     lookups = load_entity_candidate_ids_and_label_lookup(lookups_path, train_size)
     label_to_entity_id = _.invert(lookups['entity_labels'])
     self.entity_candidates_prior = {entity_text: {label_to_entity_id[label]: candidates
@@ -67,8 +67,10 @@ class SimpleCoNLLDataset(Dataset):
                                                          self.idf.get(token.lower(), 0.0))
                for token, cnt in mention_f.items())
 
+  def __len__(self): return len(self.with_labels)
+
   def __getitem__(self, idx):
-    label = self.labels[idx]
+    label = self.labels[self.with_labels[idx]]
     mention = self.mentions[idx]
     mention_f = self.mention_fs[idx]
     mention_doc_id = self.mention_doc_id[idx]
@@ -86,10 +88,13 @@ class SimpleCoNLLDataset(Dataset):
                              for candidate_str in candidate_strs]
     all_mentions_features = []
     candidate_fs = get_desc_fs(self.pages_db, self.cursor, self.stemmer, candidate_ids)
+    cands_with_page = []
     for candidate_raw_features in zip(candidate_ids,
                                       candidate_mention_sim,
                                       prior):
       candidate_id, candidate_mention_sim, candidate_prior = candidate_raw_features
+      if candidate_id not in candidate_fs: continue
+      cands_with_page.append(candidate_id)
       candidate_f = candidate_fs[candidate_id]
       mention_tfidf = self.calc_tfidf(candidate_f, mention_f)
       page_tfidf = self.calc_tfidf(candidate_f, page_f)
@@ -98,7 +103,7 @@ class SimpleCoNLLDataset(Dataset):
                                     candidate_mention_sim,
                                     candidate_prior,
                                     times_mentioned])
-    return all_mentions_features, candidate_ids, label
+    return all_mentions_features, cands_with_page, label
 
 def collate_simple_mention_ranker(batch):
   element_features = []

@@ -21,7 +21,7 @@ from ltr_bow import LtRBoW
 
 from rabbit_ml import get_cli_args, list_arg, optional_arg
 
-args =  [{'name': 'batch_size',       'for': 'train_params', 'type': int, 'default': 512},
+args =  [{'name': 'batch_size',       'for': 'run_params', 'type': int, 'default': 512},
          {'name': 'num_pages_to_use', 'for': 'train_params', 'type': int, 'default': 10000},
          {'name': 'page_id_order_path', 'for': 'train_params', 'type': str, 'default': '../wp-entity-preprocessing/page_id_order.pkl_local'},
          {'name': 'lookups_path',     'for': 'run_params', 'type': str, 'default': '../wp-preprocessing-el/lookups.pkl_local'},
