@@ -41,7 +41,6 @@ class SimpleCoNLLDataset(Dataset):
     self.cursor = cursor
     self.documents = get_documents(lines)
     self.mentions = get_mentions(lines)
-    self.sentence_splits = get_splits(self.documents, self.mentions)
     self.entity_page_ids = get_entity_page_ids(lines)
     self.labels = from_page_ids_to_entity_ids(self.cursor, self.entity_page_ids)
     self.mention_doc_id = get_doc_id_per_mention(lines)
@@ -51,11 +50,11 @@ class SimpleCoNLLDataset(Dataset):
     self.document_lookup = self.documents
     self.with_label = [i for i, x in enumerate(self.labels) if x != -1]
     self.mention_fs = [dict(Counter(self.stemmer.stem(token)
-                                    for token in parse_text_for_tokens(sentence)))
+                                    for token in sentence))
                        for sentence in self.mention_sentences]
     self.page_f_lookup = {page_id: dict(Counter(self.stemmer.stem(token)
                                                 for token in parse_text_for_tokens(doc)))
-                                   for page_id, doc in self.document_lookup.items()}
+                                   for page_id, doc in self.document_lookup}
     lookups = load_entity_candidate_ids_and_label_lookup(lookups_path, train_size)
     label_to_entity_id = _.invert(lookups['entity_labels'])
     self.entity_candidates_prior = {entity_text: {label_to_entity_id[label]: candidates
@@ -78,19 +77,19 @@ class SimpleCoNLLDataset(Dataset):
                                              self.prior_approx_mapping,
                                              mention).tolist()
     candidate_strs = get_candidate_strs(self.cursor, candidate_ids)
-    prior, total = get_p_prior_cnts(self.entity_candidates_prior,
-                                    self.prior_approx_mapping,
-                                    mention,
-                                    candidate_ids)
+    prior = get_p_prior_cnts(self.entity_candidates_prior,
+                             self.prior_approx_mapping,
+                             mention,
+                             candidate_ids)
+    times_mentioned = sum(prior)
     candidate_mention_sim = [Levenshtein.ratio(mention, clean_entity_text(candidate_str))
                              for candidate_str in candidate_strs]
     all_mentions_features = []
     candidate_fs = get_desc_fs(self.pages_db, self.cursor, self.stemmer, candidate_ids)
     for candidate_raw_features in zip(candidate_ids,
                                       candidate_mention_sim,
-                                      prior,
-                                      total):
-      candidate_id, candidate_mention_sim, candidate_prior, candidate_total = candidate_raw_features
+                                      prior):
+      candidate_id, candidate_mention_sim, candidate_prior = candidate_raw_features
       candidate_f = candidate_fs[candidate_id]
       mention_tfidf = self.calc_tfidf(candidate_f, mention_f)
       page_tfidf = self.calc_tfidf(candidate_f, page_f)
@@ -98,7 +97,7 @@ class SimpleCoNLLDataset(Dataset):
                                     page_tfidf,
                                     candidate_mention_sim,
                                     candidate_prior,
-                                    candidate_total])
+                                    times_mentioned])
     return all_mentions_features, candidate_ids, label
 
 def collate_simple_mention_ranker(batch):
