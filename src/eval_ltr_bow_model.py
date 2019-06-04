@@ -16,6 +16,8 @@ from nltk.stem.snowball import SnowballStemmer
 from simple_conll_dataset import SimpleCoNLLDataset, collate_simple_mention_ranker
 from parsers import parse_text_for_tokens
 from data_fetchers import get_connection
+from fixed_weights_model import FixedWeights
+from ltr_bow import LtRBoW
 
 from rabbit_ml import get_cli_args, list_arg, optional_arg
 
@@ -26,8 +28,18 @@ args =  [{'name': 'batch_size',       'for': 'train_params', 'type': int, 'defau
          {'name': 'idf_path',         'for': 'run_params', 'type': str, 'default': './wiki_idf_stem.json'},
          {'name': 'env_path',         'for': 'run_params', 'type': str, 'default': '.env'},
          {'name': 'use_custom',       'for': 'run_params', 'type': 'flag', 'default': False},
+         {'name': 'just_tfidf',       'for': 'model_params', 'type': 'flag', 'default': False},
          {'name': 'train_size',       'for': 'train_params', 'type': float, 'default': 1.0}]
 
+
+def load_model(model_params):
+  if model_params.just_tfidf:
+    return FixedWeights([1, 0, 0, 0, 0])
+  else:
+    model = LtRBoW(model_params.hidden_sizes)
+    path = './ltr_model_' + ','.join(model_params.hidden_sizes)
+    model.load_state_dict(torch.load(path))
+    return model
 
 def main():
   p = get_cli_args(args)
@@ -36,7 +48,7 @@ def main():
   missed_idxs = []
   guessed_when_missed = []
   db_connection = get_connection(p.run.env_path)
-  model = load_model()
+  model = load_model(p.model)
   with db_connection.cursor() as cursor:
     dataset = SimpleCoNLLDataset(cursor, conll_path, p.lookups_path, p.run.idf_path, p.train.train_size)
     conll_test_set = DataLoader(dataset,

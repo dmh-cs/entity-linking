@@ -24,12 +24,13 @@ args =  [{'name': 'num_epochs',       'for': 'train_params', 'type': int, 'defau
          {'name': 'page_id_order_path', ' for': 'train_params', 'type': str, 'default': '../wp-entity-preprocessing/page_id_order.pkl_local'},
          {'name': 'lookups_path',     'for': 'run_params', 'type': str, 'default': '../wp-preprocessing-el/lookups.pkl_local'},
          {'name': 'idf_path',         'for': 'run_params', 'type': str, 'default': './wiki_idf_stem.json'},
+         {'name': 'hidden_sizes',     'for': 'model_params', 'type': list_arg(str), 'default': [100]},
          {'name': 'env_path',         'for': 'run_params', 'type': str, 'default': '.env'},
          {'name': 'train_size',       'for': 'train_params', 'type': float, 'default': 1.0}]
 
 def main():
   p = get_cli_args(args)
-  model = LtRBoW()
+  model = LtRBoW(p.model.hidden_sizes)
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   model = model.to(device)
   optimizer = optim.Adam(model.parameters())
@@ -68,7 +69,7 @@ def main():
         loss = calc_loss(scores, labels)
         loss.backward()
         optimizer.step()
-    torch.save(model.state_dict(), './ltr_model')
+    torch.save(model.state_dict(), './ltr_model_' + ','.join(p.model.hidden_sizes))
 
 
 
