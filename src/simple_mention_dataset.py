@@ -12,11 +12,13 @@ from parsers import parse_text_for_tokens
 from data_transformers import get_mention_sentences_from_infos, pad_batch_list
 import utils as u
 
-def get_desc_fs(cursor, stemmer, cand_ids):
+def get_desc_fs(desc_fs, cursor, stemmer, cand_ids):
   def _process(page_content):
     tokenized = parse_text_for_tokens(page_content)
     return dict(Counter(stemmer.stem(token) for token in tokenized))
-  cursor.execute('select ep.entity_id as entity_id, left(p.content, 2000) as content from entity_by_page ep join pages p on ep.source_id = p.source_id where ep.entity_id in (' + str(cand_ids)[1:-1] + ')')
+  cached_fs = {cand_id: desc_fs[cand_id] for cand_id in cand_ids if cand_id in desc_fs}
+  remaining_cand_ids = [cand_id for cand_id in cand_ids if cand_id not in cached_fs]
+  cursor.execute('select ep.entity_id as entity_id, left(p.content, 2000) as content from entity_by_page ep join pages p on ep.source_id = p.source_id where ep.entity_id in (' + str(remaining_cand_ids)[1:-1] + ')')
   return {row['entity_id']: _process(row['content']) for row in cursor.fetchall()}
 
 class SimpleMentionDataset(Dataset):
@@ -45,6 +47,7 @@ class SimpleMentionDataset(Dataset):
                                                   for label, candidates in prior.items()}
                                     for entity_text, prior in lookups['entity_candidates_prior'].items()}
     self.prior_approx_mapping = u.get_prior_approx_mapping(self.entity_candidates_prior)
+    self.desc_fs = {}
 
   def __len__(self): return len(self.labels)
 
@@ -79,7 +82,7 @@ class SimpleMentionDataset(Dataset):
     candidate_mention_sim = [Levenshtein.ratio(mention, candidate_str)
                              for candidate_str in candidate_strs]
     all_mentions_features = []
-    candidate_fs = get_desc_fs(self.cursor, self.stemmer, candidate_ids)
+    candidate_fs = get_desc_fs(self.desc_fs, self.cursor, self.stemmer, candidate_ids)
     cands_with_page = []
     for candidate_raw_features in zip(candidate_ids,
                                       candidate_mention_sim,
