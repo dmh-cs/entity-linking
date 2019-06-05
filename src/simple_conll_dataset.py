@@ -17,9 +17,9 @@ from data_transformers import get_mention_sentences_from_infos, pad_batch_list
 
 def get_desc_fs(pages_db, cursor, stemmer, cand_ids):
   def _process(page_content):
-    tokenized = parse_text_for_tokens(page_content[:2000])
+    tokenized = parse_text_for_tokens(page_content)
     return dict(Counter(stemmer.stem(token) for token in tokenized))
-  cursor.execute('select ep.entity_id as entity_id, p.content as content from entity_by_page ep join pages p on ep.source_id = p.source_id where ep.entity_id in (' + str(cand_ids)[1:-1] + ')')
+  cursor.execute('select ep.entity_id as entity_id, left(p.content, 2000) as content from entity_by_page ep join pages p on ep.source_id = p.source_id where ep.entity_id in (' + str(cand_ids)[1:-1] + ')')
   return {row['entity_id']: _process(row['content']) for row in cursor.fetchall()}
 
 def clean_entity_text(entity_text):

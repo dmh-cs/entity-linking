@@ -162,7 +162,7 @@ class Runner(object):
                                       _weight=entity_embed_weights).to(self.device)
 
   def _get_token_ctr_by_entity_id(self, cursor: Cursor, token_idx_lookup):
-    cursor.execute('select e.id as entity_id, left(p.content, 1500) as text from entities e join pages p on e.text = p.title')
+    cursor.execute('select e.id as entity_id, left(p.content, 2000) as text from entities e join pages p on e.text = p.title')
     entity_desc_bow = {}
     for row in cursor.fetchall():
       tokens = parse_text_for_tokens(row['text'])
@@ -171,7 +171,7 @@ class Runner(object):
     return entity_desc_bow
 
   def init_entity_embeds_sum_encoder(self, cursor):
-    token_ctr_by_entity_id = read_cache('./caches/token_ctr_by_entity_id.pkl',
+    token_ctr_by_entity_id = read_cache('./token_ctr_by_entity_id.pkl',
                                         lambda: self._get_token_ctr_by_entity_id(cursor,
                                                                                  self.lookups.token_idx_lookup))
     self.entity_embeds = EntitySumEncoder(self.lookups.embedding, token_ctr_by_entity_id)
@@ -394,7 +394,8 @@ class Runner(object):
                                                          device=self.lookups.embedding.weight.device)).squeeze()
         self.init_entity_embeds_sum_encoder(cursor)
         self.context_encoder = MentionEncoderModel(self.lookups.embedding,
-                                                   (1 - self.train_params.dropout_drop_prob))
+                                                   (1 - self.train_params.dropout_drop_prob),
+                                                   use_cnts=True)
         self.encoder = SimpleJointModel(self.entity_embeds, self.context_encoder)
         if self.run_params.load_model:
           path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path
