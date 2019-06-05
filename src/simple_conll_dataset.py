@@ -62,11 +62,10 @@ class SimpleCoNLLDataset(Dataset):
     self.prior_approx_mapping = u.get_prior_approx_mapping(self.entity_candidates_prior)
     self.with_labels = []
     for idx, (mention, label) in enumerate(zip(self.mentions, self.labels)):
-      if len(get_candidate_ids_simple(self.entity_candidates_prior,
-                                      self.prior_approx_mapping,
-                                      mention)) != 0:
-        if label != -1:
-          self.with_labels.append(idx)
+      if label in get_candidate_ids_simple(self.entity_candidates_prior,
+                                           self.prior_approx_mapping,
+                                           mention).tolist():
+        self.with_labels.append(idx)
 
   def calc_tfidf(self, candidate_f, mention_f):
     return sum(cnt * candidate_f.get(token, 0) * self.idf.get(token,
@@ -76,10 +75,11 @@ class SimpleCoNLLDataset(Dataset):
   def __len__(self): return len(self.with_labels)
 
   def __getitem__(self, idx):
-    label = self.labels[self.with_labels[idx]]
-    mention = self.mentions[idx]
-    mention_f = self.mention_fs[idx]
-    mention_doc_id = self.mention_doc_id[idx]
+    i = self.with_labels[idx]
+    label = self.labels[i]
+    mention = self.mentions[i]
+    mention_f = self.mention_fs[i]
+    mention_doc_id = self.mention_doc_id[i]
     page_f = self.page_f_lookup[mention_doc_id]
     candidate_ids = get_candidate_ids_simple(self.entity_candidates_prior,
                                              self.prior_approx_mapping,
