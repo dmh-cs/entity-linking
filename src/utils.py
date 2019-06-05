@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from collections import defaultdict
 import unidecode
 
@@ -71,3 +72,6 @@ def get_prior_approx_mapping(entity_candidates_prior):
     approx_mention = unidecode.unidecode(mention).lower()
     approx_mapping[approx_mention].append(mention)
   return approx_mapping
+
+class Identity(nn.Module):
+  def forward(self, x): return x

@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 from torch.utils.data import DataLoader
+from progressbar import progressbar
 
 from utils import tensors_to_device, to_idx
 from ltr_bow import LtRBoW
@@ -59,16 +60,18 @@ def main():
                             batch_sampler=BatchSampler(RandomSampler(dataset), p.train.batch_size, False),
                             collate_fn=collate_fn)
     calc_loss = hinge_loss if p.train.use_hinge else nn.BCEWithLogitsLoss()
-    for epoch_num in range(p.train.num_epochs):
-      for batch_num, batch in enumerate(dataloader):
-        model.train()
-        optimizer.zero_grad()
-        batch = tensors_to_device(batch, device)
-        features, labels = batch
-        scores = model(features)
-        loss = calc_loss(scores, labels)
-        loss.backward()
-        optimizer.step()
+    with open('./losses_ltr', 'w') as fh:
+      for epoch_num in range(p.train.num_epochs):
+        for batch_num, batch in progressbar(enumerate(dataloader)):
+          model.train()
+          optimizer.zero_grad()
+          batch = [elem.to(device) for elem in batch]
+          features, labels = batch
+          scores = model(features)
+          loss = calc_loss(scores, labels)
+          fh.write('{}\n'.format(loss.item()))
+          loss.backward()
+          optimizer.step()
     torch.save(model.state_dict(), './ltr_model_' + ','.join(p.model.hidden_sizes))
 
 

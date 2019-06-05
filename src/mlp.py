@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from utils import Identity
+
 from toolz import pipe
 
 def _get_layer(from_size, to_size, dropout_keep_prob, activation=None):
@@ -18,7 +20,7 @@ class MLP(nn.Module):
                                     to_size,
                                     dropout_keep_prob))
       from_size = to_size
-    self.layers.extend(_get_layer(from_size, out_dim, dropout_keep_prob, activation=nn.Tanh()))
+    self.layers.extend(_get_layer(from_size, out_dim, dropout_keep_prob, activation=Identity()))
 
   def forward(self, x):
     return pipe(x, *self.layers)

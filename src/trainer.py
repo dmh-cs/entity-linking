@@ -139,7 +139,7 @@ class Trainer(object):
                                           batch['prior'])
         else:
           scores = logits
-        scores = [scores[(labels != -1).nonzero().reshape(-1)] for scores in scores]
+        scores = scores[(labels != -1).nonzero().reshape(-1)]
         labels = labels[(labels != -1).nonzero().reshape(-1)]
         loss = self.calc_loss(scores, labels)
         loss.backward()

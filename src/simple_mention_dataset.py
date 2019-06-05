@@ -12,6 +12,13 @@ from parsers import parse_text_for_tokens
 from data_transformers import get_mention_sentences_from_infos, pad_batch_list
 import utils as u
 
+def get_desc_fs(cursor, stemmer, cand_ids):
+  def _process(page_content):
+    tokenized = parse_text_for_tokens(page_content)
+    return dict(Counter(stemmer.stem(token) for token in tokenized))
+  cursor.execute('select ep.entity_id as entity_id, left(p.content, 2000) as content from entity_by_page ep join pages p on ep.source_id = p.source_id where ep.entity_id in (' + str(cand_ids)[1:-1] + ')')
+  return {row['entity_id']: _process(row['content']) for row in cursor.fetchall()}
+
 class SimpleMentionDataset(Dataset):
   def __init__(self, cursor, page_ids, lookups_path, idf_path, train_size):
     self.stemmer = SnowballStemmer('english')
@@ -30,7 +37,7 @@ class SimpleMentionDataset(Dataset):
                                     for token in sentence))
                        for sentence in self.mention_sentences]
     self.page_f_lookup = {page_id: dict(Counter(self.stemmer.stem(token)
-                                                         for token in parse_text_for_tokens(doc[:self.page_content_lim])))
+                                                for token in parse_text_for_tokens(doc[:self.page_content_lim])))
                                    for page_id, doc in self.document_lookup.items()}
     lookups = load_entity_candidate_ids_and_label_lookup(lookups_path, train_size)
     label_to_entity_id = _.invert(lookups['entity_labels'])
@@ -64,27 +71,31 @@ class SimpleMentionDataset(Dataset):
                                              self.prior_approx_mapping,
                                              mention).tolist()
     candidate_strs = get_candidate_strs(self.cursor, candidate_ids)
-    prior, total = get_p_prior_cnts(self.entity_candidates_prior,
-                                    self.prior_approx_mapping,
-                                    mention,
-                                    candidate_ids)
+    prior = get_p_prior_cnts(self.entity_candidates_prior,
+                             self.prior_approx_mapping,
+                             mention,
+                             candidate_ids)
+    times_mentioned = sum(prior)
     candidate_mention_sim = [Levenshtein.ratio(mention, candidate_str)
                              for candidate_str in candidate_strs]
     all_mentions_features = []
+    candidate_fs = get_desc_fs(self.cursor, self.stemmer, candidate_ids)
+    cands_with_page = []
     for candidate_raw_features in zip(candidate_ids,
                                       candidate_mention_sim,
-                                      prior,
-                                      total):
-      candidate_id, candidate_mention_sim, candidate_prior, candidate_total = candidate_raw_features
-      candidate_f = self.page_f_lookup[candidate_id]
+                                      prior):
+      candidate_id, candidate_mention_sim, candidate_prior = candidate_raw_features
+      if candidate_id not in candidate_fs: continue
+      cands_with_page.append(candidate_id)
+      candidate_f = candidate_fs[candidate_id]
       mention_tfidf = self.calc_tfidf(candidate_f, mention_f)
       page_tfidf = self.calc_tfidf(candidate_f, page_f)
       all_mentions_features.append([mention_tfidf,
                                     page_tfidf,
                                     candidate_mention_sim,
                                     candidate_prior,
-                                    candidate_total])
-    return all_mentions_features, candidate_ids, label
+                                    times_mentioned])
+    return all_mentions_features, cands_with_page, label
 
 def collate_simple_mention_pointwise(batch):
   pointwise_features = []
@@ -94,12 +105,12 @@ def collate_simple_mention_pointwise(batch):
     for candidate_features, candidate_id in zip(mention_features, mention_candidate_ids):
       pointwise_labels.append(1 if candidate_id == label else 0)
       pointwise_features.append(candidate_features)
-  return torch.tensor(pointwise_features), torch.tensor(pointwise_labels)
+  return torch.tensor(pointwise_features), torch.tensor(pointwise_labels, dtype=torch.float32)
 
 def collate_simple_mention_pairwise(batch):
   pairwise_features = []
   pair_ids = []
-  pairwise_labels = torch.zeros(len(batch))
+  pairwise_labels = torch.zeros(len(batch), dtype=torch.float32)
   features, candidate_ids, labels = zip(*batch)
   for mention_features, mention_candidate_ids, label in zip(features, candidate_ids, labels):
     target_idx = mention_candidate_ids.index(label)
