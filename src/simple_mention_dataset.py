@@ -25,10 +25,9 @@ class SimpleMentionDataset(Dataset):
     self.mentions = [info['mention'] for info in self.mention_infos]
     self.labels = [info['entity_id'] for info in self.mention_infos]
     self.mention_doc_id = [info['page_id'] for info in self.mention_infos]
-    self.with_label = [i for i, x in enumerate(self.labels) if x != -1]
     self.mention_sentences = get_mention_sentences_from_infos(self.document_lookup, self.mention_infos)
     self.mention_fs = [dict(Counter(self.stemmer.stem(token)
-                                    for token in parse_text_for_tokens(sentence)))
+                                    for token in sentence))
                        for sentence in self.mention_sentences]
     self.page_f_lookup = {page_id: dict(Counter(self.stemmer.stem(token)
                                                          for token in parse_text_for_tokens(doc[:self.page_content_lim])))
@@ -40,8 +39,10 @@ class SimpleMentionDataset(Dataset):
                                     for entity_text, prior in lookups['entity_candidates_prior'].items()}
     self.prior_approx_mapping = u.get_prior_approx_mapping(self.entity_candidates_prior)
 
+  def __len__(self): return len(self.labels)
+
   def get_document_lookup(self, page_ids):
-    self.cursor.execute(f'select id, left(content, {self.page_content_lim}) as content from pages where id in (' + str(page_ids)[1:-1] + ')')
+    self.cursor.execute(f'select id, content from pages where id in (' + str(page_ids)[1:-1] + ')')
     return {row['id']: row['content'] for row in self.cursor.fetchall()}
 
   def get_mention_infos(self, page_ids):

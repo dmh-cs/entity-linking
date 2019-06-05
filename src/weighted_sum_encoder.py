@@ -13,9 +13,9 @@ class WeightedSumEncoder(nn.Module):
   def forward(self, desc):
     if self.use_cnts:
       terms, cnts = desc
-      token_weights = self.weights(terms).reshape(-1) + torch.log(cnts.float())
+      token_weights = self.weights(terms).reshape(cnts.shape) + torch.log(cnts.float())
       normalized_weights = F.softmax(token_weights, 1)
-      document_tokens = self.document_token_embeds(terms)
+      document_tokens = self.word_embeds(terms)
       doc_vecs = torch.sum(normalized_weights.unsqueeze(2) * document_tokens, 1)
       return doc_vecs
     else:

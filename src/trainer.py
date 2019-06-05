@@ -193,7 +193,7 @@ class Trainer(object):
                                           batch['prior'])
         else:
           scores = logits
-        scores = [scores[(labels != -1).nonzero().reshape(-1)] for scores in scores]
+        scores = scores[(labels != -1).nonzero().reshape(-1)]
         labels = labels[(labels != -1).nonzero().reshape(-1)]
         loss = self.calc_loss(scores, labels)
         loss.backward()
@@ -207,14 +207,13 @@ class Trainer(object):
           encoded_test = self.model.encoder(context_bows, doc_bows)
           logits_test = self.calc_logits(encoded_test, batch['candidate_ids'])
           if self.use_stacker:
-            desc_probas, mention_probas = self.model.calc_scores(logits_test,
-                                                                 batch['candidate_mention_sim'],
-                                                                 batch['prior'])
+            probas = self.model.calc_scores(logits_test,
+                                            batch['candidate_mention_sim'],
+                                            batch['prior'])
           else:
-            desc_probas, mention_probas = logits_test
-          mention_context_error = self._classification_error(mention_probas, labels)
-          document_context_error = self._classification_error(desc_probas, labels)
-        self.experiment.record_metrics({'error': mention_context_error,
+            probas = logits_test
+          context_error = self._classification_error(probas, labels)
+        self.experiment.record_metrics({'error': context_error,
                                         'loss': loss.item()},
                                        batch_num=batch_num)
       torch.save(self.model.state_dict(), './' + self.experiment.model_name + '_epoch_' + str(epoch_num))

@@ -231,7 +231,7 @@ class Runner(object):
                                         use_fast_sampler=use_fast_sampler)
 
   def _calc_logits(self, encoded, candidate_entity_ids):
-    if self.model_params.use_wiki2vec:
+    if self.model_params.use_wiki2vec or self.model_params.use_sum_encoder:
       return Logits()(encoded,
                       self.entity_embeds(candidate_entity_ids))
     else:
@@ -247,6 +247,9 @@ class Runner(object):
       return desc_logits, mention_logits
 
   def _calc_loss(self, scores, labels_for_batch):
+    if self.model_params.use_sum_encoder:
+      criterion = nn.CrossEntropyLoss()
+      return criterion(scores, labels_for_batch)
     desc_score, mention_score = scores
     if self.model_params.use_adaptive_softmax:
       raise NotImplementedError('No longer supported')
@@ -396,6 +399,7 @@ class Runner(object):
         self.context_encoder = MentionEncoderModel(self.lookups.embedding,
                                                    (1 - self.train_params.dropout_drop_prob),
                                                    use_cnts=True)
+        self.context_encoder.to(self.device)
         self.encoder = SimpleJointModel(self.entity_embeds, self.context_encoder)
         if self.run_params.load_model:
           path = self.experiment.model_name if self.run_params.load_path is None else self.run_params.load_path

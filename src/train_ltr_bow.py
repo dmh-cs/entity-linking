@@ -21,7 +21,7 @@ args =  [{'name': 'num_epochs',       'for': 'train_params', 'type': int, 'defau
          {'name': 'num_pages_to_use', 'for': 'train_params', 'type': int, 'default': 10000},
          {'name': 'use_pairwise',     'for': 'train_params', 'type': 'flag', 'default': False},
          {'name': 'use_hinge',        'for': 'train_params', 'type': 'flag', 'default': False},
-         {'name': 'page_id_order_path', 'for': 'train_params', 'type': str, 'default': '../wp-entity-preprocessing/page_id_order.pkl_local'},
+         {'name': 'page_id_order_path', 'for': 'train_params', 'type': str, 'default': '../wp-preprocessing-el/page_id_order.pkl_local'},
          {'name': 'lookups_path',     'for': 'run_params', 'type': str, 'default': '../wp-preprocessing-el/lookups.pkl_local'},
          {'name': 'idf_path',         'for': 'run_params', 'type': str, 'default': './wiki_idf_stem.json'},
          {'name': 'hidden_sizes',     'for': 'model_params', 'type': list_arg(str), 'default': [100]},
@@ -35,7 +35,7 @@ def main():
   model = model.to(device)
   optimizer = optim.Adam(model.parameters())
   load_dotenv(dotenv_path=p.run.env_path)
-  EL_DATABASE_NAME = os.getenv("EL_DBNAME")
+  EL_DATABASE_NAME = os.getenv("DBNAME")
   DATABASE_USER = os.getenv("DBUSER")
   DATABASE_PASSWORD = os.getenv("DBPASS")
   DATABASE_HOST = os.getenv("DBHOST")

@@ -14,6 +14,7 @@ class EntitySumEncoder(nn.Module):
   def forward(self, entity_id):
     device = entity_id.device
     cntrs = []
-    for entity_id in entity_id.tolist():
-      cntrs.append(self.token_ctr_by_entity_id[entity_id])
-    return self.sum_encoder(collate_bow_doc(cntrs, device))
+    for batch_entity_ids in entity_id.tolist():
+      for single_id in batch_entity_ids:
+        cntrs.append(self.token_ctr_by_entity_id.get(single_id, {1: 1}))
+    return self.sum_encoder(collate_bow_doc(cntrs, device)).reshape(*entity_id.shape, -1)
