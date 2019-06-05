@@ -29,12 +29,15 @@ args =  [{'name': 'batch_size',       'for': 'run_params', 'type': int, 'default
          {'name': 'env_path',         'for': 'run_params', 'type': str, 'default': '.env'},
          {'name': 'use_custom',       'for': 'run_params', 'type': 'flag', 'default': False},
          {'name': 'just_tfidf',       'for': 'model_params', 'type': 'flag', 'default': False},
+         {'name': 'just_str_sim',       'for': 'model_params', 'type': 'flag', 'default': False},
          {'name': 'train_size',       'for': 'train_params', 'type': float, 'default': 1.0}]
 
 
 def load_model(model_params):
   if model_params.just_tfidf:
     return FixedWeights([1, 0, 0, 0, 0])
+  elif model_params.just_str_sim:
+    return FixedWeights([0, 0, 1, 0, 0])
   else:
     model = LtRBoW(model_params.hidden_sizes)
     path = './ltr_model_' + ','.join(model_params.hidden_sizes)
