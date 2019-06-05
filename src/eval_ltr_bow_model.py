@@ -58,15 +58,16 @@ def main():
                                 collate_fn=collate_simple_mention_ranker)
     ctr = count()
     for batch in progressbar(conll_test_set):
-      (num_candidates, features), target_rankings = batch
+      (candidate_ids, features), target_rankings = batch
       target = [ranking[0] for ranking in target_rankings]
       candidate_scores = model(features)
       top_1 = []
       offset = 0
-      for ranking_size in num_candidates:
-        top_1.append(torch.argmax(candidate_scores[offset : offset + ranking_size]).item())
+      for ids in candidate_ids:
+        ranking_size = len(ids)
+        top_1.append(ids[torch.argmax(candidate_scores[offset : offset + ranking_size]).item()])
         offset += ranking_size
-      for idx, guess, label in zip(ctr, guess, target):
+      for idx, guess, label in zip(ctr, top_1, target):
         if guess == label:
           num_correct += 1
         else:
