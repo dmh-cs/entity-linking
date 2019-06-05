@@ -61,11 +61,16 @@ class SimpleCoNLLDataset(Dataset):
                                     for entity_text, prior in lookups['entity_candidates_prior'].items()}
     self.prior_approx_mapping = u.get_prior_approx_mapping(self.entity_candidates_prior)
     self.with_labels = []
+    num_without_cand = 0
     for idx, (mention, label) in enumerate(zip(self.mentions, self.labels)):
       if label in get_candidate_ids_simple(self.entity_candidates_prior,
                                            self.prior_approx_mapping,
                                            mention).tolist():
         self.with_labels.append(idx)
+      else:
+        num_without_cand += 1
+    print('num without candidates:', num_without_cand)
+    print('num with candidates:', len(self.with_labels))
 
   def calc_tfidf(self, candidate_f, mention_f):
     return sum(cnt * candidate_f.get(token, 0) * self.idf.get(token,
@@ -117,7 +122,7 @@ def collate_simple_mention_ranker(batch):
   features, candidate_ids, labels = zip(*batch)
   for mention_features, mention_candidate_ids, label in zip(features, candidate_ids, labels):
     target_idx = mention_candidate_ids.index(label)
-    target_features = features[target_idx]
+    target_features = mention_features[target_idx]
     ranking = [label]
     features_for_ranking = [target_features]
     for candidate_features, candidate_id in zip(mention_features, mention_candidate_ids):
@@ -128,4 +133,4 @@ def collate_simple_mention_ranker(batch):
     element_features.append(features_for_ranking)
   num_candidates = [len(to_rank) for to_rank in element_features]
   flattened_features = _.flatten(element_features)
-  return (num_candidates, torch.tensor(flattened_features)), torch.tensor(target_rankings)
+  return (num_candidates, torch.tensor(flattened_features)), target_rankings
