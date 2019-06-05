@@ -48,7 +48,6 @@ class SimpleCoNLLDataset(Dataset):
     self.mention_sentences = get_mention_sentences(self.documents, self.mentions)
     self.stemmer = SnowballStemmer('english')
     self.document_lookup = self.documents
-    self.with_labels = [i for i, x in enumerate(self.labels) if x != -1]
     self.mention_fs = [dict(Counter(self.stemmer.stem(token)
                                     for token in sentence))
                        for sentence in self.mention_sentences]
@@ -61,6 +60,13 @@ class SimpleCoNLLDataset(Dataset):
                                                   for label, candidates in prior.items()}
                                     for entity_text, prior in lookups['entity_candidates_prior'].items()}
     self.prior_approx_mapping = u.get_prior_approx_mapping(self.entity_candidates_prior)
+    self.with_labels = []
+    for idx, (mention, label) in enumerate(zip(self.mentions, self.labels)):
+      if len(get_candidate_ids_simple(self.entity_candidates_prior,
+                                      self.prior_approx_mapping,
+                                      mention)) != 0:
+        if label != -1:
+          self.with_labels.append(idx)
 
   def calc_tfidf(self, candidate_f, mention_f):
     return sum(cnt * candidate_f.get(token, 0) * self.idf.get(token,
