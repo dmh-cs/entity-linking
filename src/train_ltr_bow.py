@@ -70,6 +70,7 @@ def main():
           scores = model(features)
           loss = calc_loss(scores, labels)
           fh.write('{}\n'.format(loss.item()))
+          fh.flush()
           loss.backward()
           optimizer.step()
     torch.save(model.state_dict(), './ltr_model_' + ','.join(p.model.hidden_sizes))
