@@ -15,19 +15,9 @@ from ltr_bow import LtRBoW
 from simple_mention_dataset import SimpleMentionDataset, collate_simple_mention_pointwise, collate_simple_mention_pairwise
 from losses import hinge_loss
 
-from rabbit_ml import get_cli_args, list_arg, optional_arg
+from rabbit_ml import get_cli_args
 
-args =  [{'name': 'num_epochs',       'for': 'train_params', 'type': int, 'default': 5},
-         {'name': 'batch_size',       'for': 'train_params', 'type': int, 'default': 512},
-         {'name': 'num_pages_to_use', 'for': 'train_params', 'type': int, 'default': 10000},
-         {'name': 'use_pairwise',     'for': 'train_params', 'type': 'flag', 'default': False},
-         {'name': 'use_hinge',        'for': 'train_params', 'type': 'flag', 'default': False},
-         {'name': 'page_id_order_path', 'for': 'train_params', 'type': str, 'default': '../wp-preprocessing-el/page_id_order.pkl_local'},
-         {'name': 'lookups_path',     'for': 'run_params', 'type': str, 'default': '../wp-preprocessing-el/lookups.pkl_local'},
-         {'name': 'idf_path',         'for': 'run_params', 'type': str, 'default': './wiki_idf_stem.json'},
-         {'name': 'hidden_sizes',     'for': 'model_params', 'type': list_arg(str), 'default': [100]},
-         {'name': 'env_path',         'for': 'run_params', 'type': str, 'default': '.env'},
-         {'name': 'train_size',       'for': 'train_params', 'type': float, 'default': 1.0}]
+from arg_config import args
 
 def main():
   p = get_cli_args(args)
@@ -73,7 +63,7 @@ def main():
           fh.flush()
           loss.backward()
           optimizer.step()
-    torch.save(model.state_dict(), './ltr_model_' + ','.join(p.model.hidden_sizes))
+    torch.save(model.state_dict(), './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes))
 
 
 
