@@ -5,7 +5,6 @@ import torch
 from torch.utils.data import Dataset
 from nltk.stem.snowball import SnowballStemmer
 import json
-from pymongo import MongoClient
 import re
 
 from conll_helpers import get_documents, get_mentions, get_splits, get_entity_page_ids, from_page_ids_to_entity_ids, get_doc_id_per_mention, get_mentions_by_doc_id, get_mention_sentences
@@ -15,7 +14,7 @@ import utils as u
 from data_transformers import get_mention_sentences_from_infos, pad_batch_list
 
 
-def get_desc_fs(pages_db, cursor, stemmer, cand_ids):
+def get_desc_fs(cursor, stemmer, cand_ids):
   def _process(page_content):
     tokenized = parse_text_for_tokens(page_content)
     return dict(Counter(stemmer.stem(token) for token in tokenized))
@@ -31,10 +30,6 @@ class SimpleCoNLLDataset(Dataset):
       self.idf = json.load(fh)
     with open(conll_path, 'r') as fh:
       lines = fh.read().strip().split('\n')[:-1]
-    client = MongoClient()
-    dbname = 'enwiki'
-    db = client[dbname]
-    self.pages_db = db['pages']
     self.cursor = cursor
     self.documents = get_documents(lines)
     self.mentions = get_mentions(lines)
@@ -95,7 +90,7 @@ class SimpleCoNLLDataset(Dataset):
     candidate_mention_sim = [Levenshtein.ratio(mention, clean_entity_text(candidate_str))
                              for candidate_str in candidate_strs]
     all_mentions_features = []
-    candidate_fs = get_desc_fs(self.pages_db, self.cursor, self.stemmer, candidate_ids)
+    candidate_fs = get_desc_fs(self.cursor, self.stemmer, candidate_ids)
     cands_with_page = []
     for candidate_raw_features in zip(candidate_ids,
                                       candidate_mention_sim,
@@ -107,7 +102,10 @@ class SimpleCoNLLDataset(Dataset):
       mention_tfidf = self.calc_tfidf(candidate_f, mention_f)
       page_tfidf = self.calc_tfidf(candidate_f, page_f)
       all_mentions_features.append([mention_tfidf,
+                                    sum(candidate_f.values()),
+                                    sum(mention_f.values()),
                                     page_tfidf,
+                                    sum(page_f.values()),
                                     candidate_mention_sim,
                                     candidate_prior,
                                     times_mentioned])
@@ -118,14 +116,12 @@ def collate_simple_mention_ranker(batch):
   target_rankings = []
   features, candidate_ids, labels = zip(*batch)
   for mention_features, mention_candidate_ids, label in zip(features, candidate_ids, labels):
-    target_idx = mention_candidate_ids.index(label)
-    target_features = mention_features[target_idx]
     ranking = [label]
-    features_for_ranking = [target_features]
+    features_for_ranking = []
     for candidate_features, candidate_id in zip(mention_features, mention_candidate_ids):
       if candidate_id != label:
         ranking.append(candidate_id)
-        features_for_ranking.append(candidate_features)
+      features_for_ranking.append(candidate_features)
     target_rankings.append(ranking)
     element_features.append(features_for_ranking)
   num_candidates = [len(to_rank) for to_rank in element_features]

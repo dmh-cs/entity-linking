@@ -94,7 +94,10 @@ class SimpleMentionDataset(Dataset):
       mention_tfidf = self.calc_tfidf(candidate_f, mention_f)
       page_tfidf = self.calc_tfidf(candidate_f, page_f)
       all_mentions_features.append([mention_tfidf,
+                                    sum(candidate_f.values()),
+                                    sum(mention_f.values()),
                                     page_tfidf,
+                                    sum(page_f.values()),
                                     candidate_mention_sim,
                                     candidate_prior,
                                     times_mentioned])
