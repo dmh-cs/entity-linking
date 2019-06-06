@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data.sampler import BatchSampler, RandomSampler
+from torch.utils.data.sampler import BatchSampler, RandomSampler, SequentialSampler
 from torch.utils.data import DataLoader
 from progressbar import progressbar
 
@@ -14,14 +14,15 @@ from utils import tensors_to_device, to_idx
 from ltr_bow import LtRBoW
 from simple_mention_dataset import SimpleMentionDataset, collate_simple_mention_pointwise, collate_simple_mention_pairwise
 from losses import hinge_loss
+from simple_conll_dataset import SimpleCoNLLDataset
 
 from rabbit_ml import get_cli_args
 
-from arg_config import args
+from args_config import args
 
 def main():
   p = get_cli_args(args)
-  model = LtRBoW(p.model.hidden_sizes)
+  model = LtRBoW(p.model.hidden_sizes, dropout_keep_prob=p.train.dropout_keep_prob)
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   model = model.to(device)
   optimizer = optim.Adam(model.parameters())
@@ -45,12 +46,16 @@ def main():
     cursor.execute("SET CHARACTER SET utf8mb4;")
     cursor.execute("SET character_set_connection=utf8mb4;")
     collate_fn = collate_simple_mention_pairwise if p.train.use_pairwise else collate_simple_mention_pointwise
-    dataset = SimpleMentionDataset(cursor, page_ids, p.run.lookups_path, p.run.idf_path, p.train.train_size)
+    if p.train.train_on_conll:
+      conll_path = 'custom.tsv' if p.run.use_custom else './AIDA-YAGO2-dataset.tsv'
+      dataset = SimpleCoNLLDataset(cursor, conll_path, p.run.lookups_path, p.run.idf_path, p.train.train_size)
+    else:
+      dataset = SimpleMentionDataset(cursor, page_ids, p.run.lookups_path, p.run.idf_path, p.train.train_size)
     dataloader = DataLoader(dataset,
                             batch_sampler=BatchSampler(RandomSampler(dataset), p.train.batch_size, False),
                             collate_fn=collate_fn)
     calc_loss = hinge_loss if p.train.use_hinge else nn.BCEWithLogitsLoss()
-    with open('./losses_ltr', 'w') as fh:
+    with open('./losses_ltr' + ','.join(str(sz) for sz in p.model.hidden_sizes), 'w') as fh:
       for epoch_num in range(p.train.num_epochs):
         for batch_num, batch in progressbar(enumerate(dataloader)):
           model.train()
