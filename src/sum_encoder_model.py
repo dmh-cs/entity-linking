@@ -11,7 +11,7 @@ class MentionEncoderModel(nn.Module):
     word_embed_len = word_embeds.weight.shape[1]
     self.context_encoder = WeightedSumEncoder(word_embeds, use_cnts=use_cnts)
     self.doc_encoder = WeightedSumEncoder(word_embeds, use_cnts=use_cnts)
-    self.mlp = MLP(2 * word_embed_len, word_embed_len, [], dropout_keep_prob)
+    self.mlp = MLP(2 * word_embed_len, word_embed_len, [word_embed_len], dropout_keep_prob)
     self.device = torch.device('cpu')
 
   def to(self, *args, **kwargs):
