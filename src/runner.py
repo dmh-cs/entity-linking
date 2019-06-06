@@ -1,6 +1,7 @@
 from typing import Optional
 import math
 from collections import defaultdict, Counter
+import json
 
 from experiment import Experiment
 from pyrsistent import m, ny
@@ -8,7 +9,7 @@ import pydash as _
 import torch
 import torch.nn as nn
 from torch.nn.modules.adaptive import AdaptiveLogSoftmaxWithLoss
-from torch.utils.data.sampler import BatchSampler, RandomSampler
+from torch.utils.data.sampler import BatchSampler, RandomSampler, SequentialSampler
 from pymysql.cursors import Cursor
 
 from data_fetchers import get_connection, get_embedding_dict, get_num_entities, load_page_id_order, load_entity_candidate_ids_and_label_lookup, get_entity_text
@@ -174,7 +175,7 @@ class Runner(object):
     token_ctr_by_entity_id = read_cache('./token_ctr_by_entity_id.pkl',
                                         lambda: self._get_token_ctr_by_entity_id(cursor,
                                                                                  self.lookups.token_idx_lookup))
-    self.entity_embeds = EntitySumEncoder(self.lookups.embedding, token_ctr_by_entity_id)
+    self.entity_embeds = EntitySumEncoder(self.lookups.embedding, token_ctr_by_entity_id, idf=self.idf)
 
   def init_entity_embeds_wiki2vec(self):
     entity_wikivecs = self._get_entity_wikivecs(self.model_params.num_entities)
@@ -217,9 +218,10 @@ class Runner(object):
                                    start_from_page_num=self.train_params.start_from_page_num,
                                    ablation=self.model_params.ablation)
 
-  def _get_sampler(self, cursor, is_test, limit=None, use_fast_sampler=False):
+  def _get_sampler(self, cursor, is_test, use_sequential_sampler=False, limit=None, use_fast_sampler=False):
+    sampler = SequentialSampler if use_fast_sampler else RandomSampler
     if self.use_conll or self.use_custom:
-      return BatchSampler(RandomSampler(self._dataset),
+      return BatchSampler(sampler(self._dataset),
                           self.train_params.batch_size,
                           False)
     else:
@@ -279,6 +281,7 @@ class Runner(object):
                                                                   use_fast_sampler=self.train_params.use_fast_sampler),
                             get_batch_sampler=lambda: self._get_sampler(cursor,
                                                                         is_test=False,
+                                                                        use_sequential_sampler=self.train_params.use_sequential_sampler,
                                                                         limit=self.train_params.dataset_limit,
                                                                         use_fast_sampler=self.train_params.use_fast_sampler),
                             num_epochs=self.train_params.num_epochs,
@@ -397,10 +400,16 @@ class Runner(object):
         self.load_caches(cursor)
         pad_vector = self.lookups.embedding(torch.tensor([self.lookups.token_idx_lookup['<PAD>']],
                                                          device=self.lookups.embedding.weight.device)).squeeze()
+        with open('./wiki_idf.json') as fh:
+          token_idf = json.load(fh)
+          self.idf = {self.lookups.token_idx_lookup[token]: score
+                      for token, score in token_idf.items()
+                      if token in self.lookups.token_idx_lookup}
         self.init_entity_embeds_sum_encoder(cursor)
         self.context_encoder = MentionEncoderModel(self.lookups.embedding,
                                                    (1 - self.train_params.dropout_drop_prob),
-                                                   use_cnts=True)
+                                                   use_cnts=True,
+                                                   idf=self.idf)
         self.context_encoder.to(self.device)
         self.encoder = SimpleJointModel(self.entity_embeds, self.context_encoder)
         if self.run_params.load_model:

@@ -6,9 +6,9 @@ from weighted_sum_encoder import WeightedSumEncoder
 from bow_helpers import collate_bow_doc
 
 class EntitySumEncoder(nn.Module):
-  def __init__(self, word_embeds, token_ctr_by_entity_id):
+  def __init__(self, word_embeds, token_ctr_by_entity_id, idf=None):
     super().__init__()
-    self.sum_encoder = WeightedSumEncoder(word_embeds, use_cnts=True)
+    self.sum_encoder = WeightedSumEncoder(word_embeds, use_cnts=True, idf=idf)
     self.token_ctr_by_entity_id = token_ctr_by_entity_id
 
   def forward(self, entity_id):

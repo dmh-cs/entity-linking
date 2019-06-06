@@ -6,11 +6,11 @@ from mlp import MLP
 from bow_helpers import collate_bow_doc
 
 class MentionEncoderModel(nn.Module):
-  def __init__(self, word_embeds, dropout_keep_prob, use_cnts=False):
+  def __init__(self, word_embeds, dropout_keep_prob, use_cnts=False, idf=None):
     super().__init__()
     word_embed_len = word_embeds.weight.shape[1]
-    self.context_encoder = WeightedSumEncoder(word_embeds, use_cnts=use_cnts)
-    self.doc_encoder = WeightedSumEncoder(word_embeds, use_cnts=use_cnts)
+    self.context_encoder = WeightedSumEncoder(word_embeds, use_cnts=use_cnts, idf=idf)
+    self.doc_encoder = WeightedSumEncoder(word_embeds, use_cnts=use_cnts, idf=idf)
     self.mlp = MLP(2 * word_embed_len, word_embed_len, [word_embed_len], dropout_keep_prob)
     self.device = torch.device('cpu')
 

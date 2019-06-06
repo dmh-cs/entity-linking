@@ -3,12 +3,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class WeightedSumEncoder(nn.Module):
-  def __init__(self, word_embeds, use_cnts=False):
+  def __init__(self, word_embeds, use_cnts=False, idf=None):
     super().__init__()
     self.word_embeds = word_embeds
+    self.use_cnts = use_cnts
+    self.idf = idf
     self.weights = nn.Embedding(len(word_embeds.weight), 1)
     nn.init.xavier_normal_(self.weights.weight.data)
-    self.use_cnts = use_cnts
+    if self.idf is not None:
+      for idx, weight in self.idf.items():
+        self.weights.weight.data[idx] = weight
 
   def forward(self, desc):
     if self.use_cnts:

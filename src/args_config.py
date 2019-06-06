@@ -14,6 +14,7 @@ args =  [{'name': 'batch_size',       'for': 'train_params', 'type': int, 'defau
          {'name': 'train_size',       'for': 'train_params', 'type': float, 'default': 1.0},
          {'name': 'use_custom',       'for': 'run_params', 'type': 'flag', 'default': False},
          {'name': 'train_on_conll',   'for': 'train_params', 'type': 'flag', 'default': False},
+         {'name':'use_sequential_sampler','for': 'train_params', 'type': 'flag', 'default': False},
          {'name': 'use_hinge',        'for': 'train_params', 'type': 'flag', 'default': False},
          {'name': 'use_pairwise',     'for': 'train_params', 'type': 'flag', 'default': False},
          {'name': 'num_epochs',       'for': 'train_params', 'type': int, 'default': 5}]

@@ -51,8 +51,9 @@ def main():
       dataset = SimpleCoNLLDataset(cursor, conll_path, p.run.lookups_path, p.run.idf_path, p.train.train_size)
     else:
       dataset = SimpleMentionDataset(cursor, page_ids, p.run.lookups_path, p.run.idf_path, p.train.train_size)
+    sampler = SequentialSampler if p.train.use_sequential_sampler else RandomSampler
     dataloader = DataLoader(dataset,
-                            batch_sampler=BatchSampler(RandomSampler(dataset), p.train.batch_size, False),
+                            batch_sampler=BatchSampler(sampler(dataset), p.train.batch_size, False),
                             collate_fn=collate_fn)
     calc_loss = hinge_loss if p.train.use_hinge else nn.BCEWithLogitsLoss()
     with open('./losses_ltr' + ','.join(str(sz) for sz in p.model.hidden_sizes), 'w') as fh:

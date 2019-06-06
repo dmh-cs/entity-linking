@@ -44,6 +44,7 @@ def main():
                    'use_fast_sampler',
                    'dont_use_hardcoded_cutoffs',
                    'use_ranking_loss',
+                   'use_sequential_sampler'
                    'dont_use_deep_network',
                    'use_cnn_local',
                    'use_lstm_local',
@@ -61,6 +62,7 @@ def main():
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
   flags = [_.head(arg) for arg in args]
   train_params = m(dont_clip_grad='--dont_clip_grad' in flags,
+                   use_sequential_sampler='--use_sequential_sampler' in flags,
                    use_fast_sampler='--use_fast_sampler' in flags)
   run_params = m(load_model='--load_model' in flags,
                  cheat='--cheat' in flags,
