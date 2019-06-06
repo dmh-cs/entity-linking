@@ -195,7 +195,8 @@ class Runner(object):
                           self.model_params.num_candidates,
                           self.lookups.entity_labels,
                           path=conll_path,
-                          use_wiki2vec=self.model_params.use_wiki2vec)
+                          use_wiki2vec=self.model_params.use_wiki2vec,
+                          use_sum_encoder=self.model_params.use_sum_encoder)
     else:
       return MentionContextDataset(cursor,
                                    page_ids,
@@ -323,6 +324,7 @@ class Runner(object):
                   ablation=self.model_params.ablation,
                   use_adaptive_softmax=self.model_params.use_adaptive_softmax,
                   use_wiki2vec=self.model_params.use_wiki2vec,
+                  use_sum_encoder=self.model_params.use_sum_encoder,
                   label_to_entity_id=_.invert(self.lookups.entity_labels),
                   use_stacker=self.model_params.use_stacker)
 

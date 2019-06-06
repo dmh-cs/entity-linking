@@ -22,7 +22,7 @@ def collate_sum_encoder(batch):
           'label': torch.tensor([sample['label'] for sample in batch]),
           'page_token_cnts': [sample['page_token_cnts'] for sample in batch],
           'candidate_ids': torch.stack([sample['candidate_ids'] for sample in batch]),
-          'prior': torch.stack([sample['p_prior'] for sample in batch]),
+          'p_prior': torch.stack([sample['p_prior'] for sample in batch]),
           'candidate_mention_sim': torch.stack([sample['candidate_mention_sim'] for sample in batch])}
 
 def collate_wiki2vec(batch):
