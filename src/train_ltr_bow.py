@@ -45,6 +45,7 @@ def main():
     cursor.execute("SET NAMES utf8mb4;")
     cursor.execute("SET CHARACTER SET utf8mb4;")
     cursor.execute("SET character_set_connection=utf8mb4;")
+
     collate_fn = collate_simple_mention_pairwise if p.train.use_pairwise else collate_simple_mention_pointwise
     if p.train.train_on_conll:
       conll_path = 'custom.tsv' if p.run.use_custom else './AIDA-YAGO2-dataset.tsv'

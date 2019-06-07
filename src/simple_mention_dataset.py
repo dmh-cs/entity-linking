@@ -11,25 +11,11 @@ from data_fetchers import load_entity_candidate_ids_and_label_lookup, get_candid
 from parsers import parse_text_for_tokens
 from data_transformers import get_mention_sentences_from_infos, pad_batch_list
 import utils as u
+from simple_dataset import SimpleDataset
 
-def get_desc_fs(desc_fs, cursor, stemmer, cand_ids):
-  def _process(page_content):
-    tokenized = parse_text_for_tokens(page_content)
-    return dict(Counter(stemmer.stem(token) for token in tokenized))
-  cached_fs = {cand_id: desc_fs[cand_id] for cand_id in cand_ids if cand_id in desc_fs}
-  remaining_cand_ids = [cand_id for cand_id in cand_ids if cand_id not in cached_fs]
-  if len(remaining_cand_ids) != 0:
-    cursor.execute('select ep.entity_id as entity_id, left(p.content, 2000) as content from entity_by_page ep join pages p on ep.source_id = p.source_id where ep.entity_id in (' + str(remaining_cand_ids)[1:-1] + ')')
-    result = {row['entity_id']: _process(row['content']) for row in cursor.fetchall()}
-    cached_fs.update(result)
-    desc_fs.update(result)
-  return cached_fs
-
-class SimpleMentionDataset(Dataset):
+class SimpleMentionDataset(SimpleDataset):
   def __init__(self, cursor, page_ids, lookups_path, idf_path, train_size):
-    self.stemmer = SnowballStemmer('english')
-    with open(idf_path) as fh:
-      self.idf = json.load(fh)
+    super().__init__(cursor, lookups_path, idf_path, train_size)
     self.page_content_lim = 2000
     self.cursor = cursor
     self.page_ids = page_ids
@@ -39,19 +25,10 @@ class SimpleMentionDataset(Dataset):
     self.labels = [info['entity_id'] for info in self.mention_infos]
     self.mention_doc_id = [info['page_id'] for info in self.mention_infos]
     self.mention_sentences = get_mention_sentences_from_infos(self.document_lookup, self.mention_infos)
-    self.mention_fs = [dict(Counter(self.stemmer.stem(token)
-                                    for token in sentence))
-                       for sentence in self.mention_sentences]
-    self.page_f_lookup = {page_id: dict(Counter(self.stemmer.stem(token)
-                                                for token in parse_text_for_tokens(doc[:self.page_content_lim])))
-                                   for page_id, doc in self.document_lookup.items()}
-    lookups = load_entity_candidate_ids_and_label_lookup(lookups_path, train_size)
-    label_to_entity_id = _.invert(lookups['entity_labels'])
-    self.entity_candidates_prior = {entity_text: {label_to_entity_id[label]: candidates
-                                                  for label, candidates in prior.items()}
-                                    for entity_text, prior in lookups['entity_candidates_prior'].items()}
-    self.prior_approx_mapping = u.get_prior_approx_mapping(self.entity_candidates_prior)
-    self.desc_fs = {}
+    self.mention_fs = [self._to_f(sentence) for sentence in self.mention_sentences]
+    self.page_f_lookup = {page_id: self._to_f(parse_text_for_tokens(doc[:self.page_content_lim]))
+                          for page_id, doc in self.document_lookup.items()}
+    self._post_init()
 
   def __len__(self): return len(self.labels)
 
@@ -62,50 +39,6 @@ class SimpleMentionDataset(Dataset):
   def get_mention_infos(self, page_ids):
     self.cursor.execute('select mention, page_id, entity_id, mention_id, offset from entity_mentions_text where page_id in (' + str(page_ids)[1:-1] + ')')
     return self.cursor.fetchall()
-
-  def calc_tfidf(self, candidate_f, mention_f):
-    return sum(cnt * candidate_f.get(token, 0) * self.idf.get(token,
-                                                         self.idf.get(token.lower(), 0.0))
-               for token, cnt in mention_f.items())
-
-  def __getitem__(self, idx):
-    label = self.labels[idx]
-    mention = self.mentions[idx]
-    mention_f = self.mention_fs[idx]
-    mention_doc_id = self.mention_doc_id[idx]
-    page_f = self.page_f_lookup[mention_doc_id]
-    candidate_ids = get_candidate_ids_simple(self.entity_candidates_prior,
-                                             self.prior_approx_mapping,
-                                             mention).tolist()
-    candidate_strs = get_candidate_strs(self.cursor, candidate_ids)
-    prior = get_p_prior_cnts(self.entity_candidates_prior,
-                             self.prior_approx_mapping,
-                             mention,
-                             candidate_ids)
-    times_mentioned = sum(prior)
-    candidate_mention_sim = [Levenshtein.ratio(mention, candidate_str)
-                             for candidate_str in candidate_strs]
-    all_mentions_features = []
-    candidate_fs = get_desc_fs(self.desc_fs, self.cursor, self.stemmer, candidate_ids)
-    cands_with_page = []
-    for candidate_raw_features in zip(candidate_ids,
-                                      candidate_mention_sim,
-                                      prior):
-      candidate_id, candidate_mention_sim, candidate_prior = candidate_raw_features
-      if candidate_id not in candidate_fs: continue
-      cands_with_page.append(candidate_id)
-      candidate_f = candidate_fs[candidate_id]
-      mention_tfidf = self.calc_tfidf(candidate_f, mention_f)
-      page_tfidf = self.calc_tfidf(candidate_f, page_f)
-      all_mentions_features.append([mention_tfidf,
-                                    sum(candidate_f.values()),
-                                    sum(mention_f.values()),
-                                    page_tfidf,
-                                    sum(page_f.values()),
-                                    candidate_mention_sim,
-                                    candidate_prior,
-                                    times_mentioned])
-    return all_mentions_features, cands_with_page, label
 
 def collate_simple_mention_pointwise(batch):
   pointwise_features = []
