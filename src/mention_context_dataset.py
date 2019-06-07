@@ -1,6 +1,7 @@
 import Levenshtein
 from collections import defaultdict, Counter
 from nltk.stem.snowball import SnowballStemmer
+import unidecode
 
 from torch.utils.data import Dataset
 import torch
@@ -11,7 +12,13 @@ from data_transformers import get_mention_sentence_splits, embed_page_content, g
 from data_fetchers import get_candidate_ids, get_p_prior, get_candidate_strs
 from parsers import parse_for_sentence_spans, parse_text_for_tokens
 import utils as u
+from cache import read_cache
 
+
+def _get_str_lookup(cursor, entity_label_lookup):
+  cursor.execute('select id, text from entities')
+  return {entity_label_lookup[row['id']]: row['text']
+          for row in self.cursor.fetchall()}
 
 class MentionContextDataset(Dataset):
   def __init__(self,
@@ -48,9 +55,8 @@ class MentionContextDataset(Dataset):
     self._embedded_page_content_lookup = {}
     self._page_token_cnts_lookup = {}
     self._entity_page_mentions_lookup = {}
-    self._mentions_per_page_ctr = {}
+    self._mentions_per_page_ctr = defaultdict(int)
     self._mention_infos = {}
-    self._candidate_strs_lookup = {}
     self._bag_of_nouns_lookup = {}
     self.page_ctr = start_from_page_num
     self.cheat = cheat
@@ -69,6 +75,9 @@ class MentionContextDataset(Dataset):
     self.ablation = ablation
     self.entity_embeds = entity_embeds
     self.stemmer = SnowballStemmer('english')
+    self._candidate_strs_lookup = read_cache('./candidate_strs_lookup.pkl',
+                                             lambda: _get_str_lookup(self.cursor, entity_label_lookup))
+    self._offset = 0
 
   def _get_candidate_ids(self, mention, label):
     return get_candidate_ids(self.entity_candidates_prior,
@@ -189,24 +198,18 @@ class MentionContextDataset(Dataset):
         result[row['page_id']].append(row)
     return dict(result)
 
-  def _get_batch_mention_infos(self, closeby_page_ids):
-    self._candidate_strs_lookup = {}
+  def _get_batch_mention_infos(self):
+    num_to_fetch = self.batch_size
     mention_infos = {}
-    mentions_covered = set()
-    mentions_by_page_id = self._get_mention_infos_by_page_id(closeby_page_ids)
-    candidate_ids = []
-    for page_id, mentions in mentions_by_page_id.items():
-      for mention_info in mentions:
-        if mention_info['mention'] in mentions_covered: continue
-        mentions_covered.add(mention_info['mention'])
-        label = self.entity_label_lookup[mention_info['entity_id']]
-        candidate_ids.extend(self._get_candidate_ids(mention_info['mention'], label).tolist())
-      self._mentions_per_page_ctr[page_id] = len(mentions)
-      mention_infos.update({mention['mention_id']: mention for mention in mentions})
-    self._candidate_strs_lookup.update(dict(zip(candidate_ids,
-                                                u.chunk_apply_at_lim(lambda ids: get_candidate_strs(self.cursor, ids),
-                                                                     [self.entity_id_lookup[cand_id] for cand_id in candidate_ids],
-                                                                     10000))))
+    while len(mention_infos) < self.batch_size:
+      self.cursor.execute(f'select mention, page_id, entity_id, mention_id, offset from entity_mentions_text limit {num_to_fetch} offset {self._offset}')
+      rows = self.cursor.fetchall()
+      for row in rows:
+        if (self.min_mentions == 1) or (row['entity_id'] in self.valid_entity_ids):
+          self._mentions_per_page_ctr[row['page_id']] += 1
+          mention_infos[row['mention_id']] = row
+          num_to_fetch -= -1
+        self._offset += 1
     return mention_infos
 
   def _to_sentence_spans_lookup(self, content_lookup):
@@ -296,9 +299,10 @@ class MentionContextDataset(Dataset):
     return self.stemmer.stem(text)
 
   def _next_batch(self):
-    closeby_page_ids = self._next_page_id_batch()
+    new_mention_infos = self._get_batch_mention_infos()
+    self._mention_infos.update(new_mention_infos)
+    closeby_page_ids = [mention_info['page_id'] for mention_info in new_mention_infos]
     page_content = self._get_batch_page_content_lookup(closeby_page_ids)
-    self._mention_infos.update(self._get_batch_mention_infos(closeby_page_ids))
     if self.use_sum_encoder:
       self._page_content_lookup.update(page_content)
       self._sentence_spans_lookup.update(self._to_sentence_spans_lookup(page_content))
