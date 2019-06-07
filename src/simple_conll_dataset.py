@@ -19,8 +19,12 @@ def get_desc_fs(desc_fs, cursor, stemmer, cand_ids):
     return dict(Counter(stemmer.stem(token) for token in tokenized))
   cached_fs = {cand_id: desc_fs[cand_id] for cand_id in cand_ids if cand_id in desc_fs}
   remaining_cand_ids = [cand_id for cand_id in cand_ids if cand_id not in cached_fs]
-  cursor.execute('select ep.entity_id as entity_id, left(p.content, 2000) as content from entity_by_page ep join pages p on ep.source_id = p.source_id where ep.entity_id in (' + str(remaining_cand_ids)[1:-1] + ')')
-  return {row['entity_id']: _process(row['content']) for row in cursor.fetchall()}
+  if len(remaining_cand_ids) != 0:
+    cursor.execute('select ep.entity_id as entity_id, left(p.content, 2000) as content from entity_by_page ep join pages p on ep.source_id = p.source_id where ep.entity_id in (' + str(remaining_cand_ids)[1:-1] + ')')
+    result = {row['entity_id']: _process(row['content']) for row in cursor.fetchall()}
+    cached_fs.update(result)
+    desc_fs.update(result)
+  return cached_fs
 
 def clean_entity_text(entity_text):
   return re.sub(r'\s*\(.*\)$', '', entity_text)
