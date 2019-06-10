@@ -8,4 +8,6 @@ class DBBoW(CachedBoW):
 
   def _get_doc_text(self, doc_id):
     self.cursor.execute(self.query_template.format(doc_id))
-    return self.cursor.fetchone()['text']
+    result = self.cursor.fetchone()
+    if result is None: raise IndexError
+    return result['text']
