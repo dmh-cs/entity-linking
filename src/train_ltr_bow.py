@@ -64,7 +64,13 @@ def main():
           optimizer.zero_grad()
           batch = [elem.to(device) for elem in batch]
           features, labels = batch
-          scores = model(features)
+          if p.train.use_pairwise:
+            target_features, candidate_features = features
+            target_scores = model(target_features)
+            candidate_scores = model(candidate_features)
+            scores = target_scores - candidate_scores
+          else:
+            scores = model(features)
           loss = calc_loss(scores, labels)
           fh.write('{}\n'.format(loss.item()))
           fh.flush()
