@@ -301,7 +301,7 @@ class MentionContextDataset(Dataset):
   def _next_batch(self):
     new_mention_infos = self._get_batch_mention_infos()
     self._mention_infos.update(new_mention_infos)
-    closeby_page_ids = [mention_info['page_id'] for mention_info in new_mention_infos]
+    closeby_page_ids = [mention_info['page_id'] for mention_info in new_mention_infos.values()]
     page_content = self._get_batch_page_content_lookup(closeby_page_ids)
     if self.use_sum_encoder:
       self._page_content_lookup.update(page_content)

@@ -33,7 +33,7 @@ from sum_encoder_model import MentionEncoderModel
 from utils import to_idx
 from cache import read_cache
 from db_backed_bow import DBBoW
-from coll_transformers import DefaultVal, KeyMapperByLookup
+from coll_transformers import DefaultVal, ValuesMapper
 
 from fire_extinguisher import BatchRepeater
 
@@ -176,8 +176,10 @@ class Runner(object):
   def init_entity_embeds_sum_encoder(self, cursor):
     query_template = 'select e.id as entity_id, left(p.content, 2000) as text from entities e join pages p on e.text = p.title where e.id = {}'
     bow = DBBoW('entity', cursor, query_template)
-    token_ctr_by_entity_id = DefaultVal(KeyMapperByLookup(bow, self.lookups.token_idx_lookup),
-                                        {})
+    token_ctr_by_entity_id = DefaultVal(ValuesMapper(bow,
+                                                     lambda fs: {self.lookups.token_idx_lookup[key]: item
+                                                                 for key, item in fs.items()}),
+                                        {1: 1})
     self.entity_embeds = EntitySumEncoder(self.lookups.embedding, token_ctr_by_entity_id, idf=self.idf)
 
   def init_entity_embeds_wiki2vec(self):

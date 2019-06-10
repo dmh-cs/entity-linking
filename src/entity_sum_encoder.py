@@ -16,5 +16,5 @@ class EntitySumEncoder(nn.Module):
     cntrs = []
     for batch_entity_ids in entity_id.tolist():
       for single_id in batch_entity_ids:
-        cntrs.append(self.token_ctr_by_entity_id.get(single_id, {1: 1}))
+        cntrs.append(self.token_ctr_by_entity_id[single_id])
     return self.sum_encoder(collate_bow_doc(cntrs, device)).reshape(*entity_id.shape, -1)
