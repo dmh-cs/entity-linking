@@ -6,11 +6,9 @@ from pathlib import Path
 from parsers import parse_text_for_tokens
 
 class CachedBoW(ABC):
-  def __init__(self, docs_name, token_idx_lookup=None, unk_idx=1):
-    self.token_idx_lookup = token_idx_lookup
+  def __init__(self, docs_name):
     self.docs_name = docs_name
     self.cache_path = Path('./cache/').joinpath(docs_name)
-    self.unk_idx = unk_idx
     self.cache_path.mkdir(parents=True, exist_ok=True) # pylint: disable=no-member
                                                        # pylint bug https://github.com/PyCQA/pylint/issues/1660
 
@@ -29,11 +27,7 @@ class CachedBoW(ABC):
   def _get_bow(self, doc_id):
     text = self._get_doc_text(doc_id)
     tokenized = parse_text_for_tokens(text)
-    if self.token_idx_lookup is None:
-      counts = dict(Counter(tokenized))
-    else:
-      counts = dict(Counter(self.token_idx_lookup.get(token, self.unk_idx)
-                            for token in tokenized))
+    counts = dict(Counter(tokenized))
     return counts
 
   def __getitem__(self, doc_id):

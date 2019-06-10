@@ -14,7 +14,7 @@ import utils as u
 from data_transformers import get_mention_sentences_from_infos, pad_batch_list
 from cache import read_cache
 from db_backed_bow import DBBoW
-from default_val_wrapper import DefaultVal
+from coll_transformers import DefaultVal
 
 def clean_entity_text(entity_text):
   return re.sub(r'\s*\(.*\)$', '', entity_text)
