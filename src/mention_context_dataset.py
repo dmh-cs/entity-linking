@@ -18,7 +18,7 @@ from cache import read_cache
 def _get_str_lookup(cursor, entity_label_lookup):
   cursor.execute('select id, text from entities')
   return {entity_label_lookup[row['id']]: row['text']
-          for row in self.cursor.fetchall()}
+          for row in cursor.fetchall() if row['text'] in entity_label_lookup}
 
 class MentionContextDataset(Dataset):
   def __init__(self,
@@ -40,6 +40,8 @@ class MentionContextDataset(Dataset):
                use_sum_encoder=False,
                start_from_page_num=0,
                ablation=['local_context', 'document_context', 'prior']):
+    self._candidate_strs_lookup = read_cache('./candidate_strs_lookup.pkl',
+                                             lambda: _get_str_lookup(cursor, entity_label_lookup))
     self.page_id_order = page_id_order
     self.entity_candidates_prior = entity_candidates_prior
     self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
@@ -75,8 +77,6 @@ class MentionContextDataset(Dataset):
     self.ablation = ablation
     self.entity_embeds = entity_embeds
     self.stemmer = SnowballStemmer('english')
-    self._candidate_strs_lookup = read_cache('./candidate_strs_lookup.pkl',
-                                             lambda: _get_str_lookup(self.cursor, entity_label_lookup))
     self._offset = 0
 
   def _get_candidate_ids(self, mention, label):
