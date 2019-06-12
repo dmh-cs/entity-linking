@@ -57,6 +57,7 @@ def main():
                    'use_conll',
                    'dont_use_stacker',
                    'use_custom',
+                   'only_mention_encoder',
                    'use_wiki2vec',
                    'use_sum_encoder']
   args = getopt.getopt(_.tail(sys.argv), '', flag_argnames + [arg['name'] + '=' for arg in args_with_values])[0]
@@ -74,6 +75,7 @@ def main():
                    use_ranking_loss='--use_ranking_loss' in flags,
                    use_cnn_local='--use_cnn_local' in flags,
                    no_trans='--no_trans' in flags,
+                   only_mention_encoder='--only_mention_encoder' in flags,
                    use_lstm_local='--use_lstm_local' in flags,
                    use_deep_network='--dont_use_deep_network' not in flags,
                    freeze_word_embeddings='--dont_freeze_word_embeddings' not in flags,

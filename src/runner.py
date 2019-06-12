@@ -34,6 +34,7 @@ from utils import to_idx
 from cache import read_cache
 from db_backed_bow import DBBoW
 from coll_transformers import DefaultVal, ValuesMapper
+from context_sum_encoder_model import ContextEncoderModel
 
 from fire_extinguisher import BatchRepeater
 
@@ -411,10 +412,13 @@ class Runner(object):
                       for token, score in token_idf.items()
                       if token in self.lookups.token_idx_lookup}
         self.init_entity_embeds_sum_encoder(cursor)
-        self.context_encoder = MentionEncoderModel(self.lookups.embedding,
-                                                   (1 - self.train_params.dropout_drop_prob),
-                                                   use_cnts=True,
-                                                   idf=self.idf)
+        if self.model_params.only_mention_encoder:
+          self.context_encoder = ContextEncoderModel(self.lookups.embedding)
+        else:
+          self.context_encoder = MentionEncoderModel(self.lookups.embedding,
+                                                     (1 - self.train_params.dropout_drop_prob),
+                                                     use_cnts=True,
+                                                     idf=self.idf)
         self.context_encoder.to(self.device)
         self.encoder = SimpleJointModel(self.entity_embeds, self.context_encoder)
         if self.run_params.load_model:
