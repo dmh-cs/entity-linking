@@ -176,10 +176,7 @@ class Runner(object):
 
   def init_entity_embeds_sum_encoder(self, cursor):
     query_template = 'select e.id as entity_id, left(p.content, 2000) as text from entities e join pages p on e.text = p.title where e.id = {}'
-    bow = DBBoW('desc', cursor, query_template)
-    token_ctr_by_entity_id = DefaultVal(ValuesMapper(bow,
-                                                     lambda fs: {to_idx(self.lookups.token_idx_lookup, key): item
-                                                                 for key, item in fs.items()}),
+    token_ctr_by_entity_id = DefaultVal(DBBoW('entity', cursor, query_template),
                                         {1: 1})
     self.entity_embeds = EntitySumEncoder(self.lookups.embedding, token_ctr_by_entity_id, idf=self.idf)
 
@@ -413,7 +410,9 @@ class Runner(object):
                       if token in self.lookups.token_idx_lookup}
         self.init_entity_embeds_sum_encoder(cursor)
         if self.model_params.only_mention_encoder:
-          self.context_encoder = ContextEncoderModel(self.lookups.embedding)
+          self.context_encoder = ContextEncoderModel(self.lookups.embedding,
+                                                     use_cnts=True,
+                                                     idf=self.idf)
         else:
           self.context_encoder = MentionEncoderModel(self.lookups.embedding,
                                                      (1 - self.train_params.dropout_drop_prob),

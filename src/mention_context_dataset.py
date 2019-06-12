@@ -9,16 +9,10 @@ import torch
 import pydash as _
 
 from data_transformers import get_mention_sentence_splits, embed_page_content, get_bag_of_nouns, tokens_to_embeddings, get_mention_sentence
-from data_fetchers import get_candidate_ids, get_p_prior, get_candidate_strs
+from data_fetchers import get_candidate_ids, get_p_prior, get_candidate_strs, get_str_lookup
 from parsers import parse_for_sentence_spans, parse_text_for_tokens
 import utils as u
 from cache import read_cache
-
-
-def _get_str_lookup(cursor, entity_label_lookup):
-  cursor.execute('select id, text from entities')
-  return {entity_label_lookup[row['id']]: row['text']
-          for row in cursor.fetchall() if row['id'] in entity_label_lookup}
 
 class MentionContextDataset(Dataset):
   def __init__(self,
@@ -41,7 +35,7 @@ class MentionContextDataset(Dataset):
                start_from_page_num=0,
                ablation=['local_context', 'document_context', 'prior']):
     self._candidate_strs_lookup = read_cache('./candidate_strs_lookup.pkl',
-                                             lambda: _get_str_lookup(cursor, entity_label_lookup))
+                                             lambda: get_str_lookup(cursor))
     self.page_id_order = page_id_order
     self.entity_candidates_prior = entity_candidates_prior
     self.entity_label_lookup = _.map_values(entity_label_lookup, torch.tensor)
@@ -185,8 +179,8 @@ class MentionContextDataset(Dataset):
       return self._getitem(idx)
 
   def _get_candidate_strs(self, candidate_ids):
-    return [self._candidate_strs_lookup[candidate_id]
-            if candidate_id in self._candidate_strs_lookup else ''
+    return [self._candidate_strs_lookup[self.entity_label_lookup[candidate_id]]
+            if self.entity_label_lookup.get(candidate_id) in self._candidate_strs_lookup else ''
             for candidate_id in candidate_ids]
 
   def _get_mention_infos_by_page_id(self, page_ids):

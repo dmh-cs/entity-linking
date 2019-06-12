@@ -8,7 +8,7 @@ import json
 import re
 
 from conll_helpers import get_documents, get_mentions, get_splits, get_entity_page_ids, from_page_ids_to_entity_ids, get_doc_id_per_mention, get_mentions_by_doc_id, get_mention_sentences
-from data_fetchers import load_entity_candidate_ids_and_label_lookup, get_candidate_ids_simple, get_p_prior_cnts, get_candidate_strs
+from data_fetchers import load_entity_candidate_ids_and_label_lookup, get_candidate_ids_simple, get_p_prior_cnts, get_candidate_strs, get_str_lookup
 from parsers import parse_text_for_tokens
 import utils as u
 from data_transformers import get_mention_sentences_from_infos, pad_batch_list
@@ -50,6 +50,8 @@ class SimpleDataset(Dataset):
     self.mention_fs = None
     self.page_f_lookup = None
     self.with_labels = None
+    self._candidate_strs_lookup = read_cache('./candidate_strs_lookup.pkl',
+                                             lambda: get_str_lookup(cursor))
 
   def _post_init(self):
     self.with_labels = []
@@ -85,7 +87,7 @@ class SimpleDataset(Dataset):
     candidate_ids = get_candidate_ids_simple(self.entity_candidates_prior,
                                              self.prior_approx_mapping,
                                              mention).tolist()
-    candidate_strs = get_candidate_strs(self.cursor, candidate_ids)
+    candidate_strs = [self._candidate_strs_lookup[cand_id] for cand_id in candidate_ids]
     prior = get_p_prior_cnts(self.entity_candidates_prior,
                              self.prior_approx_mapping,
                              mention,

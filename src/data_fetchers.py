@@ -206,6 +206,11 @@ def get_p_prior_cnts(entity_candidates_prior, prior_approx_mapping, mention, can
   candidate_counts = [entity_counts[entity] if entity in entity_counts else 0 for entity in candidate_ids]
   return candidate_counts
 
+def get_str_lookup(cursor):
+  cursor.execute('select id, text from entities')
+  return {row['id']: row['text']
+          for row in cursor.fetchall()}
+
 def get_candidate_strs(cursor, candidate_ids):
   if len(candidate_ids) == 0: return []
   cursor.execute('select id, text from entities where id in (' + str(candidate_ids)[1:-1] + ')')

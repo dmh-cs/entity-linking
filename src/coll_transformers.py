@@ -14,7 +14,11 @@ class ValuesMapper():
     self.fn = fn
     self.coll = coll
 
-  def __getitem__(self, idx): return self.fn(self.coll[idx])
+  def __getitem__(self, idx):
+    if hasattr(idx, '__iter__'):
+      return [self.fn(val) if val is not None else None for val in self.coll[idx]]
+    else:
+      return self.fn(self.coll[idx])
 
 class DefaultVal():
   def __init__(self, coll, default_value):
