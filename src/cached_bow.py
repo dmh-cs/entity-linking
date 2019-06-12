@@ -1,5 +1,3 @@
-import ast
-from pymongo import MongoClient
 from abc import ABC, abstractmethod
 from collections import Counter
 import pickle
@@ -8,13 +6,12 @@ from pathlib import Path
 from parsers import parse_text_for_tokens
 
 class CachedBoW(ABC):
-  def __init__(self, docs_name):
+  def __init__(self, docs_name, ignore_cache_miss=False):
     self.docs_name = docs_name
     self.cache_path = Path('./cache/').joinpath(docs_name)
     self.cache_path.mkdir(parents=True, exist_ok=True) # pylint: disable=no-member
     # pylint bug https://github.com/PyCQA/pylint/issues/1660
-    self.mongo_client = MongoClient()
-    self.mongo_db = self.mongo_client['{}_cache'.format(self.docs_name)]
+    self.ignore_cache_miss = ignore_cache_miss
 
   def _get_doc_name(self, doc_id): return '{}_{}'.format(self.docs_name, doc_id)
 
@@ -22,14 +19,14 @@ class CachedBoW(ABC):
 
   def _cached_get(self, doc_id):
     if hasattr(doc_id, '__iter__'):
-      query = {'_id': {'$in': [str(d_id) for d_id in doc_id]}}
-      result = {int(result['_id']): ast.literal_eval(result['content'])
-                for result in self.mongo_db['{}_cache'.format(self.docs_name)].find(query)}
-      return [result.get(d_id, None) for d_id in doc_id]
+      result = []
+      for d_id in doc_id:
+        try: result.append(self[d_id])
+        except IndexError: result.append(None)
+      return result
     else:
-      query = {'_id': str(doc_id)}
-      result = self.mongo_db['{}_cache'.format(self.docs_name)].find_one(query)
-      return ast.literal_eval(result['content'])
+      with open(self._get_cache_path(doc_id), 'rb') as fh:
+        return pickle.load(fh)
 
   def _cache_result(self, doc_id, bow):
     if hasattr(doc_id, '__iter__'): raise NotImplementedError
@@ -46,6 +43,7 @@ class CachedBoW(ABC):
     try:
       bow = self._cached_get(doc_id)
     except FileNotFoundError:
+      if self.ignore_cache_miss: raise IndexError
       bow = self._get_bow(doc_id)
       self._cache_result(doc_id, bow)
     return bow

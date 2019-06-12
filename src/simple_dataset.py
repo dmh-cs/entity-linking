@@ -34,7 +34,7 @@ class SimpleDataset(Dataset):
       self.idf = json.load(fh)
     self.cursor = cursor
     self.query_template = 'select e.id as entity_id, left(p.content, 2000) as text from entities e join pages p on e.text = p.title where e.id = {}'
-    self.desc_fs = DefaultVal(DBBoW('desc', self.cursor, self.query_template),
+    self.desc_fs = DefaultVal(DBBoW('desc', self.cursor, self.query_template, ignore_cache_miss=True),
                               {})
     self.stemmer = SnowballStemmer('english')
     lookups = load_entity_candidate_ids_and_label_lookup(lookups_path, train_size)

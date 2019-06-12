@@ -176,7 +176,7 @@ class Runner(object):
 
   def init_entity_embeds_sum_encoder(self, cursor):
     query_template = 'select e.id as entity_id, left(p.content, 2000) as text from entities e join pages p on e.text = p.title where e.id = {}'
-    token_ctr_by_entity_id = DefaultVal(DBBoW('entity', cursor, query_template),
+    token_ctr_by_entity_id = DefaultVal(DBBoW('entity', cursor, query_template, ignore_cache_miss=True),
                                         {1: 1})
     self.entity_embeds = EntitySumEncoder(self.lookups.embedding, token_ctr_by_entity_id, idf=self.idf)
 
