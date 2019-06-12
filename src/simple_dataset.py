@@ -95,8 +95,7 @@ class SimpleDataset(Dataset):
                              for candidate_str in candidate_strs]
     all_mentions_features = []
     candidate_fs = {cand_id: fs
-                    for cand_id, fs in zip(candidate_ids, self.desc_fs[candidate_ids])
-                    if fs is not None}
+                    for cand_id, fs in zip(candidate_ids, self.desc_fs[candidate_ids])}
     cands_with_page = []
     for candidate_raw_features in zip(candidate_ids,
                                       candidate_mention_sim,
