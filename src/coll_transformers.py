@@ -22,7 +22,9 @@ class DefaultVal():
     self.coll = coll
 
   def __getitem__(self, idx):
-    try:
-      return self.coll[idx]
-    except IndexError:
-      return self.default_value
+    if hasattr(idx, '__iter__'):
+      return [elem if elem is not None else self.default_value
+              for elem in self.coll[idx]]
+    else:
+      try:               return self.coll[idx]
+      except IndexError: return self.default_value

@@ -18,7 +18,7 @@ from cache import read_cache
 def _get_str_lookup(cursor, entity_label_lookup):
   cursor.execute('select id, text from entities')
   return {entity_label_lookup[row['id']]: row['text']
-          for row in cursor.fetchall() if row['text'] in entity_label_lookup}
+          for row in cursor.fetchall() if row['id'] in entity_label_lookup}
 
 class MentionContextDataset(Dataset):
   def __init__(self,
