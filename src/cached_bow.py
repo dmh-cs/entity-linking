@@ -27,6 +27,7 @@ class CachedBoW(ABC):
                 for result in self.mongo_db['{}_cache'.format(self.docs_name)].find(query)}
       return [result.get(d_id, None) for d_id in doc_id]
     else:
+      query = {'_id': str(doc_id)}
       result = self.mongo_db['{}_cache'.format(self.docs_name)].find_one(query)
       return ast.literal_eval(result['content'])
 

@@ -94,9 +94,9 @@ class SimpleDataset(Dataset):
     candidate_mention_sim = [Levenshtein.ratio(mention, clean_entity_text(candidate_str))
                              for candidate_str in candidate_strs]
     all_mentions_features = []
-    candidate_fs = {cand_id: self.desc_fs[cand_id]
-                    for cand_id in candidate_ids
-                    if cand_id in self.desc_fs}
+    candidate_fs = {cand_id: fs
+                    for cand_id, fs in zip(candidate_ids, self.desc_fs[candidate_ids])
+                    if fs is not None}
     cands_with_page = []
     for candidate_raw_features in zip(candidate_ids,
                                       candidate_mention_sim,
