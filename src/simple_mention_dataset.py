@@ -54,7 +54,6 @@ def collate_simple_mention_pairwise(batch):
   all_target_features = []
   all_candidate_features = []
   pair_ids = []
-  pairwise_labels = torch.zeros(len(batch), dtype=torch.float32)
   features, candidate_ids, labels = zip(*batch)
   for mention_features, mention_candidate_ids, label in zip(features, candidate_ids, labels):
     target_idx = mention_candidate_ids.index(label)
@@ -65,4 +64,5 @@ def collate_simple_mention_pairwise(batch):
         all_candidate_features.append(candidate_features)
         pair_ids.append((label, candidate_id))
   features = (torch.tensor(all_target_features), torch.tensor(all_candidate_features))
-  return features, torch.tensor(pairwise_labels, dtype=torch.float32)
+  pairwise_labels = torch.zeros(len(all_target_features), dtype=torch.float32)
+  return features, pairwise_labels
