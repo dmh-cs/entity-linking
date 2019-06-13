@@ -196,6 +196,7 @@ class Trainer(object):
         scores = scores[(labels != -1).nonzero().reshape(-1)]
         labels = labels[(labels != -1).nonzero().reshape(-1)]
         loss = self.calc_loss(scores, labels)
+        assert torch.isnan(loss).sum() == 0
         loss.backward()
         if not self.dont_clip_grad:
           torch.nn.utils.clip_grad_norm_(itertools.chain(self.model.parameters(),
