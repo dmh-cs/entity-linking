@@ -1,7 +1,7 @@
 import Levenshtein
 from collections import defaultdict, Counter
-from nltk.stem.snowball import SnowballStemmer
 import unidecode
+import pickle
 
 from torch.utils.data import Dataset
 import torch
@@ -13,6 +13,7 @@ from data_fetchers import get_candidate_ids, get_p_prior, get_candidate_strs, ge
 from parsers import parse_for_sentence_spans, parse_text_for_tokens
 import utils as u
 from cache import read_cache
+from doc_lookup import DocLookup
 
 class MentionContextDataset(Dataset):
   def __init__(self,
@@ -70,8 +71,15 @@ class MentionContextDataset(Dataset):
       self.valid_entity_ids = set(row['id'] for row in cursor.fetchall())
     self.ablation = ablation
     self.entity_embeds = entity_embeds
-    self.stemmer = SnowballStemmer('english')
     self._offset = 0
+    with open('./entity_to_row_id.pkl', 'rb') as fh:
+      entity_id_to_row = pickle.load(fh)
+    self.token_ctr_by_entity_id = DocLookup('./desc_unstemmed_fs.npz',
+                                            entity_id_to_row,
+                                            default_value={1: 1},
+                                            use_default=True)
+    self.cursor.execute('select entity_id, page_id from entity_by_page')
+    self.to_entity_id = {row['page_id']: row['entity_id'] for row in self.cursor.fetchall()}
 
   def _get_candidate_ids(self, mention, label):
     return get_candidate_ids(self.entity_candidates_prior,
@@ -264,10 +272,14 @@ class MentionContextDataset(Dataset):
     lim = self.page_content_lim
     lookup = {}
     for page_id in page_ids:
-      page_content = self._page_content_lookup[page_id]
-      if len(page_content.strip()) > 5:
-        lookup[page_id] = dict(Counter(u.to_idx(self.token_idx_lookup, self._stem(token))
-                                       for token in parse_text_for_tokens(page_content[:lim])))
+      if page_id not in self.to_entity_id:
+        page_content = self._page_content_lookup[page_id]
+        if len(page_content.strip()) > 5:
+          lookup[page_id] = dict(Counter(u.to_idx(self.token_idx_lookup, token)
+                                         for token in parse_text_for_tokens(page_content[:lim])))
+      else:
+        entity_id = self.to_entity_id[page_id]
+        lookup[page_id] = self.token_ctr_by_entity_id[entity_id]
     return lookup
 
   def _next_page_id_batch(self):
@@ -288,9 +300,6 @@ class MentionContextDataset(Dataset):
         page_ids.append(page_id_to_add)
         self.page_ctr += 1
     return page_ids
-
-  def _stem(self, text):
-    return self.stemmer.stem(text)
 
   def _next_batch(self):
     new_mention_infos = self._get_batch_mention_infos()
