@@ -58,7 +58,7 @@ def collate_simple_mention_pairwise(batch):
   features, candidate_ids, labels = zip(*batch)
   for mention_features, mention_candidate_ids, label in zip(features, candidate_ids, labels):
     target_idx = mention_candidate_ids.index(label)
-    target_features = features[target_idx]
+    target_features = mention_features[target_idx]
     for candidate_features, candidate_id in zip(mention_features, mention_candidate_ids):
       if candidate_id != label:
         target_features.append(target_features)
