@@ -87,7 +87,8 @@ def main():
           fh.flush()
           loss.backward()
           optimizer.step()
-    torch.save(model.state_dict(), './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes))
+    train_str = 'pairwise' if p.train.use_pairwise else ''
+    torch.save(model.state_dict(), './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes) + train_str)
 
 
 

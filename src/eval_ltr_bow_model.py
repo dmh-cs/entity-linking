@@ -32,7 +32,8 @@ def load_model(model_params, train_params):
     return FixedWeights([0, 0, 1, 0, 0, 0, 0, 0])
   else:
     model = LtRBoW(model_params.hidden_sizes, dropout_keep_prob=train_params.dropout_keep_prob)
-    path = './ltr_model_' + ','.join(str(sz) for sz in model_params.hidden_sizes)
+    train_str = 'pairwise' if train_params.use_pairwise else ''
+    path = './ltr_model_' + ','.join(str(sz) for sz in model_params.hidden_sizes) + train_str
     model.load_state_dict(torch.load(path))
     return model
 
