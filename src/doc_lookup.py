@@ -1,3 +1,5 @@
+from toolz import pipe
+
 from scipy.sparse import load_npz
 
 class DocLookup():
@@ -23,18 +25,19 @@ class DocLookup():
     else:
       return dict(zip(token_idxs, cnts))
 
-  def _get_sparse_rows(self, idx):
-    if hasattr(idx, '__iter__'):
-      return [self[index] for index in idx]
+  def _get_sparse_row(self, idx):
     if self.use_default:
-      try:               return self[idx]
-      except IndexError: return self.default_value
+      try:
+        row_idx = self.doc_id_to_row[idx]
+      except KeyError:
+        return self.default_value
+    else:
+      row_idx = self.doc_id_to_row[idx]
+    return self.mat[row_idx]
 
   def __getitem__(self, idx):
     if hasattr(idx, '__iter__'):
-      sparse_rows =  self._get_sparse_rows([self.doc_id_to_row[index]
-                                            for index in idx])
-      return [self._to_lookup(sparse_row) for sparse_row in sparse_rows]
+      return [pipe(index, self._get_sparse_row, self._to_lookup)
+              for index in idx]
     else:
-      sparse_row = self._get_sparse_rows(self.doc_id_to_row[idx])
-      return self._to_lookup(sparse_row)
+      return pipe(idx, self._get_sparse_row, self._to_lookup)
