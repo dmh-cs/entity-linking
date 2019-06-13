@@ -2,6 +2,7 @@ from typing import Optional
 import math
 from collections import defaultdict, Counter
 import json
+import pickle
 
 from experiment import Experiment
 from pyrsistent import m, ny
@@ -35,6 +36,7 @@ from cache import read_cache
 from db_backed_bow import DBBoW
 from coll_transformers import DefaultVal, ValuesMapper
 from context_sum_encoder_model import ContextEncoderModel
+from doc_lookup import DocLookup
 
 from fire_extinguisher import BatchRepeater
 
@@ -175,9 +177,12 @@ class Runner(object):
     return entity_desc_bow
 
   def init_entity_embeds_sum_encoder(self, cursor):
-    query_template = 'select e.id as entity_id, left(p.content, 2000) as text from entities e join pages p on e.text = p.title where e.id = {}'
-    token_ctr_by_entity_id = DefaultVal(DBBoW('entity', cursor, query_template, ignore_cache_miss=True),
-                                        {1: 1})
+    with open('./entity_to_row_id.pkl', 'rb') as fh:
+      entity_id_to_row = pickle.load(fh)
+    token_ctr_by_entity_id = DocLookup('./desc_unstemmed_fs.npz',
+                                       entity_id_to_row,
+                                       default_value={1: 1},
+                                       use_default=True)
     self.entity_embeds = EntitySumEncoder(self.lookups.embedding, token_ctr_by_entity_id, idf=self.idf)
 
   def init_entity_embeds_wiki2vec(self):
