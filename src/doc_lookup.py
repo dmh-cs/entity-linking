@@ -51,6 +51,7 @@ class DocLookup():
       rows = self.mat[without_none]
       result = [{} if row_idx is not None else self.default_value
                 for row_idx in row_idxs]
+      if len(without_none) == 0: return result
       row_nums, token_idxs = rows.nonzero()
       cnts = rows[row_nums, token_idxs].tolist()[0]
       for row_num, token_idx, cnt in zip(row_nums, token_idxs, cnts):
