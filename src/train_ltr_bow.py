@@ -26,6 +26,7 @@ def main():
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
   model = model.to(device)
   optimizer = optim.Adam(model.parameters())
+  with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
   load_dotenv(dotenv_path=p.run.env_path)
   EL_DATABASE_NAME = os.getenv("DBNAME")
   DATABASE_USER = os.getenv("DBUSER")
@@ -49,9 +50,19 @@ def main():
     collate_fn = collate_simple_mention_pairwise if p.train.use_pairwise else collate_simple_mention_pointwise
     if p.train.train_on_conll:
       conll_path = 'custom.tsv' if p.run.use_custom else './AIDA-YAGO2-dataset.tsv'
-      dataset = SimpleCoNLLDataset(cursor, conll_path, p.run.lookups_path, p.run.idf_path, p.train.train_size)
+      dataset = SimpleCoNLLDataset(cursor,
+                                   token_idx_lookup,
+                                   conll_path,
+                                   p.run.lookups_path,
+                                   p.run.idf_path,
+                                   p.train.train_size)
     else:
-      dataset = SimpleMentionDataset(cursor, page_ids, p.run.lookups_path, p.run.idf_path, p.train.train_size)
+      dataset = SimpleMentionDataset(cursor,
+                                     token_idx_lookup,
+                                     page_ids,
+                                     p.run.lookups_path,
+                                     p.run.idf_path,
+                                     p.train.train_size)
     sampler = SequentialSampler if p.train.use_sequential_sampler else RandomSampler
     dataloader = DataLoader(dataset,
                             batch_sampler=BatchSampler(sampler(dataset), p.train.batch_size, False),

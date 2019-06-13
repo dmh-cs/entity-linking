@@ -9,6 +9,7 @@ import string
 from torch.utils.data.sampler import BatchSampler, SequentialSampler
 from torch.utils.data import DataLoader
 import torch
+import pickle
 
 import numpy as np
 from nltk.stem.snowball import SnowballStemmer
@@ -43,10 +44,16 @@ def main():
   guessed_when_missed = []
   db_connection = get_connection(p.run.env_path)
   model = load_model(p.model, p.train)
+  with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
   model.eval()
   with torch.no_grad():
     with db_connection.cursor() as cursor:
-      dataset = SimpleCoNLLDataset(cursor, conll_path, p.run.lookups_path, p.run.idf_path, p.train.train_size)
+      dataset = SimpleCoNLLDataset(cursor,
+                                   token_idx_lookup,
+                                   conll_path,
+                                   p.run.lookups_path,
+                                   p.run.idf_path,
+                                   p.train.train_size)
       conll_test_set = DataLoader(dataset,
                                   batch_sampler=BatchSampler(SequentialSampler(dataset),
                                                              p.run.batch_size,

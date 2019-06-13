@@ -1,3 +1,4 @@
+import pickle
 import pydash as _
 import Levenshtein
 from collections import Counter
@@ -15,6 +16,7 @@ from data_transformers import get_mention_sentences_from_infos, pad_batch_list
 from cache import read_cache
 from db_backed_bow import DBBoW
 from coll_transformers import DefaultVal
+from doc_lookup import DocLookup
 
 def clean_entity_text(entity_text):
   return re.sub(r'\s*\(.*\)$', '', entity_text)
@@ -29,13 +31,16 @@ def _get_desc_fs(cursor):
   return entity_desc_bow
 
 class SimpleDataset(Dataset):
-  def __init__(self, cursor, lookups_path, idf_path, train_size):
+  def __init__(self, cursor, token_idx_lookup, lookups_path, idf_path, train_size):
     with open(idf_path) as fh:
       self.idf = json.load(fh)
     self.cursor = cursor
-    self.query_template = 'select e.id as entity_id, left(p.content, 2000) as text from entities e join pages p on e.text = p.title where e.id = {}'
-    self.desc_fs = DefaultVal(DBBoW('desc', self.cursor, self.query_template, ignore_cache_miss=True),
-                              {})
+    with open('./entity_to_row_id.pkl', 'rb') as fh: entity_id_to_row = pickle.load(fh)
+    self.desc_fs = DocLookup('./desc_fs.npz',
+                             entity_id_to_row,
+                             token_idx_to_str=_.invert(token_idx_lookup),
+                             default_value={},
+                             use_default=True)
     self.stemmer = SnowballStemmer('english')
     lookups = load_entity_candidate_ids_and_label_lookup(lookups_path, train_size)
     label_to_entity_id = _.invert(lookups['entity_labels'])
@@ -115,5 +120,6 @@ class SimpleDataset(Dataset):
                                     sum(page_f.values()),
                                     candidate_mention_sim,
                                     candidate_prior,
-                                    times_mentioned])
+                                    times_mentioned,
+                                    bon_l2_wiki2vec])
     return all_mentions_features, cands_with_page, label
