@@ -38,7 +38,7 @@ class SimpleDataset(Dataset):
     with open('./entity_to_row_id.pkl', 'rb') as fh: entity_id_to_row = pickle.load(fh)
     self.desc_fs = DocLookup('./desc_fs.npz',
                              entity_id_to_row,
-                             token_idx_to_str=_.invert(token_idx_lookup),
+                             token_idx_mapping=_.invert(token_idx_lookup),
                              default_value={},
                              use_default=True)
     self.stemmer = SnowballStemmer('english')

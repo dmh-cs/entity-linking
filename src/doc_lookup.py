@@ -6,7 +6,7 @@ class DocLookup():
   def __init__(self,
                sparse_mat_path,
                doc_id_to_row,
-               token_idx_to_str=None,
+               token_idx_mapping=None,
                default_value=None,
                use_default=False):
     self.sparse_mat_path = sparse_mat_path
@@ -14,13 +14,15 @@ class DocLookup():
     self.default_value = default_value
     self.use_default = use_default
     self.doc_id_to_row = doc_id_to_row
-    self.token_idx_to_str = token_idx_to_str
+    self.token_idx_mapping = token_idx_mapping
 
   def _to_lookup(self, sparse_row):
+    if sparse_row is None:
+      return self.default_value
     token_idxs = sparse_row.nonzero()[1]
     cnts = sparse_row[0, token_idxs].toarray().reshape(-1).tolist()
-    if self.token_idx_to_str is not None:
-      return dict(zip((self.token_idx_to_str[idx] for idx in token_idxs),
+    if self.token_idx_mapping is not None:
+      return dict(zip((self.token_idx_mapping[idx] for idx in token_idxs),
                       cnts))
     else:
       return dict(zip(token_idxs, cnts))
@@ -30,7 +32,7 @@ class DocLookup():
       try:
         row_idx = self.doc_id_to_row[idx]
       except KeyError:
-        return self.default_value
+        return None
     else:
       row_idx = self.doc_id_to_row[idx]
     return self.mat[row_idx]
