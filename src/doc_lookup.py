@@ -39,7 +39,25 @@ class DocLookup():
 
   def __getitem__(self, idx):
     if hasattr(idx, '__iter__'):
-      return [pipe(index, self._get_sparse_row, self._to_lookup)
-              for index in idx]
+      row_idxs = [self.doc_id_to_row.get(i) for i in idx]
+      without_none = [self.doc_id_to_row[i]
+                      for i in idx
+                      if i in self.doc_id_to_row]
+      to_result_num = [result_num
+                       for result_num, index in enumerate(idx)
+                       if index in self.doc_id_to_row]
+      if (len(row_idxs) != len(without_none)) and not self.use_default:
+        raise IndexError
+      rows = self.mat[without_none]
+      result = [{} if row_idx is not None else self.default_value
+                for row_idx in row_idxs]
+      row_nums, token_idxs = rows.nonzero()
+      cnts = rows[row_nums, token_idxs].tolist()[0]
+      for row_num, token_idx, cnt in zip(row_nums, token_idxs, cnts):
+        if self.token_idx_mapping is not None:
+          result[to_result_num[row_num]][self.token_idx_mapping[token_idx]] = cnt
+        else:
+          result[to_result_num[row_num]][token_idx] = cnt
+      return result
     else:
       return pipe(idx, self._get_sparse_row, self._to_lookup)
