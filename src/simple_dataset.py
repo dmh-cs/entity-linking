@@ -120,6 +120,5 @@ class SimpleDataset(Dataset):
                                     sum(page_f.values()),
                                     candidate_mention_sim,
                                     candidate_prior,
-                                    times_mentioned,
-                                    bon_l2_wiki2vec])
+                                    times_mentioned])
     return all_mentions_features, cands_with_page, label
