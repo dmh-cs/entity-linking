@@ -10,6 +10,7 @@ args =  [{'name': 'batch_size',       'for': 'train_params', 'type': int, 'defau
          {'name': 'just_str_sim',     'for': 'model_params', 'type': 'flag', 'default': False},
          {'name': 'lookups_path',     'for': 'run_params', 'type': str, 'default': '../wp-preprocessing-el/lookups.pkl_local'},
          {'name': 'num_pages_to_use', 'for': 'train_params', 'type': int, 'default': 10000},
+         {'name': 'margin',           'for': 'train_params', 'type': float, 'default': 0.1},
          {'name':'page_id_order_path','for': 'train_params', 'type': str, 'default': '../wp-preprocessing-el/page_id_order.pkl_local'},
          {'name': 'train_size',       'for': 'train_params', 'type': float, 'default': 1.0},
          {'name': 'use_custom',       'for': 'run_params', 'type': 'flag', 'default': False},

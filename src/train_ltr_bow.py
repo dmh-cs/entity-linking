@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data.sampler import BatchSampler, RandomSampler, SequentialSampler
 from torch.utils.data import DataLoader
+import torch.nn.functional as F
 from progressbar import progressbar
 
 from utils import tensors_to_device, to_idx
@@ -67,7 +68,7 @@ def main():
     dataloader = DataLoader(dataset,
                             batch_sampler=BatchSampler(sampler(dataset), p.train.batch_size, False),
                             collate_fn=collate_fn)
-    calc_loss = hinge_loss if p.train.use_hinge else nn.BCEWithLogitsLoss()
+    calc_loss = nn.MarginRankingLoss(p.train.margin) if p.train.use_hinge else nn.BCEWithLogitsLoss()
     with open('./losses_ltr' + ','.join(str(sz) for sz in p.model.hidden_sizes), 'w') as fh:
       for epoch_num in range(p.train.num_epochs):
         for batch_num, batch in progressbar(enumerate(dataloader)):
@@ -80,18 +81,22 @@ def main():
             target_features, candidate_features = features
             target_scores = model(target_features)
             candidate_scores = model(candidate_features)
-            scores = target_scores - candidate_scores
+            scores = candidate_scores - target_scores
           else:
             batch = [elem.to(device) for elem in batch]
             features, labels = batch
             scores = model(features)
-          loss = calc_loss(scores, labels)
+          if p.train.use_hinge:
+            loss = calc_loss(target_scores, candidate_scores, torch.ones_like(labels))
+          else:
+            loss = calc_loss(scores, labels)
           fh.write('{}\n'.format(loss.item()))
           fh.flush()
           loss.backward()
           optimizer.step()
     train_str = 'pairwise' if p.train.use_pairwise else ''
-    torch.save(model.state_dict(), './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes) + train_str)
+    loss_str = 'hinge_{}'.format(p.train.margin) if p.train.use_hinge else ''
+    torch.save(model.state_dict(), './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes) + train_str + '_' + loss_str)
 
 
 
