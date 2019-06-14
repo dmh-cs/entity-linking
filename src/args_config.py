@@ -4,7 +4,7 @@ args =  [{'name': 'batch_size',       'for': 'train_params', 'type': int, 'defau
          {'name': 'batch_size',       'for': 'run_params', 'type': int, 'default': 512},
          {'name': 'dropout_keep_prob','for': 'train_params', 'type': float, 'default': 0.5},
          {'name': 'env_path',         'for': 'run_params', 'type': str, 'default': '.env'},
-         {'name': 'hidden_sizes',     'for': 'model_params', 'type': list_arg(str), 'default': [100]},
+         {'name': 'hidden_sizes',     'for': 'model_params', 'type': list_arg(int), 'default': [100, 50]},
          {'name': 'idf_path',         'for': 'run_params', 'type': str, 'default': './wiki_idf_stem.json'},
          {'name': 'just_tfidf',       'for': 'model_params', 'type': 'flag', 'default': False},
          {'name': 'just_str_sim',     'for': 'model_params', 'type': 'flag', 'default': False},
