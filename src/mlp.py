@@ -6,7 +6,17 @@ from utils import Identity
 from toolz import pipe
 
 def _get_layer(from_size, to_size, dropout_keep_prob, activation=None):
-  return [nn.Linear(from_size, to_size),
+  lin = nn.Linear(from_size, to_size)
+  if (activation == None) or type(activation) == nn.ReLU:
+    act_name = 'relu'
+  elif type(activation) == nn.Tanh:
+    act_name = 'tanh'
+  elif type(activation) == nn.LeakyReLU:
+    act_name = 'leaky_relu'
+  else:
+    act_name = 'linear'
+  nn.init.xavier_uniform_(lin.weight, gain=nn.init.calculate_gain(act_name))
+  return [lin,
           nn.ReLU() if activation is None else activation,
           nn.Dropout(1 - dropout_keep_prob)]
 
