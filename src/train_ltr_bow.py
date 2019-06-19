@@ -56,14 +56,16 @@ def main():
                                    conll_path,
                                    p.run.lookups_path,
                                    p.run.idf_path,
-                                   p.train.train_size)
+                                   p.train.train_size,
+                                   txt_dataset_path=p.run.txt_dataset_path)
     else:
       dataset = SimpleMentionDataset(cursor,
                                      token_idx_lookup,
                                      page_ids,
                                      p.run.lookups_path,
                                      p.run.idf_path,
-                                     p.train.train_size)
+                                     p.train.train_size,
+                                     txt_dataset_path=p.run.txt_dataset_path)
     sampler = SequentialSampler if p.train.use_sequential_sampler else RandomSampler
     dataloader = DataLoader(dataset,
                             batch_sampler=BatchSampler(sampler(dataset), p.train.batch_size, False),

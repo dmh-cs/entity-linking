@@ -14,8 +14,15 @@ import utils as u
 from simple_dataset import SimpleDataset
 
 class SimpleMentionDataset(SimpleDataset):
-  def __init__(self, cursor, token_idx_lookup, page_ids, lookups_path, idf_path, train_size):
-    super().__init__(cursor, token_idx_lookup, lookups_path, idf_path, train_size)
+  def __init__(self,
+               cursor,
+               token_idx_lookup,
+               page_ids,
+               lookups_path,
+               idf_path,
+               train_size,
+               txt_dataset_path=None):
+    super().__init__(cursor, token_idx_lookup, lookups_path, idf_path, train_size, txt_dataset_path)
     self.page_content_lim = 2000
     self.cursor = cursor
     self.page_ids = page_ids

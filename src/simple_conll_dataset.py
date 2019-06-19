@@ -15,8 +15,15 @@ from data_transformers import get_mention_sentences_from_infos, pad_batch_list
 from simple_dataset import SimpleDataset
 
 class SimpleCoNLLDataset(SimpleDataset):
-  def __init__(self, cursor, token_idx_lookup, conll_path, lookups_path, idf_path, train_size):
-    super().__init__(cursor, token_idx_lookup, lookups_path, idf_path, train_size)
+  def __init__(self,
+               cursor,
+               token_idx_lookup,
+               conll_path,
+               lookups_path,
+               idf_path,
+               train_size,
+               txt_dataset_path=None):
+    super().__init__(cursor, token_idx_lookup, lookups_path, idf_path, train_size, txt_dataset_path)
     with open(conll_path, 'r') as fh:
       lines = fh.read().strip().split('\n')[:-1]
     self.documents = get_documents(lines)

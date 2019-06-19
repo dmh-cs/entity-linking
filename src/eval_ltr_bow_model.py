@@ -55,7 +55,8 @@ def main():
                                    conll_path,
                                    p.run.lookups_path,
                                    p.run.idf_path,
-                                   p.train.train_size)
+                                   p.train.train_size,
+                                   p.run.txt_dataset_path)
       conll_test_set = DataLoader(dataset,
                                   batch_sampler=BatchSampler(SequentialSampler(dataset),
                                                              p.run.batch_size,
@@ -72,16 +73,18 @@ def main():
           ranking_size = len(ids)
           top_1.append(ids[torch.argmax(candidate_scores[offset : offset + ranking_size]).item()])
           offset += ranking_size
-        for idx, guess, label in zip(ctr, top_1, target):
+        for guess, label, idx, ids in zip(top_1, target, ctr, candidate_ids):
           if guess == label:
             num_correct += 1
           else:
             missed_idxs.append(idx)
             guessed_when_missed.append(guess)
+      print(num_correct / next(ctr))
+      import ipdb; ipdb.set_trace()
       with open('./missed_idxs', 'w') as fh:
-        fh.writelines([str(dataset[idx]) for idx in missed_idxs])
+        fh.write('\n'.join([str((idx, dataset[idx])) for idx in missed_idxs]))
       with open('./guessed_when_missed', 'w') as fh:
-        fh.writelines([str(idx) for idx in guessed_when_missed])
+        fh.write('\n'.join([str(idx) for idx in guessed_when_missed]))
 
 
 

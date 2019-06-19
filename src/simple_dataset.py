@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 from nltk.stem.snowball import SnowballStemmer
 import json
 import re
+import ast
 
 from conll_helpers import get_documents, get_mentions, get_splits, get_entity_page_ids, from_page_ids_to_entity_ids, get_doc_id_per_mention, get_mentions_by_doc_id, get_mention_sentences
 from data_fetchers import load_entity_candidate_ids_and_label_lookup, get_candidate_ids_simple, get_p_prior_cnts, get_candidate_strs, get_str_lookup
@@ -31,7 +32,17 @@ def _get_desc_fs(cursor):
   return entity_desc_bow
 
 class SimpleDataset(Dataset):
-  def __init__(self, cursor, token_idx_lookup, lookups_path, idf_path, train_size):
+  def __init__(self,
+               cursor,
+               token_idx_lookup,
+               lookups_path,
+               idf_path,
+               train_size,
+               txt_dataset_path):
+    self.txt_dataset_path = txt_dataset_path
+    if self.txt_dataset_path is not None:
+      with open(self.txt_dataset_path) as fh:
+        self.dataset_cache = [ast.literal_eval(line) for line in fh.readlines()]
     with open(idf_path) as fh:
       self.idf = json.load(fh)
     self.cursor = cursor
@@ -77,12 +88,13 @@ class SimpleDataset(Dataset):
 
   def calc_tfidf(self, candidate_f, mention_f):
     return sum(cnt * candidate_f.get(token, 0) * self.idf.get(token,
-                                                         self.idf.get(token.lower(), 0.0))
+                                                              self.idf.get(token.lower(), 0.0))
                for token, cnt in mention_f.items())
 
   def __len__(self): return len(self.with_labels)
 
   def __getitem__(self, idx):
+    if self.txt_dataset_path is not None: return self.dataset_cache[idx]
     i = self.with_labels[idx]
     label = self.labels[i]
     mention = self.mentions[i]
