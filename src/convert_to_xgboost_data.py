@@ -7,7 +7,7 @@ import pydash as _
 from args_config import args
 
 def libsvm_format_row(row_label, query_id, row_features):
-  row_rank = 1 if row_label == 0 else 2
+  row_rank = 0 if row_label == 0 else 1
   row = ''
   row += '{} '.format(row_rank)
   row += 'qid:{} '.format(query_id)
