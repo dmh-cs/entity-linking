@@ -23,10 +23,6 @@ from args_config import args
 
 def main():
   p = get_cli_args(args)
-  model = LtRBoW(p.model.hidden_sizes, dropout_keep_prob=p.train.dropout_keep_prob)
-  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-  model = model.to(device)
-  optimizer = optim.Adam(model.parameters())
   with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
   load_dotenv(dotenv_path=p.run.env_path)
   EL_DATABASE_NAME = os.getenv("DBNAME")
@@ -70,6 +66,10 @@ def main():
     dataloader = DataLoader(dataset,
                             batch_sampler=BatchSampler(sampler(dataset), p.train.batch_size, False),
                             collate_fn=collate_fn)
+    model = LtRBoW(p.model.hidden_sizes, dropout_keep_prob=p.train.dropout_keep_prob)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
+    optimizer = optim.Adam(model.parameters())
     calc_loss = nn.MarginRankingLoss(p.train.margin) if p.train.use_hinge else nn.BCEWithLogitsLoss()
     with open('./losses_ltr' + ','.join(str(sz) for sz in p.model.hidden_sizes), 'w') as fh:
       for epoch_num in range(p.train.num_epochs):
@@ -96,9 +96,9 @@ def main():
           fh.flush()
           loss.backward()
           optimizer.step()
-    train_str = 'pairwise' if p.train.use_pairwise else ''
-    loss_str = 'hinge_{}'.format(p.train.margin) if p.train.use_hinge else ''
-    torch.save(model.state_dict(), './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes) + train_str + '_' + loss_str)
+          train_str = 'pairwise' if p.train.use_pairwise else ''
+          loss_str = 'hinge_{}'.format(p.train.margin) if p.train.use_hinge else ''
+          torch.save(model.state_dict(), './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes) + train_str + '_' + loss_str)
 
 
 

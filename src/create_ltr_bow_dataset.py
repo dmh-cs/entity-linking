@@ -52,7 +52,7 @@ def main():
                                      p.train.train_size)
     train_str = '_'.join(['conll' if p.train.train_on_conll else 'wiki',
                           'custom' if p.run.use_custom else '',
-                          str(p.run.num_pages_to_use)])
+                          str(p.train.num_pages_to_use)])
     with open('./data_{}'.format(train_str), 'w') as fh:
       for item_num, item in progressbar(enumerate(dataset)):
         fh.write('{}\n'.format(str(item)))

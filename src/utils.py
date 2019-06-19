@@ -75,3 +75,11 @@ def get_prior_approx_mapping(entity_candidates_prior):
 
 class Identity(nn.Module):
   def forward(self, x): return x
+
+def items_to_str(items, sort_by=None):
+  if sort_by is not None:
+    to_serialize = sorted(items, key=sort_by)
+  else:
+    to_serialize = items
+  return '_'.join(':'.join(str(elem) for elem in pair)
+                  for pair in to_serialize)
