@@ -15,6 +15,11 @@ import utils as u
 from cache import read_cache
 from doc_lookup import DocLookup
 
+def get_page_id_to_entity_id_lookup(cursor):
+  cursor.execute('select entity_id, page_id from entity_by_page')
+  return {row['page_id']: row['entity_id']
+          for row in cursor.fetchall()}
+
 class MentionContextDataset(Dataset):
   def __init__(self,
                cursor,
@@ -78,8 +83,8 @@ class MentionContextDataset(Dataset):
                                             entity_id_to_row,
                                             default_value={1: 1},
                                             use_default=True)
-    self.cursor.execute('select entity_id, page_id from entity_by_page')
-    self.to_entity_id = {row['page_id']: row['entity_id'] for row in self.cursor.fetchall()}
+    self.to_entity_id = read_cache('./page_to_entity_id.pkl',
+                                   lambda: get_page_id_to_entity_id_lookup(cursor))
 
   def _get_candidate_ids(self, mention, label):
     return get_candidate_ids(self.entity_candidates_prior,
@@ -204,7 +209,7 @@ class MentionContextDataset(Dataset):
     num_to_fetch = self.batch_size
     mention_infos = {}
     while len(mention_infos) < self.batch_size:
-      self.cursor.execute(f'select mention, page_id, entity_id, mention_id, offset from entity_mentions_text limit {num_to_fetch} offset {self._offset}')
+      self.cursor.execute(f'select mention, page_id, entity_id, mention_id, offset from entity_mentions_text_tbl limit {num_to_fetch} offset {self._offset}')
       rows = self.cursor.fetchall()
       for row in rows:
         if (self.min_mentions == 1) or (row['entity_id'] in self.valid_entity_ids):
@@ -304,7 +309,7 @@ class MentionContextDataset(Dataset):
   def _next_batch(self):
     new_mention_infos = self._get_batch_mention_infos()
     self._mention_infos.update(new_mention_infos)
-    closeby_page_ids = [mention_info['page_id'] for mention_info in new_mention_infos.values()]
+    closeby_page_ids = list(set([mention_info['page_id'] for mention_info in new_mention_infos.values()]))
     page_content = self._get_batch_page_content_lookup(closeby_page_ids)
     if self.use_sum_encoder:
       self._page_content_lookup.update(page_content)
