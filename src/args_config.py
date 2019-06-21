@@ -8,6 +8,7 @@ args =  [
   {'name': 'idf_path',         'for': 'run_params', 'type': str, 'default': './wiki_idf_stem.json'},
   {'name': 'just_str_sim',     'for': 'model_params', 'type': 'flag', 'default': False},
   {'name': 'just_tfidf',       'for': 'model_params', 'type': 'flag', 'default': False},
+  {'name': 'just_wiki2vec',    'for': 'model_params', 'type': 'flag', 'default': False},
   {'name': 'txt_dataset_path', 'for': 'run_params', 'type': optional_arg(str), 'default': None},
   {'name':'xgboost_path','for': 'run_params', 'type': optional_arg(str), 'default': None},
   {'name':'xgboost_train_path','for': 'train_params', 'type': optional_arg(str), 'default': None},

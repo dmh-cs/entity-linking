@@ -3,6 +3,7 @@ from itertools import groupby
 
 import pydash as _
 import xgboost as xgb
+import numpy as np
 from xgboost import DMatrix
 from sklearn.datasets import load_svmlight_file
 from rabbit_ml import get_cli_args
@@ -14,6 +15,10 @@ def main():
   p = get_cli_args(args)
   x_train, y_train, qid_train = load_svmlight_file(p.train.xgboost_train_path, query_id=True) # pylint: disable=unbalanced-tuple-unpacking
   x_test, y_test, qid_test = load_svmlight_file(p.train.xgboost_test_path, query_id=True) # pylint: disable=unbalanced-tuple-unpacking
+  x_train = x_train.todense()
+  x_train = np.concatenate([x_train, x_train[:, -2] / x_train[:, 2], x_train[:, -1] / x_train[:, 4]], 1)
+  x_test = x_test.todense()
+  x_test = np.concatenate([x_test, x_test[:, -2] / x_test[:, 2], x_test[:, -1] / x_test[:, 4]], 1)
   train_dmatrix = DMatrix(x_train, y_train)
   test_dmatrix = DMatrix(x_test, y_test)
   train_dmatrix.set_group([len(list(g)) for __, g in groupby(qid_train)])

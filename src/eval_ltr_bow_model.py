@@ -27,9 +27,11 @@ from args_config import args
 
 def load_model(model_params, train_params):
   if model_params.just_tfidf:
-    return FixedWeights([1, 0, 0, 0, 0, 0, 0, 0])
+    return FixedWeights([1] + [0] * 9)
   elif model_params.just_str_sim:
-    return FixedWeights([0, 0, 1, 0, 0, 0, 0, 0])
+    return FixedWeights([0, 0, 1] + [0] * 7)
+  elif model_params.just_wiki2vec:
+    return FixedWeights([0] * 8 + [0, 1])
   else:
     model = LtRBoW(model_params.hidden_sizes, dropout_keep_prob=train_params.dropout_keep_prob)
     train_str = 'pairwise' if train_params.use_pairwise else ''
@@ -47,11 +49,13 @@ def main():
   db_connection = get_connection(p.run.env_path)
   model = load_model(p.model, p.train)
   with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
+  with open('./glove_token_idx_lookup.pkl', 'rb') as fh: full_token_idx_lookup = pickle.load(fh)
   model.eval()
   with torch.no_grad():
     with db_connection.cursor() as cursor:
       dataset = SimpleCoNLLDataset(cursor,
                                    token_idx_lookup,
+                                   full_token_idx_lookup,
                                    conll_path,
                                    p.run.lookups_path,
                                    p.run.idf_path,
