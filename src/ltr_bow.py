@@ -23,7 +23,9 @@ class LtRBoW(nn.Module):
                              'prior',
                              'times_mentioned',
                              'mention_wiki2vec_dot',
-                             'page_wiki2vec_dot'])
+                             'page_wiki2vec_dot',
+                             'mention_wiki2vec_dot_norm',
+                             'page_wiki2vec_dot_norm'])
     self.tanh_final_layer = tanh_final_layer
     self.mlp = MLP(self.num_features, 1, self.hidden_sizes, dropout_keep_prob)
 
