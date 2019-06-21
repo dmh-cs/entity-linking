@@ -48,6 +48,7 @@ class SimpleDataset(Dataset):
     if self.txt_dataset_path is not None:
       with open(self.txt_dataset_path) as fh:
         self.dataset_cache = [ast.literal_eval(line) for line in fh.readlines()]
+        return
     with open(idf_path) as fh:
       self.idf = json.load(fh)
     self.cursor = cursor
@@ -108,7 +109,11 @@ class SimpleDataset(Dataset):
                                                               self.idf.get(token.lower(), 0.0))
                for token, cnt in mention_f.items())
 
-  def __len__(self): return len(self.with_labels)
+  def __len__(self):
+    if self.txt_dataset_path is not None:
+      return len(self.dataset_cache)
+    else:
+      return len(self.with_labels)
 
   def _f_to_vec(self, f_unstemmed):
     cnts = f_unstemmed.values()

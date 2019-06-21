@@ -30,6 +30,9 @@ class SimpleMentionDataset(SimpleDataset):
                      idf_path,
                      train_size,
                      txt_dataset_path)
+    if txt_dataset_path is not None:
+      self._post_init()
+      return
     self.page_content_lim = 2000
     self.cursor = cursor
     self.page_ids = page_ids
@@ -50,7 +53,11 @@ class SimpleMentionDataset(SimpleDataset):
                                     for page_id, tokens in self.document_lookup.items()}
     self._post_init()
 
-  def __len__(self): return len(self.labels)
+  def __len__(self):
+    if self.txt_dataset_path is not None:
+      return len(self.dataset_cache)
+    else:
+      return len(self.labels)
 
   def get_document_lookup(self, page_ids):
     self.cursor.execute(f'select id, content from pages where id in (' + str(page_ids)[1:-1] + ')')
