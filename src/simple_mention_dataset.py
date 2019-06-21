@@ -17,12 +17,19 @@ class SimpleMentionDataset(SimpleDataset):
   def __init__(self,
                cursor,
                token_idx_lookup,
+               full_token_idx_lookup,
                page_ids,
                lookups_path,
                idf_path,
                train_size,
                txt_dataset_path=None):
-    super().__init__(cursor, token_idx_lookup, lookups_path, idf_path, train_size, txt_dataset_path)
+    super().__init__(cursor,
+                     token_idx_lookup,
+                     full_token_idx_lookup,
+                     lookups_path,
+                     idf_path,
+                     train_size,
+                     txt_dataset_path)
     self.page_content_lim = 2000
     self.cursor = cursor
     self.page_ids = page_ids
@@ -33,8 +40,14 @@ class SimpleMentionDataset(SimpleDataset):
     self.mention_doc_id = [info['page_id'] for info in self.mention_infos]
     self.mention_sentences = get_mention_sentences_from_infos(self.document_lookup, self.mention_infos)
     self.mention_fs = [self._to_f(sentence) for sentence in self.mention_sentences]
-    self.page_f_lookup = {page_id: self._to_f(parse_text_for_tokens(doc[:self.page_content_lim]))
-                          for page_id, doc in self.document_lookup.items()}
+    self.mention_fs_unstemmed = [self._to_f(sentence, stem_p=False)
+                                 for sentence in self.mention_sentences]
+    self.document_lookup = {page_id: parse_text_for_tokens(doc[:self.page_content_lim])
+                            for page_id, doc in self.document_lookup.items()}
+    self.page_f_lookup = {page_id: self._to_f(tokens)
+                          for page_id, tokens in self.document_lookup.items()}
+    self.page_f_lookup_unstemmed = {page_id: self._to_f(tokens, stem_p=False)
+                                    for page_id, tokens in self.document_lookup.items()}
     self._post_init()
 
   def __len__(self): return len(self.labels)

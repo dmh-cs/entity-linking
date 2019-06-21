@@ -18,12 +18,19 @@ class SimpleCoNLLDataset(SimpleDataset):
   def __init__(self,
                cursor,
                token_idx_lookup,
+               full_token_idx_lookup,
                conll_path,
                lookups_path,
                idf_path,
                train_size,
                txt_dataset_path=None):
-    super().__init__(cursor, token_idx_lookup, lookups_path, idf_path, train_size, txt_dataset_path)
+    super().__init__(cursor,
+                     token_idx_lookup,
+                     full_token_idx_lookup,
+                     lookups_path,
+                     idf_path,
+                     train_size,
+                     txt_dataset_path)
     with open(conll_path, 'r') as fh:
       lines = fh.read().strip().split('\n')[:-1]
     self.documents = get_documents(lines)
@@ -34,8 +41,15 @@ class SimpleCoNLLDataset(SimpleDataset):
     self.mentions_by_doc_id = get_mentions_by_doc_id(lines)
     self.mention_sentences = get_mention_sentences(self.documents, self.mentions)
     self.document_lookup = self.documents
-    self.mention_fs = [self._to_f(sentence) for sentence in self.mention_sentences]
-    self.page_f_lookup = [self._to_f(parse_text_for_tokens(doc)) for doc in self.document_lookup]
+    self.mention_fs = [self._to_f(sentence)
+                       for sentence in self.mention_sentences]
+    self.mention_fs_unstemmed = [self._to_f(sentence, stem_p=False)
+                                 for sentence in self.mention_sentences]
+    self.document_lookup = [parse_text_for_tokens(doc)
+                            for doc in self.document_lookup]
+    self.page_f_lookup = [self._to_f(doc) for doc in self.document_lookup]
+    self.page_f_lookup_unstemmed = [self._to_f(tokens, stem_p=False)
+                                    for tokens in self.document_lookup]
     self._post_init()
 
 def collate_simple_mention_ranker(batch):

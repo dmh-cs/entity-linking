@@ -23,7 +23,7 @@ def main():
   )
 
   model.fit(x_train.todense(), y_train, qid_train)
-  preds = model.predict(x_test)
+  preds = model.predict(x_test.todense())
   print('Random ranking:', metric.calc_mean_random(qid_test, y_test))
   print('Our model:', metric.calc_mean(qid_test, y_test, preds))
   import ipdb; ipdb.set_trace()

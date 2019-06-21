@@ -9,8 +9,12 @@ import json
 import re
 import ast
 
+import nltk
+from nltk.corpus import stopwords as nltk_stopwords
+import numpy as np
+
 from conll_helpers import get_documents, get_mentions, get_splits, get_entity_page_ids, from_page_ids_to_entity_ids, get_doc_id_per_mention, get_mentions_by_doc_id, get_mention_sentences
-from data_fetchers import load_entity_candidate_ids_and_label_lookup, get_candidate_ids_simple, get_p_prior_cnts, get_candidate_strs, get_str_lookup
+from data_fetchers import load_entity_candidate_ids_and_label_lookup, get_candidate_ids_simple, get_p_prior_cnts, get_candidate_strs, get_str_lookup, get_embedding_dict
 from parsers import parse_text_for_tokens
 import utils as u
 from data_transformers import get_mention_sentences_from_infos, pad_batch_list
@@ -35,6 +39,7 @@ class SimpleDataset(Dataset):
   def __init__(self,
                cursor,
                token_idx_lookup,
+               full_token_idx_lookup,
                lookups_path,
                idf_path,
                train_size,
@@ -52,6 +57,13 @@ class SimpleDataset(Dataset):
                              token_idx_mapping=_.invert(token_idx_lookup),
                              default_value={},
                              use_default=True)
+    self.desc_fs_unstemmed = DocLookup('./desc_unstemmed_fs.npz',
+                                       entity_id_to_row,
+                                       token_idx_mapping=_.invert(full_token_idx_lookup),
+                                       default_value={'<PAD>': 1},
+                                       use_default=True)
+    self.embedding_dict = get_embedding_dict('./glove.6B.300d.txt',
+                                             embedding_dim=300)
     self.stemmer = SnowballStemmer('english')
     lookups = load_entity_candidate_ids_and_label_lookup(lookups_path, train_size)
     label_to_entity_id = _.invert(lookups['entity_labels'])
@@ -64,10 +76,12 @@ class SimpleDataset(Dataset):
     self.mention_doc_id = None
     self.mention_sentences = None
     self.mention_fs = None
+    self.mention_fs_unstemmed = None
     self.page_f_lookup = None
     self.with_labels = None
     self._candidate_strs_lookup = read_cache('./candidate_strs_lookup.pkl',
                                              lambda: get_str_lookup(cursor))
+    self.stopwords = set(nltk_stopwords.words('english'))
 
   def _post_init(self):
     self.with_labels = []
@@ -82,9 +96,12 @@ class SimpleDataset(Dataset):
     print('num without candidates:', num_without_cand)
     print('num with candidates:', len(self.with_labels))
 
-  def _to_f(self, tokens):
-    return dict(Counter(self.stemmer.stem(token)
-                        for token in tokens))
+  def _to_f(self, tokens, stem_p=True):
+    if stem_p:
+      return dict(Counter(self.stemmer.stem(token)
+                          for token in tokens))
+    else:
+      return dict(Counter(tokens))
 
   def calc_tfidf(self, candidate_f, mention_f):
     return sum(cnt * candidate_f.get(token, 0) * self.idf.get(token,
@@ -93,14 +110,31 @@ class SimpleDataset(Dataset):
 
   def __len__(self): return len(self.with_labels)
 
+  def _f_to_vec(self, f_unstemmed):
+    cnts = f_unstemmed.values()
+    idfs = [self.idf.get(token, self.idf.get(token.lower()))
+            for token in f_unstemmed.keys()]
+    vecs = [self.embedding_dict.get(token, self.embedding_dict.get(token.lower()))
+            for token in f_unstemmed.keys()]
+    return torch.sum(torch.stack([cnt * idf * vec
+                                  if (token not in self.stopwords) and all(x is not None
+                                                                           for x in (token, cnt, idf, vec))
+                                  else self.embedding_dict['<PAD>']
+                                  for token, cnt, idf, vec in zip(f_unstemmed.keys(), cnts, idfs, vecs)]),
+                     dim=0)
+
   def __getitem__(self, idx):
     if self.txt_dataset_path is not None: return self.dataset_cache[idx]
     i = self.with_labels[idx]
     label = self.labels[i]
     mention = self.mentions[i]
     mention_f = self.mention_fs[i]
+    mention_f_unstemmed = self.mention_fs_unstemmed[i]
     mention_doc_id = self.mention_doc_id[i]
     page_f = self.page_f_lookup[mention_doc_id]
+    page_f_unstemmed = self.page_f_lookup_unstemmed[mention_doc_id]
+    mention_vec = self._f_to_vec(mention_f_unstemmed)
+    page_vec = self._f_to_vec(page_f_unstemmed)
     candidate_ids = get_candidate_ids_simple(self.entity_candidates_prior,
                                              self.prior_approx_mapping,
                                              mention).tolist()
@@ -115,6 +149,9 @@ class SimpleDataset(Dataset):
     all_mentions_features = []
     candidate_fs = {cand_id: fs
                     for cand_id, fs in zip(candidate_ids, self.desc_fs[candidate_ids])}
+    candidate_fs_unstemmed = {cand_id: fs
+                              for cand_id, fs in zip(candidate_ids,
+                                                     self.desc_fs_unstemmed[candidate_ids])}
     cands_with_page = []
     for candidate_raw_features in zip(candidate_ids,
                                       candidate_mention_sim,
@@ -123,6 +160,10 @@ class SimpleDataset(Dataset):
       if candidate_id not in candidate_fs: continue
       cands_with_page.append(candidate_id)
       candidate_f = candidate_fs[candidate_id]
+      candidate_f_unstemmed = candidate_fs_unstemmed[candidate_id]
+      cand_vec = self._f_to_vec(candidate_f_unstemmed)
+      mention_wiki2vec_dot = cand_vec.dot(mention_vec).item()
+      page_wiki2vec_dot = cand_vec.dot(page_vec).item()
       mention_tfidf = self.calc_tfidf(candidate_f, mention_f)
       page_tfidf = self.calc_tfidf(candidate_f, page_f)
       all_mentions_features.append([mention_tfidf,
@@ -132,5 +173,7 @@ class SimpleDataset(Dataset):
                                     sum(page_f.values()),
                                     candidate_mention_sim,
                                     candidate_prior,
-                                    times_mentioned])
+                                    times_mentioned,
+                                    mention_wiki2vec_dot,
+                                    page_wiki2vec_dot])
     return all_mentions_features, cands_with_page, label

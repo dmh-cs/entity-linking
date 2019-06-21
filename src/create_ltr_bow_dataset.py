@@ -15,6 +15,7 @@ from args_config import args
 def main():
   p = get_cli_args(args)
   with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
+  with open('./glove_token_idx_lookup.pkl', 'rb') as fh: full_token_idx_lookup = pickle.load(fh)
   load_dotenv(dotenv_path=p.run.env_path)
   EL_DATABASE_NAME = os.getenv("DBNAME")
   DATABASE_USER = os.getenv("DBUSER")
@@ -39,6 +40,7 @@ def main():
       conll_path = 'custom.tsv' if p.run.use_custom else './AIDA-YAGO2-dataset.tsv'
       dataset = SimpleCoNLLDataset(cursor,
                                    token_idx_lookup,
+                                   full_token_idx_lookup,
                                    conll_path,
                                    p.run.lookups_path,
                                    p.run.idf_path,
@@ -46,6 +48,7 @@ def main():
     else:
       dataset = SimpleMentionDataset(cursor,
                                      token_idx_lookup,
+                                     full_token_idx_lookup,
                                      page_ids,
                                      p.run.lookups_path,
                                      p.run.idf_path,
@@ -53,7 +56,7 @@ def main():
     train_str = '_'.join(['conll' if p.train.train_on_conll else 'wiki',
                           'custom' if p.run.use_custom else '',
                           str(p.train.num_pages_to_use)])
-    with open('./data_{}'.format(train_str), 'w') as fh:
+    with open('./2data_{}'.format(train_str), 'w') as fh:
       for item_num, item in progressbar(enumerate(dataset)):
         fh.write('{}\n'.format(str(item)))
         if item_num % 1000 == 0: fh.flush()

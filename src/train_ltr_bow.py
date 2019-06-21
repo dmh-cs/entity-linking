@@ -24,6 +24,7 @@ from args_config import args
 def main():
   p = get_cli_args(args)
   with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
+  with open('./glove_token_idx_lookup.pkl', 'rb') as fh: full_token_idx_lookup = pickle.load(fh)
   load_dotenv(dotenv_path=p.run.env_path)
   EL_DATABASE_NAME = os.getenv("DBNAME")
   DATABASE_USER = os.getenv("DBUSER")
@@ -49,6 +50,7 @@ def main():
       conll_path = 'custom.tsv' if p.run.use_custom else './AIDA-YAGO2-dataset.tsv'
       dataset = SimpleCoNLLDataset(cursor,
                                    token_idx_lookup,
+                                   full_token_idx_lookup,
                                    conll_path,
                                    p.run.lookups_path,
                                    p.run.idf_path,
@@ -57,6 +59,7 @@ def main():
     else:
       dataset = SimpleMentionDataset(cursor,
                                      token_idx_lookup,
+                                     full_token_idx_lookup,
                                      page_ids,
                                      p.run.lookups_path,
                                      p.run.idf_path,

@@ -24,7 +24,7 @@ def main():
             'gamma': 1.0,
             'min_child_weight': 0.1,
             'max_depth': 6}
-  xgb_model = xgb.train(params, train_dmatrix, num_boost_round=4,
+  xgb_model = xgb.train(params, train_dmatrix, num_boost_round=100,
                         evals=[(test_dmatrix, 'validation')])
   xgb_train_str = items_to_str(_.omit(params, 'objective', 'eval_metric').items(),
                                sort_by=itemgetter(0))

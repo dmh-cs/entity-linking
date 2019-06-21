@@ -21,7 +21,9 @@ class LtRBoW(nn.Module):
                              'page_token_cnt',
                              'str_sim',
                              'prior',
-                             'times_mentioned'])
+                             'times_mentioned',
+                             'mention_wiki2vec_dot',
+                             'page_wiki2vec_dot'])
     self.tanh_final_layer = tanh_final_layer
     self.mlp = MLP(self.num_features, 1, self.hidden_sizes, dropout_keep_prob)
 
