@@ -30,9 +30,7 @@ class SimpleMentionDataset(SimpleDataset):
                      idf_path,
                      train_size,
                      txt_dataset_path)
-    if txt_dataset_path is not None:
-      self._post_init()
-      return
+    if txt_dataset_path is not None: return
     self.page_content_lim = 2000
     self.cursor = cursor
     self.page_ids = page_ids

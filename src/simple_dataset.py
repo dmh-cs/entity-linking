@@ -168,9 +168,9 @@ class SimpleDataset(Dataset):
       candidate_f_unstemmed = candidate_fs_unstemmed[candidate_id]
       cand_vec = self._f_to_vec(candidate_f_unstemmed)
       mention_wiki2vec_dot = cand_vec.dot(mention_vec).item()
-      mention_wiki2vec_dot_unit = mention_wiki2vec_dot / (cand_vec.norm() * mention_vec.norm())
+      mention_wiki2vec_dot_unit = (mention_wiki2vec_dot / (cand_vec.norm() * mention_vec.norm())).item()
       page_wiki2vec_dot = cand_vec.dot(page_vec).item()
-      page_wiki2vec_dot_unit = cand_vec.dot(page_vec).item() / (cand_vec.norm() * page_vec.norm())
+      page_wiki2vec_dot_unit = (page_wiki2vec_dot / (cand_vec.norm() * page_vec.norm())).item()
       mention_tfidf = self.calc_tfidf(candidate_f, mention_f)
       page_tfidf = self.calc_tfidf(candidate_f, page_f)
       all_mentions_features.append([mention_tfidf,

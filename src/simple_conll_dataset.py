@@ -31,9 +31,7 @@ class SimpleCoNLLDataset(SimpleDataset):
                      idf_path,
                      train_size,
                      txt_dataset_path)
-    if txt_dataset_path is not None:
-      self._post_init()
-      return
+    if txt_dataset_path is not None: return
     with open(conll_path, 'r') as fh:
       lines = fh.read().strip().split('\n')[:-1]
     self.documents = get_documents(lines)
