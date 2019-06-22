@@ -121,8 +121,6 @@ def main():
           loss = calc_loss(target_scores, candidate_scores, torch.ones_like(labels))
         else:
           loss = calc_loss(scores, labels)
-        fh.write('{}\n'.format(loss.item()))
-        fh.flush()
         loss.backward()
         optimizer.step()
         train_str = 'pairwise' if p.train.use_pairwise else ''
