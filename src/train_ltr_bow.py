@@ -100,35 +100,34 @@ def main():
     model = model.to(device)
     optimizer = optim.Adam(model.parameters())
     calc_loss = nn.MarginRankingLoss(p.train.margin) if p.train.use_hinge else nn.BCEWithLogitsLoss()
-    with open('./losses_ltr' + ','.join(str(sz) for sz in p.model.hidden_sizes), 'w') as fh:
-      for epoch_num in range(p.train.num_epochs):
-        print(eval_model(test_dataloader, model, device))
-        for batch_num, batch in progressbar(enumerate(dataloader)):
-          model.train()
-          optimizer.zero_grad()
-          if p.train.use_pairwise:
-            features, labels = batch
-            features = [elem.to(device) for elem in features]
-            labels = labels.to(device)
-            target_features, candidate_features = features
-            target_scores = model(target_features)
-            candidate_scores = model(candidate_features)
-            scores = candidate_scores - target_scores
-          else:
-            batch = [elem.to(device) for elem in batch]
-            features, labels = batch
-            scores = model(features)
-          if p.train.use_hinge:
-            loss = calc_loss(target_scores, candidate_scores, torch.ones_like(labels))
-          else:
-            loss = calc_loss(scores, labels)
-          fh.write('{}\n'.format(loss.item()))
-          fh.flush()
-          loss.backward()
-          optimizer.step()
-          train_str = 'pairwise' if p.train.use_pairwise else ''
-          loss_str = 'hinge_{}'.format(p.train.margin) if p.train.use_hinge else ''
-          torch.save(model.state_dict(), './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes) + train_str + '_' + loss_str)
+    for epoch_num in range(p.train.num_epochs):
+      print(eval_model(test_dataloader, model, device))
+      for batch_num, batch in progressbar(enumerate(dataloader)):
+        model.train()
+        optimizer.zero_grad()
+        if p.train.use_pairwise:
+          features, labels = batch
+          features = [elem.to(device) for elem in features]
+          labels = labels.to(device)
+          target_features, candidate_features = features
+          target_scores = model(target_features)
+          candidate_scores = model(candidate_features)
+          scores = candidate_scores - target_scores
+        else:
+          batch = [elem.to(device) for elem in batch]
+          features, labels = batch
+          scores = model(features)
+        if p.train.use_hinge:
+          loss = calc_loss(target_scores, candidate_scores, torch.ones_like(labels))
+        else:
+          loss = calc_loss(scores, labels)
+        fh.write('{}\n'.format(loss.item()))
+        fh.flush()
+        loss.backward()
+        optimizer.step()
+        train_str = 'pairwise' if p.train.use_pairwise else ''
+        loss_str = 'hinge_{}'.format(p.train.margin) if p.train.use_hinge else ''
+        torch.save(model.state_dict(), './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes) + train_str + '_' + loss_str)
 
 
 
