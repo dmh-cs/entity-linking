@@ -2,8 +2,11 @@ import torch
 import torch.nn as nn
 from collections import defaultdict
 import unidecode
+from itertools import product
+from random import shuffle
 
 import pydash as _
+from pyrsistent import freeze, thaw
 
 def to_idx(token_idx_lookup, token):
   if token in token_idx_lookup:
@@ -83,3 +86,17 @@ def items_to_str(items, sort_by=None):
     to_serialize = items
   return '_'.join(':'.join(str(elem) for elem in pair)
                   for pair in to_serialize)
+
+def hparam_search(p, arg_options, rand_p=False):
+  arg_options = list(arg_options)
+  if rand_p: shuffle(arg_options)
+  paths = [options_details['path'] for options_details in arg_options]
+  options_grid = product(*[options_details['options']
+                           for options_details in arg_options])
+  hparams = [p]
+  for options in options_grid:
+    new_params = thaw(p)
+    for path, option in zip(paths, options):
+      _.set_(new_params, path, option)
+    hparams.append(new_params)
+  return freeze(hparams)

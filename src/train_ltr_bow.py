@@ -1,5 +1,6 @@
 import os
 from random import shuffle
+from operator import itemgetter
 
 import pickle
 import pymysql.cursors
@@ -12,6 +13,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from progressbar import progressbar
 import json
+import numpy as np
 
 from utils import tensors_to_device, to_idx
 from ltr_bow import LtRBoW
@@ -24,9 +26,30 @@ from early_stopping_helpers import eval_model
 from rabbit_ml import get_cli_args
 
 from args_config import args
+from utils import hparam_search
+
+def choose_model(p, model):
+  train_str = 'pairwise' if p.train.use_pairwise else ''
+  loss_str = 'hinge_{}'.format(p.train.margin) if p.train.use_hinge else ''
+  torch.save(model.state_dict(),
+             './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes) + train_str + '_' + loss_str)
 
 def main():
   p = get_cli_args(args)
+  arg_options = [
+    # {'path': ['train', 'dropout_keep_prob'],
+    #  'options': [0.1 * val for val in range(0, 7)]},
+    # {'path': ['train', 'margin'],
+    #  'options': [0.01 * 10 ** val for val in range(0, 3)]},
+    # {'path': ['train', 'stop_by'],
+    #  'options': ['acc', 'loss']},
+    # {'path': ['train', 'use_hinge'],
+    #  'options': [False, True]},
+    # {'path': ['train', 'stop_after_n_bad_epochs'],
+    #  'options': [1, 2]},
+    # {'path': ['model', 'hidden_sizes'],
+    #  'options': [[], [100], [100, 100], [100, 100, 100]]},
+  ]
   with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
   with open('./glove_token_idx_lookup.pkl', 'rb') as fh: full_token_idx_lookup = pickle.load(fh)
   load_dotenv(dotenv_path=p.run.env_path)
@@ -66,11 +89,11 @@ def main():
         split_idx = int(len(test_dataset) * 0.25)
         val_indices, test_indices = permutation[:split_idx], permutation[split_idx:]
         json.dump((val_indices, test_indices), fh)
-    test_dataloader = DataLoader(test_dataset,
-                                 batch_sampler=BatchSampler(SubsetSequentialSampler(val_indices),
-                                                            p.run.batch_size,
-                                                            False),
-                                 collate_fn=collate_simple_mention_ranker)
+    val_dataloader = DataLoader(test_dataset,
+                                batch_sampler=BatchSampler(SubsetSequentialSampler(val_indices),
+                                                           p.run.batch_size,
+                                                           False),
+                                collate_fn=collate_simple_mention_ranker)
     collate_fn = collate_simple_mention_pairwise if p.train.use_pairwise else collate_simple_mention_pointwise
     if p.train.train_on_conll:
       conll_path = 'custom.tsv' if p.run.use_custom else './AIDA-YAGO2-dataset.tsv'
@@ -95,37 +118,53 @@ def main():
     dataloader = DataLoader(dataset,
                             batch_sampler=BatchSampler(sampler(dataset), p.train.batch_size, False),
                             collate_fn=collate_fn)
-    model = LtRBoW(p.model.hidden_sizes, dropout_keep_prob=p.train.dropout_keep_prob)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = model.to(device)
-    optimizer = optim.Adam(model.parameters())
-    calc_loss = nn.MarginRankingLoss(p.train.margin) if p.train.use_hinge else nn.BCEWithLogitsLoss()
-    for epoch_num in range(p.train.num_epochs):
-      print(eval_model(test_dataloader, model, device))
-      for batch_num, batch in progressbar(enumerate(dataloader)):
-        model.train()
-        optimizer.zero_grad()
-        if p.train.use_pairwise:
-          features, labels = batch
-          features = [elem.to(device) for elem in features]
-          labels = labels.to(device)
-          target_features, candidate_features = features
-          target_scores = model(target_features)
-          candidate_scores = model(candidate_features)
-          scores = candidate_scores - target_scores
-        else:
-          batch = [elem.to(device) for elem in batch]
-          features, labels = batch
-          scores = model(features)
-        if p.train.use_hinge:
-          loss = calc_loss(target_scores, candidate_scores, torch.ones_like(labels))
-        else:
-          loss = calc_loss(scores, labels)
-        loss.backward()
-        optimizer.step()
-        train_str = 'pairwise' if p.train.use_pairwise else ''
-        loss_str = 'hinge_{}'.format(p.train.margin) if p.train.use_hinge else ''
-        torch.save(model.state_dict(), './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes) + train_str + '_' + loss_str)
+    for cand_p in progressbar(hparam_search(p, arg_options, rand_p=True)):
+      model = LtRBoW(cand_p.model.hidden_sizes,
+                     dropout_keep_prob=cand_p.train.dropout_keep_prob)
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model = model.to(device)
+      optimizer = optim.Adam(model.parameters())
+      if cand_p.train.use_hinge:
+        calc_loss = nn.MarginRankingLoss(cand_p.train.margin)
+      else:
+        calc_loss = nn.BCEWithLogitsLoss()
+      models_by_epoch = []
+      model_performances = []
+      for epoch_num in range(cand_p.train.max_num_epochs):
+        get_stop_by_val = itemgetter(cand_p.train.stop_by)
+        performance = eval_model(val_dataloader, model, device)
+        model_performances.append(performance)
+        print(performance)
+        models_by_epoch.append(model)
+        if len(model_performances) >= cand_p.train.stop_after_n_bad_epochs + 1:
+          stop_by_perfs = [get_stop_by_val(perf) for perf in model_performances]
+          bad_epochs = [diff > 0 for diff in np.diff(stop_by_perfs)]
+          if all(bad_epochs[-cand_p.train.stop_after_n_bad_epochs:]):
+            choose_model(cand_p,
+                         models_by_epoch[-cand_p.train.stop_after_n_bad_epochs])
+            return
+        for batch_num, batch in progressbar(enumerate(dataloader)):
+          model.train()
+          optimizer.zero_grad()
+          if cand_p.train.use_pairwise:
+            features, labels = batch
+            features = [elem.to(device) for elem in features]
+            labels = labels.to(device)
+            target_features, candidate_features = features
+            target_scores = model(target_features)
+            candidate_scores = model(candidate_features)
+            scores = candidate_scores - target_scores
+          else:
+            batch = [elem.to(device) for elem in batch]
+            features, labels = batch
+            scores = model(features)
+          if cand_p.train.use_hinge:
+            loss = calc_loss(target_scores, candidate_scores, torch.ones_like(labels))
+          else:
+            loss = calc_loss(scores, labels)
+          loss.backward()
+          optimizer.step()
+      choose_model(cand_p, model)
 
 
 
