@@ -102,7 +102,7 @@ def main():
     calc_loss = nn.MarginRankingLoss(p.train.margin) if p.train.use_hinge else nn.BCEWithLogitsLoss()
     with open('./losses_ltr' + ','.join(str(sz) for sz in p.model.hidden_sizes), 'w') as fh:
       for epoch_num in range(p.train.num_epochs):
-        print(eval_model(test_dataloader, model))
+        print(eval_model(test_dataloader, model, device))
         for batch_num, batch in progressbar(enumerate(dataloader)):
           model.train()
           optimizer.zero_grad()
