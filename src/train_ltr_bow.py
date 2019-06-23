@@ -46,7 +46,7 @@ def main():
   p = get_cli_args(args)
   arg_options = [
     {'path': ['train', 'dropout_keep_prob'],
-     'options': [1 - 0.1 * val for val in range(0, 7)]},
+     'options': [1 - 0.1 * val for val in range(0, 5)]},
     {'path': ['train', 'margin'],
      'if': lambda params: _.get(thaw(params), ['train', 'use_hinge']),
      'options': [0.01 * 10 ** val for val in range(0, 3)] + [5]},
@@ -59,7 +59,7 @@ def main():
     {'path': ['model', 'hidden_sizes'],
      'options': [[100], [100, 100], [100, 100, 100]]},
     {'path': ['train', 'learning_rate'],
-     'options': [1e-3, 5e-3, 1e-2, 1e-4]},
+     'options': [1e-3, 1e-4, 5e-5]},
   ]
   with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
   with open('./glove_token_idx_lookup.pkl', 'rb') as fh: full_token_idx_lookup = pickle.load(fh)
@@ -157,9 +157,9 @@ def main():
             bad_epochs = [diff < 0 if neg_is_bad else diff > 0
                           for diff in np.diff(stop_by_perfs)]
             if all(bad_epochs[-cand_p.train.stop_after_n_bad_epochs:]):
-              idx = np.searchsorted(best_performances, performance)
+              idx = np.searchsorted([obj['acc'] for obj in best_performances], performance['acc'])
               best_options.insert(thaw(cand_p), idx)
-              best_performances.insert(performance, idx)
+              best_performances.insert(idx, performance['acc'])
               choose_model(cand_p,
                            models_by_epoch[-cand_p.train.stop_after_n_bad_epochs - 1])
               break
@@ -184,9 +184,9 @@ def main():
               loss = calc_loss(scores, labels)
             loss.backward()
             optimizer.step()
-        idx = np.searchsorted(best_performances, performance)
-        best_options.insert(thaw(cand_p), idx)
-        best_performances.insert(performance, idx)
+        idx = np.searchsorted([obj['acc'] for obj in best_performances], performance['acc'])
+        best_options.insert(idx, thaw(cand_p))
+        best_performances.insert(performance['acc'], idx)
         choose_model(cand_p, model)
 
 
