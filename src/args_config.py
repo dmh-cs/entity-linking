@@ -5,6 +5,7 @@ from rabbit_ml import list_arg, optional_arg
 train_args = [
   {'name': 'batch_size','type': int,                      'default': 512},
   {'name': 'dropout_keep_prob','type': float,             'default': 0.5},
+  {'name': 'learning_rate','type': float,                 'default': 1e-3},
   {'name': 'margin','type': float,                        'default': 0.1},
   {'name': 'max_num_epochs','type': int,                  'default': 10},
   {'name': 'num_pages_to_use', 'type': int,               'default': 10000},

@@ -14,6 +14,8 @@ import torch.nn.functional as F
 from progressbar import progressbar
 import json
 import numpy as np
+import pydash as _
+from pyrsistent import thaw
 
 from utils import tensors_to_device, to_idx
 from ltr_bow import LtRBoW
@@ -31,6 +33,7 @@ from utils import hparam_search
 def choose_model(p, model):
   train_str = 'pairwise' if p.train.use_pairwise else ''
   train_str += '_{}_'.format(p.train.dropout_keep_prob)
+  train_str += '_{}_'.format(p.train.learning_rate)
   loss_str = 'hinge_{}'.format(p.train.margin) if p.train.use_hinge else ''
   loss_str += '_{}_'.format(p.train.margin) if p.train.use_hinge else ''
   torch.save(model.state_dict(),
@@ -42,6 +45,7 @@ def main():
     {'path': ['train', 'dropout_keep_prob'],
      'options': [1 - 0.1 * val for val in range(0, 7)]},
     {'path': ['train', 'margin'],
+     'if': lambda params: _.get(thaw(params), ['train', 'use_hinge']),
      'options': [0.01 * 10 ** val for val in range(0, 3)] + [5]},
     # {'path': ['train', 'stop_by'],
     #  'options': ['acc', 'loss']},
@@ -51,6 +55,8 @@ def main():
     #  'options': [1, 2]},
     {'path': ['model', 'hidden_sizes'],
      'options': [[100], [100, 100], [100, 100, 100]]},
+    {'path': ['train', 'learning_rate'],
+     'options': [1e-3, 5e-3, 1e-2, 1e-4]},
   ]
   with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
   with open('./glove_token_idx_lookup.pkl', 'rb') as fh: full_token_idx_lookup = pickle.load(fh)
@@ -88,7 +94,7 @@ def main():
     except FileNotFoundError:
       with open('./val_test_indices.json', 'w') as fh:
         permutation = list(range(len(test_dataset))); shuffle(permutation)
-        split_idx = int(len(test_dataset) * 0.25)
+        split_idx = int(len(test_dataset) * 0.5)
         val_indices, test_indices = permutation[:split_idx], permutation[split_idx:]
         json.dump((val_indices, test_indices), fh)
     val_dataloader = DataLoader(test_dataset,
@@ -119,7 +125,7 @@ def main():
     sampler = SequentialSampler if p.train.use_sequential_sampler else RandomSampler
     with open('./perf.txt', 'w') as fh:
       for cand_p, new_options in progressbar(hparam_search(p, arg_options, rand_p=True)):
-        fh.write(str(new_options) + '\n')
+        fh.write(str(thaw(new_options)) + '\n')
         fh.flush()
         dataloader = DataLoader(dataset,
                                 batch_sampler=BatchSampler(sampler(dataset), p.train.batch_size, False),
@@ -128,7 +134,7 @@ def main():
                        dropout_keep_prob=cand_p.train.dropout_keep_prob)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = model.to(device)
-        optimizer = optim.Adam(model.parameters())
+        optimizer = optim.Adam(model.parameters(), cand_p.train.learning_rate)
         if cand_p.train.use_hinge:
           calc_loss = nn.MarginRankingLoss(cand_p.train.margin)
         else:
@@ -138,7 +144,7 @@ def main():
         for epoch_num in range(cand_p.train.max_num_epochs):
           get_stop_by_val = itemgetter(cand_p.train.stop_by)
           neg_is_bad = cand_p.train.stop_by in ['acc']
-          performance = eval_model(val_dataloader, model, device, calc_loss)
+          performance = eval_model(val_dataloader, model, device)
           model_performances.append(performance)
           fh.write(str(performance) + '\n')
           fh.flush()

@@ -93,7 +93,7 @@ def hparam_search(p, arg_options, rand_p=False):
   paths = [options_details['path'] for options_details in arg_options]
   options_grid = product(*[options_details['options']
                            for options_details in arg_options])
-  hparams = [p]
+  hparams = [thaw(p)]
   new_options = [[]]
   for options in options_grid:
     new_params = thaw(p)
@@ -101,4 +101,9 @@ def hparam_search(p, arg_options, rand_p=False):
     for path, option in zip(paths, options):
       _.set_(new_params, path, option)
     hparams.append(new_params)
-  return freeze(list(zip(hparams, new_options)))
+  filtered = []
+  for cand_p, opts in zip(hparams, new_options):
+    if all(options_details['if'](cand_p) or (_.get(thaw(cand_p), options_details['path']) == options_details['options'][0])
+           for options_details in arg_options if 'if' in options_details):
+      filtered.append((cand_p, opts))
+  return freeze(filtered)

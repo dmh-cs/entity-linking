@@ -19,6 +19,7 @@ from parsers import parse_text_for_tokens
 from data_fetchers import get_connection
 from fixed_weights_model import FixedWeights
 from ltr_bow import LtRBoW
+from samplers import SubsetSequentialSampler
 
 from rabbit_ml import get_cli_args
 
@@ -35,7 +36,10 @@ def load_model(model_params, train_params):
   else:
     model = LtRBoW(model_params.hidden_sizes, dropout_keep_prob=train_params.dropout_keep_prob)
     train_str = 'pairwise' if train_params.use_pairwise else ''
+    train_str += '_{}_'.format(train_params.dropout_keep_prob)
+    train_str += '_{}_'.format(p.train.learning_rate)
     loss_str = 'hinge_{}'.format(train_params.margin) if train_params.use_hinge else ''
+    loss_str += '_{}_'.format(train_params.margin) if train_params.use_hinge else ''
     path = './ltr_model_' + ','.join(str(sz) for sz in model_params.hidden_sizes) + train_str + '_' + loss_str
     model.load_state_dict(torch.load(path))
     return model
@@ -50,6 +54,8 @@ def main():
   model = load_model(p.model, p.train)
   with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
   with open('./glove_token_idx_lookup.pkl', 'rb') as fh: full_token_idx_lookup = pickle.load(fh)
+  with open('./val_test_indices.json', 'r') as fh:
+    val_indices, test_indices = json.load(fh)
   model.eval()
   with torch.no_grad():
     with db_connection.cursor() as cursor:
@@ -62,7 +68,7 @@ def main():
                                    p.train.train_size,
                                    p.run.txt_dataset_path)
       conll_test_set = DataLoader(dataset,
-                                  batch_sampler=BatchSampler(SequentialSampler(dataset),
+                                  batch_sampler=BatchSampler(SubsetSequentialSampler(test_indices),
                                                              p.run.batch_size,
                                                              False),
                                   collate_fn=collate_simple_mention_ranker)
