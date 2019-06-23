@@ -4,13 +4,12 @@ import torch
 from torch import nn
 from progressbar import progressbar
 
-def eval_model(test_dataloader, model, device):
+def eval_model(test_dataloader, model, device, calc_loss):
   model.eval()
   ctr = count()
   num_correct = 0
-  criteria = nn.BCEWithLogitsLoss()
   loss = 0
-  for batch in progressbar(test_dataloader):
+  for batch in test_dataloader:
     (candidate_ids, features), target_rankings = batch
     features = features.to(device)
     target = [ranking[0] for ranking in target_rankings]
@@ -20,7 +19,7 @@ def eval_model(test_dataloader, model, device):
     for ids, true_id in zip(candidate_ids, target):
       for entity_id, idx in zip(ids, ctr2):
         if entity_id == true_id: label[idx] = 1
-    loss += criteria(candidate_scores, label)
+    loss += calc_loss(candidate_scores, label) / len(candidate_ids)
     top_1 = []
     offset = 0
     for ids in candidate_ids:

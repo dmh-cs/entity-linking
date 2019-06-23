@@ -30,25 +30,27 @@ from utils import hparam_search
 
 def choose_model(p, model):
   train_str = 'pairwise' if p.train.use_pairwise else ''
+  train_str += '_{}_'.format(p.train.dropout_keep_prob)
   loss_str = 'hinge_{}'.format(p.train.margin) if p.train.use_hinge else ''
+  loss_str += '_{}_'.format(p.train.margin) if p.train.use_hinge else ''
   torch.save(model.state_dict(),
              './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes) + train_str + '_' + loss_str)
 
 def main():
   p = get_cli_args(args)
   arg_options = [
-    # {'path': ['train', 'dropout_keep_prob'],
-    #  'options': [0.1 * val for val in range(0, 7)]},
-    # {'path': ['train', 'margin'],
-    #  'options': [0.01 * 10 ** val for val in range(0, 3)]},
+    {'path': ['train', 'dropout_keep_prob'],
+     'options': [1 - 0.1 * val for val in range(0, 7)]},
+    {'path': ['train', 'margin'],
+     'options': [0.01 * 10 ** val for val in range(0, 3)] + [5]},
     # {'path': ['train', 'stop_by'],
     #  'options': ['acc', 'loss']},
-    # {'path': ['train', 'use_hinge'],
-    #  'options': [False, True]},
+    {'path': ['train', 'use_hinge'],
+     'options': [False, True]},
     # {'path': ['train', 'stop_after_n_bad_epochs'],
     #  'options': [1, 2]},
-    # {'path': ['model', 'hidden_sizes'],
-    #  'options': [[], [100], [100, 100], [100, 100, 100]]},
+    {'path': ['model', 'hidden_sizes'],
+     'options': [[100], [100, 100], [100, 100, 100]]},
   ]
   with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
   with open('./glove_token_idx_lookup.pkl', 'rb') as fh: full_token_idx_lookup = pickle.load(fh)
@@ -115,56 +117,62 @@ def main():
                                      p.train.train_size,
                                      txt_dataset_path=p.run.txt_dataset_path)
     sampler = SequentialSampler if p.train.use_sequential_sampler else RandomSampler
-    dataloader = DataLoader(dataset,
-                            batch_sampler=BatchSampler(sampler(dataset), p.train.batch_size, False),
-                            collate_fn=collate_fn)
-    for cand_p in progressbar(hparam_search(p, arg_options, rand_p=True)):
-      model = LtRBoW(cand_p.model.hidden_sizes,
-                     dropout_keep_prob=cand_p.train.dropout_keep_prob)
-      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-      model = model.to(device)
-      optimizer = optim.Adam(model.parameters())
-      if cand_p.train.use_hinge:
-        calc_loss = nn.MarginRankingLoss(cand_p.train.margin)
-      else:
-        calc_loss = nn.BCEWithLogitsLoss()
-      models_by_epoch = []
-      model_performances = []
-      for epoch_num in range(cand_p.train.max_num_epochs):
-        get_stop_by_val = itemgetter(cand_p.train.stop_by)
-        performance = eval_model(val_dataloader, model, device)
-        model_performances.append(performance)
-        print(performance)
-        models_by_epoch.append(model)
-        if len(model_performances) >= cand_p.train.stop_after_n_bad_epochs + 1:
-          stop_by_perfs = [get_stop_by_val(perf) for perf in model_performances]
-          bad_epochs = [diff > 0 for diff in np.diff(stop_by_perfs)]
-          if all(bad_epochs[-cand_p.train.stop_after_n_bad_epochs:]):
-            choose_model(cand_p,
-                         models_by_epoch[-cand_p.train.stop_after_n_bad_epochs])
-            return
-        for batch_num, batch in progressbar(enumerate(dataloader)):
-          model.train()
-          optimizer.zero_grad()
-          if cand_p.train.use_pairwise:
-            features, labels = batch
-            features = [elem.to(device) for elem in features]
-            labels = labels.to(device)
-            target_features, candidate_features = features
-            target_scores = model(target_features)
-            candidate_scores = model(candidate_features)
-            scores = candidate_scores - target_scores
-          else:
-            batch = [elem.to(device) for elem in batch]
-            features, labels = batch
-            scores = model(features)
-          if cand_p.train.use_hinge:
-            loss = calc_loss(target_scores, candidate_scores, torch.ones_like(labels))
-          else:
-            loss = calc_loss(scores, labels)
-          loss.backward()
-          optimizer.step()
-      choose_model(cand_p, model)
+    with open('./perf.txt', 'w') as fh:
+      for cand_p, new_options in progressbar(hparam_search(p, arg_options, rand_p=True)):
+        fh.write(str(new_options) + '\n')
+        fh.flush()
+        dataloader = DataLoader(dataset,
+                                batch_sampler=BatchSampler(sampler(dataset), p.train.batch_size, False),
+                                collate_fn=collate_fn)
+        model = LtRBoW(cand_p.model.hidden_sizes,
+                       dropout_keep_prob=cand_p.train.dropout_keep_prob)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model = model.to(device)
+        optimizer = optim.Adam(model.parameters())
+        if cand_p.train.use_hinge:
+          calc_loss = nn.MarginRankingLoss(cand_p.train.margin)
+        else:
+          calc_loss = nn.BCEWithLogitsLoss()
+        models_by_epoch = []
+        model_performances = []
+        for epoch_num in range(cand_p.train.max_num_epochs):
+          get_stop_by_val = itemgetter(cand_p.train.stop_by)
+          neg_is_bad = cand_p.train.stop_by in ['acc']
+          performance = eval_model(val_dataloader, model, device, calc_loss)
+          model_performances.append(performance)
+          fh.write(str(performance) + '\n')
+          fh.flush()
+          models_by_epoch.append(model)
+          if len(model_performances) >= cand_p.train.stop_after_n_bad_epochs + 1:
+            stop_by_perfs = [get_stop_by_val(perf) for perf in model_performances]
+            bad_epochs = [diff < 0 if neg_is_bad else diff > 0
+                          for diff in np.diff(stop_by_perfs)]
+            if all(bad_epochs[-cand_p.train.stop_after_n_bad_epochs:]):
+              choose_model(cand_p,
+                           models_by_epoch[-cand_p.train.stop_after_n_bad_epochs - 1])
+              break
+          for batch_num, batch in enumerate(dataloader):
+            model.train()
+            optimizer.zero_grad()
+            if cand_p.train.use_pairwise:
+              features, labels = batch
+              features = [elem.to(device) for elem in features]
+              labels = labels.to(device)
+              target_features, candidate_features = features
+              target_scores = model(target_features)
+              candidate_scores = model(candidate_features)
+              scores = candidate_scores - target_scores
+            else:
+              batch = [elem.to(device) for elem in batch]
+              features, labels = batch
+              scores = model(features)
+            if cand_p.train.use_hinge:
+              loss = calc_loss(target_scores, candidate_scores, torch.ones_like(labels))
+            else:
+              loss = calc_loss(scores, labels)
+            loss.backward()
+            optimizer.step()
+        choose_model(cand_p, model)
 
 
 
