@@ -39,7 +39,10 @@ def choose_model(p, model):
   torch.save(model.state_dict(),
              './ltr_model_' + ','.join(str(sz) for sz in p.model.hidden_sizes) + train_str + '_' + loss_str)
 
+best_options = []
+best_performances = []
 def main():
+  global best_options, best_performances
   p = get_cli_args(args)
   arg_options = [
     {'path': ['train', 'dropout_keep_prob'],
@@ -124,7 +127,7 @@ def main():
                                      txt_dataset_path=p.run.txt_dataset_path)
     sampler = SequentialSampler if p.train.use_sequential_sampler else RandomSampler
     with open('./perf.txt', 'w') as fh:
-      for cand_p, new_options in progressbar(hparam_search(p, arg_options, rand_p=True)):
+      for cand_p, new_options in progressbar(hparam_search(p, arg_options, rand_p=False)):
         fh.write(str(thaw(new_options)) + '\n')
         fh.flush()
         dataloader = DataLoader(dataset,
@@ -154,6 +157,9 @@ def main():
             bad_epochs = [diff < 0 if neg_is_bad else diff > 0
                           for diff in np.diff(stop_by_perfs)]
             if all(bad_epochs[-cand_p.train.stop_after_n_bad_epochs:]):
+              idx = np.searchsorted(best_performances, performance)
+              best_options.insert(thaw(cand_p), idx)
+              best_performances.insert(performance, idx)
               choose_model(cand_p,
                            models_by_epoch[-cand_p.train.stop_after_n_bad_epochs - 1])
               break
@@ -178,6 +184,9 @@ def main():
               loss = calc_loss(scores, labels)
             loss.backward()
             optimizer.step()
+        idx = np.searchsorted(best_performances, performance)
+        best_options.insert(thaw(cand_p), idx)
+        best_performances.insert(performance, idx)
         choose_model(cand_p, model)
 
 
@@ -186,6 +195,15 @@ if __name__ == "__main__":
   import ipdb
   import traceback
   import sys
+
+  import signal, os
+
+  def handler(signum, frame):
+    global best_options, best_performances
+    print('best', list(zip(best_options[-10:],
+                           best_performances[-10:])))
+
+  signal.signal(signal.SIGUSR2, handler)
 
   try:
     main()
