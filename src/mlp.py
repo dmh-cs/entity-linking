@@ -21,14 +21,24 @@ def _get_layer(from_size, to_size, dropout_keep_prob, activation=None):
           nn.Dropout(1 - dropout_keep_prob)]
 
 class MLP(nn.Module):
-  def __init__(self, in_dim, out_dim, hidden_sizes, dropout_keep_prob):
+  def __init__(self,
+               in_dim,
+               out_dim,
+               hidden_sizes,
+               dropout_keep_prob,
+               dropout_after_first_layer_only=True):
     super().__init__()
+    self.dropout_after_first_layer_only = dropout_after_first_layer_only
     self.layers = nn.ModuleList()
     from_size = in_dim
-    for to_size in hidden_sizes:
+    for layer_num, to_size in enumerate(hidden_sizes):
+      if self.dropout_after_first_layer_only and (layer_num == 0):
+        layer_dropout_kp = 1.0
+      else:
+        layer_dropout_kp = dropout_keep_prob
       self.layers.extend(_get_layer(from_size,
                                     to_size,
-                                    dropout_keep_prob))
+                                    layer_dropout_kp))
       from_size = to_size
     self.layers.extend(_get_layer(from_size, out_dim, dropout_keep_prob, activation=Identity()))
 
