@@ -90,7 +90,7 @@ def main():
                                       p.run.lookups_path,
                                       p.run.idf_path,
                                       p.train.train_size,
-                                      p.run.txt_dataset_path)
+                                      p.run.val_txt_dataset_path)
     try:
       with open('./val_test_indices.json', 'r') as fh:
         val_indices, test_indices = json.load(fh)
