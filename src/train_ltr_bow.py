@@ -132,6 +132,7 @@ def main():
         fh.flush()
         dataloader = DataLoader(dataset,
                                 batch_sampler=BatchSampler(sampler(dataset), p.train.batch_size, False),
+                                num_workers=5,
                                 collate_fn=collate_fn)
         model = LtRBoW(cand_p.model.hidden_sizes,
                        dropout_keep_prob=cand_p.train.dropout_keep_prob)
