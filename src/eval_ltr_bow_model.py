@@ -37,7 +37,7 @@ def load_model(model_params, train_params):
     model = LtRBoW(model_params.hidden_sizes, dropout_keep_prob=train_params.dropout_keep_prob)
     train_str = 'pairwise' if train_params.use_pairwise else ''
     train_str += '_{}_'.format(train_params.dropout_keep_prob)
-    train_str += '_{}_'.format(p.train.learning_rate)
+    train_str += '_{}_'.format(train_params.learning_rate)
     loss_str = 'hinge_{}'.format(train_params.margin) if train_params.use_hinge else ''
     loss_str += '_{}_'.format(train_params.margin) if train_params.use_hinge else ''
     path = './ltr_model_' + ','.join(str(sz) for sz in model_params.hidden_sizes) + train_str + '_' + loss_str

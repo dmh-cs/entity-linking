@@ -158,8 +158,8 @@ def main():
             bad_epochs = [diff < 0 if neg_is_bad else diff > 0
                           for diff in np.diff(stop_by_perfs)]
             if all(bad_epochs[-cand_p.train.stop_after_n_bad_epochs:]):
-              idx = np.searchsorted([obj['acc'] for obj in best_performances], performance['acc'])
-              best_options.insert(thaw(cand_p), idx)
+              idx = np.searchsorted(best_performances, performance['acc'])
+              best_options.insert(idx, thaw(cand_p))
               best_performances.insert(idx, performance['acc'])
               choose_model(cand_p,
                            models_by_epoch[-cand_p.train.stop_after_n_bad_epochs - 1])
@@ -185,9 +185,9 @@ def main():
               loss = calc_loss(scores, labels)
             loss.backward()
             optimizer.step()
-        idx = np.searchsorted([obj['acc'] for obj in best_performances], performance['acc'])
+        idx = np.searchsorted(best_performances, performance['acc'])
         best_options.insert(idx, thaw(cand_p))
-        best_performances.insert(performance['acc'], idx)
+        best_performances.insert(idx, performance['acc'])
         choose_model(cand_p, model)
 
 
