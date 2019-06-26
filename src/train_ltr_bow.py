@@ -46,7 +46,7 @@ def main():
   p = get_cli_args(args)
   arg_options = [
     {'path': ['train', 'dropout_keep_prob'],
-     'options': [1 - 0.1 * val for val in range(0, 5)]},
+     'options': [1.0, 0.9, 0.8, 0.7]},
     {'path': ['train', 'margin'],
      'if': lambda params: _.get(thaw(params), ['train', 'use_hinge']),
      'options': [0.01 * 10 ** val for val in range(0, 3)] + [5]},
@@ -57,9 +57,9 @@ def main():
     # {'path': ['train', 'stop_after_n_bad_epochs'],
     #  'options': [1, 2]},
     {'path': ['model', 'hidden_sizes'],
-     'options': [[100], [100, 100], [100, 100, 100]]},
+     'options': [[100]]},
     {'path': ['train', 'learning_rate'],
-     'options': [1e-3, 1e-4, 5e-5]},
+     'options': [5e-6, 1e-6, 5e-7]},
   ]
   with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
   with open('./glove_token_idx_lookup.pkl', 'rb') as fh: full_token_idx_lookup = pickle.load(fh)
@@ -132,7 +132,6 @@ def main():
         fh.flush()
         dataloader = DataLoader(dataset,
                                 batch_sampler=BatchSampler(sampler(dataset), p.train.batch_size, False),
-                                num_workers=5,
                                 collate_fn=collate_fn)
         model = LtRBoW(cand_p.model.hidden_sizes,
                        dropout_keep_prob=cand_p.train.dropout_keep_prob)
