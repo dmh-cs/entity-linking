@@ -145,6 +145,7 @@ def main():
           calc_loss = nn.BCEWithLogitsLoss()
         models_by_epoch = []
         model_performances = []
+        epoch_loss = 0
         for epoch_num in range(cand_p.train.max_num_epochs):
           get_stop_by_val = itemgetter(cand_p.train.stop_by)
           neg_is_bad = cand_p.train.stop_by in ['acc']
@@ -183,12 +184,16 @@ def main():
               loss = calc_loss(target_scores, candidate_scores, torch.ones_like(labels))
             else:
               loss = calc_loss(scores, labels)
+            epoch_loss += loss.item()
             loss.backward()
             optimizer.step()
+        print('epoch loss', epoch_loss)
         idx = np.searchsorted(best_performances, performance['acc'])
         best_options.insert(idx, thaw(cand_p))
         best_performances.insert(idx, performance['acc'])
         choose_model(cand_p, model)
+      print('best', list(zip(best_options[-10:],
+                             best_performances[-10:])))
 
 
 
