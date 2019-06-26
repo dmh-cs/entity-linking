@@ -25,6 +25,7 @@ def main():
   test_dmatrix.set_group([len(list(g)) for __, g in groupby(qid_test)])
   params = {'objective': 'rank:pairwise',
             'eval_metric': ['error', 'map@1'],
+            'tree_method': 'exact',
             'eta': 0.1,
             'gamma': 1.0,
             'min_child_weight': 0.1,
