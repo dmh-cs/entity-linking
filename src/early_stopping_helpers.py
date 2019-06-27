@@ -29,4 +29,4 @@ def eval_model(test_dataloader, model, device):
         offset += ranking_size
       for guess, label, idx in zip(top_1, target, ctr): # pylint: disable=unused-variable
         if guess == label: num_correct += 1
-    return {'acc': num_correct / next(ctr), 'loss': loss.item()}
+    return {'acc': num_correct / next(ctr), 'bce_loss': loss.item()}
