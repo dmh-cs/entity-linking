@@ -45,7 +45,7 @@ def main():
     'num_trees': 100,
     'num_leaves': 100,
     'learning_rate': 0.1,
-    'num_iterations': 300,
+    'num_iterations': 100,
     'num_threads': 8,
     'feature_fraction': 1.0,
     'bagging_fraction': 0.9,
@@ -58,6 +58,8 @@ def main():
                   valid_sets=lgb_eval)
   xgb_train_str = items_to_str(_.omit(params, 'objective', 'eval_metric').items(),
                                sort_by=itemgetter(0))
+  preds = gbm.predict(lgb_eval)
+  print((y_test != preds).nonzero())
   gbm.save_model('model' + xgb_train_str + '.light')
 
 
