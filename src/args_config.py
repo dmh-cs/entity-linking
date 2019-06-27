@@ -29,6 +29,7 @@ run_args = [
   {'name': 'lookups_path','type': str, 'default': '../wp-preprocessing-el/lookups.pkl_local'},
   {'name': 'txt_dataset_path', 'type': optional_arg(str), 'default': None},
   {'name': 'val_txt_dataset_path', 'type': optional_arg(str), 'default': None},
+  {'name': 'pkl_dataset_prefix', 'type': optional_arg(str), 'default': None},
   {'name': 'use_custom','type': 'flag',                   'default': False},
   {'name':'xgboost_path','type': optional_arg(str),       'default': None},
 ]

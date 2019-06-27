@@ -10,19 +10,19 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data.sampler import BatchSampler, RandomSampler, SequentialSampler
 from torch.utils.data import DataLoader
+from torch.utils.data._utils.collate import default_collate
 import torch.nn.functional as F
 from progressbar import progressbar
 import json
 import numpy as np
 import pydash as _
-from pyrsistent import thaw
+from pyrsistent import thaw, pvector
 
 from utils import tensors_to_device, to_idx
 from ltr_bow import LtRBoW
 from simple_mention_dataset import SimpleMentionDataset, collate_simple_mention_pointwise, collate_simple_mention_pairwise
-from losses import hinge_loss
 from simple_conll_dataset import SimpleCoNLLDataset, collate_simple_mention_ranker
-from samplers import SubsetSequentialSampler
+from samplers import SubsetSequentialSampler, FixLenSequentialSampler, ChunkedRandomSampler
 from early_stopping_helpers import eval_model
 
 from rabbit_ml import get_cli_args
@@ -51,7 +51,7 @@ def main():
      'if': lambda params: _.get(thaw(params), ['train', 'use_hinge']),
      'options': [0.01 * 10 ** val for val in range(0, 3)] + [5]},
     # {'path': ['train', 'stop_by'],
-    #  'options': ['acc', 'loss']},
+    #  'options': ['acc', 'bce_loss']},
     {'path': ['train', 'use_hinge'],
      'options': [False, True]},
     # {'path': ['train', 'stop_after_n_bad_epochs'],
@@ -59,7 +59,7 @@ def main():
     {'path': ['model', 'hidden_sizes'],
      'options': [[100]]},
     {'path': ['train', 'learning_rate'],
-     'options': [5e-6, 1e-6, 5e-7]},
+     'options': [1e-2, 1e-3, 1e-4, 1e-5, 5e-6]},
   ]
   with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
   with open('./glove_token_idx_lookup.pkl', 'rb') as fh: full_token_idx_lookup = pickle.load(fh)
@@ -105,7 +105,17 @@ def main():
                                                            p.run.batch_size,
                                                            False),
                                 collate_fn=collate_simple_mention_ranker)
-    collate_fn = collate_simple_mention_pairwise if p.train.use_pairwise else collate_simple_mention_pointwise
+    if p.run.pkl_dataset_prefix:
+      def _col(batch):
+        features, labels = zip(*batch)
+        target, cand = zip(*features)
+        target = torch.tensor(target)
+        cand = torch.tensor(cand)
+        labels = torch.tensor(labels)
+        return (target, cand), labels
+      collate_fn = _col
+    else:
+      collate_fn = collate_simple_mention_pairwise if p.train.use_pairwise else collate_simple_mention_pointwise
     if p.train.train_on_conll:
       conll_path = 'custom.tsv' if p.run.use_custom else './AIDA-YAGO2-dataset.tsv'
       dataset = SimpleCoNLLDataset(cursor,
@@ -124,14 +134,22 @@ def main():
                                      p.run.lookups_path,
                                      p.run.idf_path,
                                      p.train.train_size,
-                                     txt_dataset_path=p.run.txt_dataset_path)
-    sampler = SequentialSampler if p.train.use_sequential_sampler else RandomSampler
+                                     txt_dataset_path=p.run.txt_dataset_path,
+                                     pkl_dataset_prefix=p.run.pkl_dataset_prefix)
     with open('./perf.txt', 'w') as fh:
       for cand_p, new_options in progressbar(hparam_search(p, arg_options, rand_p=False)):
         fh.write(str(thaw(new_options)) + '\n')
         fh.flush()
+        if p.train.use_sequential_sampler:
+          bs = BatchSampler(FixLenSequentialSampler(2140542), p.train.batch_size, False)
+        else:
+          if p.run.pkl_dataset_prefix is not None:
+            sampler = ChunkedRandomSampler(2140542, 100000)
+          else:
+            sampler = RandomSampler(dataset)
+          bs = BatchSampler(sampler, p.train.batch_size, False)
         dataloader = DataLoader(dataset,
-                                batch_sampler=BatchSampler(sampler(dataset), p.train.batch_size, False),
+                                batch_sampler=bs,
                                 collate_fn=collate_fn)
         model = LtRBoW(cand_p.model.hidden_sizes,
                        dropout_keep_prob=cand_p.train.dropout_keep_prob)
@@ -144,8 +162,8 @@ def main():
           calc_loss = nn.BCEWithLogitsLoss()
         models_by_epoch = []
         model_performances = []
-        epoch_loss = 0
         for epoch_num in range(cand_p.train.max_num_epochs):
+          epoch_loss = 0
           get_stop_by_val = itemgetter(cand_p.train.stop_by)
           neg_is_bad = cand_p.train.stop_by in ['acc']
           performance = eval_model(val_dataloader, model, device)
@@ -186,13 +204,13 @@ def main():
             epoch_loss += loss.item()
             loss.backward()
             optimizer.step()
-        print('epoch loss', epoch_loss)
-        idx = np.searchsorted(best_performances, performance['acc'])
-        best_options.insert(idx, thaw(cand_p))
-        best_performances.insert(idx, performance['acc'])
+          print('epoch loss', epoch_loss / len(dataloader))
+          idx = np.searchsorted(best_performances, performance['acc'])
+          best_options.insert(idx, thaw(cand_p))
+          best_performances.insert(idx, performance['acc'])
         choose_model(cand_p, model)
-      print('best', list(zip(best_options[-10:],
-                             best_performances[-10:])))
+        print('best', list(zip(best_options[-10:],
+                               best_performances[-10:])))
 
 
 

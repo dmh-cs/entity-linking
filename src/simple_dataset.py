@@ -1,3 +1,4 @@
+from pyrsistent import pvector
 import pickle
 import pydash as _
 import Levenshtein
@@ -43,9 +44,18 @@ class SimpleDataset(Dataset):
                lookups_path,
                idf_path,
                train_size,
-               txt_dataset_path):
+               txt_dataset_path,
+               pkl_dataset_prefix=None):
     self.txt_dataset_path = txt_dataset_path
+    self.pkl_dataset_prefix = pkl_dataset_prefix
+    if self.pkl_dataset_prefix is not None:
+      self.current_part = None
+      return
     if self.txt_dataset_path is not None:
+      if '.pkl' in self.txt_dataset_path:
+        with open(self.txt_dataset_path, 'rb') as fh:
+          self.dataset_cache = pickle.load(fh)
+          return
       with open(self.txt_dataset_path) as fh:
         self.dataset_cache = [ast.literal_eval(line) for line in fh.readlines()]
         return
@@ -128,7 +138,20 @@ class SimpleDataset(Dataset):
                                   for token, cnt, idf, vec in zip(f_unstemmed.keys(), cnts, idfs, vecs)]),
                      dim=0)
 
+  def _idx_in_part(self, idx):
+    return np.searchsorted(range(100000, 2140542 // 100000), idx // 100000)
+
   def __getitem__(self, idx):
+    if self.pkl_dataset_prefix is not None:
+      if self._idx_in_part(idx) != self.current_part:
+        self.current_part = self._idx_in_part(idx)
+        with open(self.pkl_dataset_prefix + '_{}'.format(self.current_part) + '.pkl', 'rb') as fh:
+          self.targets = []
+          self.cands = []
+          for t, c in pickle.load(fh):
+            self.targets.extend(t)
+            self.cands.extend(c)
+      return (self.targets[idx % 100000], self.cands[idx % 100000]), 0.0
     if self.txt_dataset_path is not None: return self.dataset_cache[idx]
     i = self.with_labels[idx]
     label = self.labels[i]
@@ -169,8 +192,10 @@ class SimpleDataset(Dataset):
       cand_vec = self._f_to_vec(candidate_f_unstemmed)
       mention_wiki2vec_dot = cand_vec.dot(mention_vec).item()
       mention_wiki2vec_dot_unit = (mention_wiki2vec_dot / (cand_vec.norm() * mention_vec.norm())).item()
+      mention_wiki2vec_dot_unit = 0.0 if torch.isnan(torch.tensor(mention_wiki2vec_dot_unit)) else mention_wiki2vec_dot_unit
       page_wiki2vec_dot = cand_vec.dot(page_vec).item()
       page_wiki2vec_dot_unit = (page_wiki2vec_dot / (cand_vec.norm() * page_vec.norm())).item()
+      page_wiki2vec_dot_unit = 0.0 if torch.isnan(torch.tensor(page_wiki2vec_dot_unit)) else page_wiki2vec_dot_unit
       mention_tfidf = self.calc_tfidf(candidate_f, mention_f)
       page_tfidf = self.calc_tfidf(candidate_f, page_f)
       all_mentions_features.append([mention_tfidf,

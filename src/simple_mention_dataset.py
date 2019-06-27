@@ -22,14 +22,16 @@ class SimpleMentionDataset(SimpleDataset):
                lookups_path,
                idf_path,
                train_size,
-               txt_dataset_path=None):
+               txt_dataset_path=None,
+               pkl_dataset_prefix=None):
     super().__init__(cursor,
                      token_idx_lookup,
                      full_token_idx_lookup,
                      lookups_path,
                      idf_path,
                      train_size,
-                     txt_dataset_path)
+                     txt_dataset_path,
+                     pkl_dataset_prefix=pkl_dataset_prefix)
     if txt_dataset_path is not None: return
     self.page_content_lim = 2000
     self.cursor = cursor
