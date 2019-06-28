@@ -106,3 +106,5 @@ def hparam_search(p, arg_options, rand_p=False):
       filtered.append((cand_p, opts))
   if rand_p: shuffle(filtered)
   return freeze(filtered)
+
+def is_odd(num): return num % 2 != 0

@@ -18,7 +18,7 @@ from simple_conll_dataset import SimpleCoNLLDataset, collate_simple_mention_rank
 from parsers import parse_text_for_tokens
 from data_fetchers import get_connection
 from fixed_weights_model import FixedWeights
-from ltr_bow import LtRBoW
+from ltr_bow import get_model
 from samplers import SubsetSequentialSampler
 
 from rabbit_ml import get_cli_args
@@ -34,7 +34,7 @@ def load_model(model_params, train_params):
   elif model_params.just_wiki2vec:
     return FixedWeights([0] * 8 + [0, 0, 1, 0])
   else:
-    model = LtRBoW(model_params.hidden_sizes, dropout_keep_prob=train_params.dropout_keep_prob)
+    model = get_model(model_params, train_params)
     train_str = 'pairwise' if train_params.use_pairwise else ''
     train_str += '_{}_'.format(train_params.dropout_keep_prob)
     train_str += '_{}_'.format(train_params.learning_rate)

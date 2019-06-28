@@ -19,7 +19,7 @@ import pydash as _
 from pyrsistent import thaw, pvector
 
 from utils import tensors_to_device, to_idx
-from ltr_bow import LtRBoW
+from ltr_bow import get_model
 from simple_mention_dataset import SimpleMentionDataset, collate_simple_mention_pointwise, collate_simple_mention_pairwise
 from simple_conll_dataset import SimpleCoNLLDataset, collate_simple_mention_ranker
 from samplers import SubsetSequentialSampler, FixLenSequentialSampler, ChunkedRandomSampler
@@ -151,8 +151,7 @@ def main():
         dataloader = DataLoader(dataset,
                                 batch_sampler=bs,
                                 collate_fn=collate_fn)
-        model = LtRBoW(cand_p.model.hidden_sizes,
-                       dropout_keep_prob=cand_p.train.dropout_keep_prob)
+        model = get_model(cand_p.model, cand_p.train)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = model.to(device)
         optimizer = optim.Adam(model.parameters(), cand_p.train.learning_rate)

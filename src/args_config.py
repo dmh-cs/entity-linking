@@ -40,6 +40,9 @@ model_args =  [
   {'name': 'just_tfidf','type': 'flag',          'default': False},
   {'name': 'just_wiki2vec','type': 'flag',       'default': False},
   {'name': 'hidden_sizes','type': list_arg(int), 'default': [100, 50]},
+  {'name': 'use_mlp_skips','type': 'flag', 'default': False},
+  {'name': 'hidden_size','type': int, 'default': 100},
+  {'name': 'num_hidden','type': int, 'default': 3},
 ]
 
 args = [_.assign({'for': 'train_params'}, arg) for arg in train_args] + [_.assign({'for': 'run_params'}, arg) for arg in run_args] + [_.assign({'for': 'model_params'}, arg) for arg in model_args]
