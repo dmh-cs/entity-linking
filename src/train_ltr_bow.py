@@ -136,7 +136,7 @@ def main():
                                      p.train.train_size,
                                      txt_dataset_path=p.run.txt_dataset_path,
                                      pkl_dataset_prefix=p.run.pkl_dataset_prefix)
-    with open('./perf.txt', 'w') as fh:
+    with open(p.run.perf_path, 'w') as fh:
       for cand_p, new_options in progressbar(hparam_search(p, arg_options, rand_p=False)):
         fh.write(str(thaw(new_options)) + '\n')
         fh.flush()

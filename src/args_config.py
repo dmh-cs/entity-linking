@@ -32,6 +32,7 @@ run_args = [
   {'name': 'pkl_dataset_prefix', 'type': optional_arg(str), 'default': None},
   {'name': 'use_custom','type': 'flag',                   'default': False},
   {'name':'xgboost_path','type': optional_arg(str),       'default': None},
+  {'name':'perf_path','type': str,       'default': './perf.txt'},
 ]
 
 model_args =  [
