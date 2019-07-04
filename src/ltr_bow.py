@@ -27,7 +27,8 @@ features = ['mention_tfidf',
             'mention_wiki2vec_dot',
             'page_wiki2vec_dot',
             'mention_wiki2vec_dot_unit',
-            'page_wiki2vec_dot_unit']
+            'page_wiki2vec_dot_unit',
+            'candidate_tfidf_norm']
 
 class LtRBoWMLP(nn.Module):
   def __init__(self, hidden_sizes, dropout_keep_prob=0.5, tanh_final_layer=False):

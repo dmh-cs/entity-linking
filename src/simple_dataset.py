@@ -116,8 +116,13 @@ class SimpleDataset(Dataset):
 
   def calc_tfidf(self, candidate_f, mention_f):
     return sum(cnt * candidate_f.get(token, 0) * self.idf.get(token,
-                                                              self.idf.get(token.lower(), 0.0))
+                                                              self.idf.get(token.lower(), 0.0)) ** 2
                for token, cnt in mention_f.items())
+
+  def calc_tfidf_norm(self, f):
+    return sum((cnt * self.idf.get(token,
+                                   self.idf.get(token.lower(), 0.0))) ** 2
+               for token, cnt in f.items())
 
   def __len__(self):
     if self.txt_dataset_path is not None:
@@ -197,6 +202,7 @@ class SimpleDataset(Dataset):
       page_wiki2vec_dot_unit = (page_wiki2vec_dot / (cand_vec.norm() * page_vec.norm())).item()
       page_wiki2vec_dot_unit = 0.0 if torch.isnan(torch.tensor(page_wiki2vec_dot_unit)) else page_wiki2vec_dot_unit
       mention_tfidf = self.calc_tfidf(candidate_f, mention_f)
+      candidate_tfidf_norm = self.calc_tfidf_norm(candidate_f)
       page_tfidf = self.calc_tfidf(candidate_f, page_f)
       all_mentions_features.append([mention_tfidf,
                                     sum(candidate_f.values()),
@@ -209,5 +215,6 @@ class SimpleDataset(Dataset):
                                     mention_wiki2vec_dot,
                                     page_wiki2vec_dot,
                                     mention_wiki2vec_dot_unit,
-                                    page_wiki2vec_dot_unit])
+                                    page_wiki2vec_dot_unit,
+                                    candidate_tfidf_norm])
     return all_mentions_features, cands_with_page, label

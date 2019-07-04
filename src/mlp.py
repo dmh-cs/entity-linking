@@ -16,9 +16,9 @@ def _get_layer(from_size, to_size, dropout_keep_prob, activation=None):
   else:
     act_name = 'linear'
   nn.init.xavier_uniform_(lin.weight, gain=nn.init.calculate_gain(act_name))
-  return [lin,
-          nn.ReLU() if activation is None else activation,
-          nn.Dropout(1 - dropout_keep_prob)]
+  return nn.Sequential(lin,
+                       nn.ReLU() if activation is None else activation,
+                       nn.Dropout(1 - dropout_keep_prob))
 
 class MLP(nn.Module):
   def __init__(self,
@@ -36,11 +36,11 @@ class MLP(nn.Module):
         layer_dropout_kp = 1.0
       else:
         layer_dropout_kp = dropout_keep_prob
-      self.layers.extend(_get_layer(from_size,
+      self.layers.append(_get_layer(from_size,
                                     to_size,
                                     layer_dropout_kp))
       from_size = to_size
-    self.layers.extend(_get_layer(from_size, out_dim, dropout_keep_prob, activation=Identity()))
+    self.layers.append(_get_layer(from_size, out_dim, dropout_keep_prob, activation=Identity()))
 
   def forward(self, x):
     return pipe(x, *self.layers)

@@ -56,7 +56,7 @@ def main():
     train_str = '_'.join(['conll' if p.train.train_on_conll else 'wiki',
                           'custom' if p.run.use_custom else '',
                           str(p.train.num_pages_to_use)])
-    with open('./3data_{}'.format(train_str), 'w') as fh:
+    with open('./4data_{}'.format(train_str), 'w') as fh:
       for item_num, item in progressbar(enumerate(dataset)):
         fh.write('{}\n'.format(str(item)))
         if item_num % 1000 == 0: fh.flush()

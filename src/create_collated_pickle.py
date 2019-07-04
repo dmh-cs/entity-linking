@@ -60,14 +60,14 @@ def main():
                           str(p.train.num_pages_to_use)])
     part_num = 0
     data = []
-    fh = open('./3prep_{}_part_{}.pkl'.format(train_str, part_num), 'wb')
+    fh = open('./4prep_{}_part_{}.pkl'.format(train_str, part_num), 'wb')
     for item_num, item in progressbar(enumerate(dataset)):
       if (item_num != 0) and item_num % 100000 == 0:
         pickle.dump(data, fh)
         data = []
         fh.close()
         part_num += 1
-        fh = open('./3prep_{}_part_{}.pkl'.format(train_str, part_num), 'wb')
+        fh = open('./4prep_{}_part_{}.pkl'.format(train_str, part_num), 'wb')
       all_target_features = []
       all_candidate_features = []
       pair_ids = []

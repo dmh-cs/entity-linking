@@ -28,11 +28,11 @@ from args_config import args
 
 def load_model(model_params, train_params):
   if model_params.just_tfidf:
-    return FixedWeights([1] + [0] * 11)
+    return FixedWeights([1] + [0] * 12)
   elif model_params.just_str_sim:
-    return FixedWeights([0, 0, 1] + [0] * 9)
+    return FixedWeights([0, 0, 1] + [0] * 10)
   elif model_params.just_wiki2vec:
-    return FixedWeights([0] * 8 + [0, 0, 1, 0])
+    return FixedWeights([0] * 8 + [0, 0, 1, 0, 0])
   else:
     model = get_model(model_params, train_params)
     train_str = 'pairwise' if train_params.use_pairwise else ''
