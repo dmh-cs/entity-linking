@@ -46,10 +46,10 @@ def main():
   p = get_cli_args(args)
   arg_options = [
     {'path': ['train', 'dropout_keep_prob'],
-     'options': [1.0, 0.9, 0.8, 0.7]},
+     'options': [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3]},
     {'path': ['train', 'margin'],
      'if': lambda params: _.get(thaw(params), ['train', 'use_hinge']),
-     'options': [0.01 * 10 ** val for val in range(0, 3)] + [5]},
+     'options': [10, 100, 1000, 10000]},
     # {'path': ['train', 'stop_by'],
     #  'options': ['acc', 'bce_loss']},
     {'path': ['train', 'use_hinge'],
@@ -59,7 +59,7 @@ def main():
     {'path': ['model', 'hidden_sizes'],
      'options': [[100]]},
     {'path': ['train', 'learning_rate'],
-     'options': [1e-2, 1e-3, 1e-4, 1e-5, 5e-6]},
+     'options': [0.1, 1e-2, 1e-3, 1e-4, 1e-5]},
   ]
   with open('./tokens.pkl', 'rb') as fh: token_idx_lookup = pickle.load(fh)
   with open('./glove_token_idx_lookup.pkl', 'rb') as fh: full_token_idx_lookup = pickle.load(fh)
