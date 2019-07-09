@@ -9,14 +9,6 @@ from torch.nn.utils.rnn import pad_sequence
 from utils import elim_dim
 
 
-def emissions_from_flat_scores(lens, flat_scores):
-  scores = []
-  offset = 0
-  for length in lens:
-    scores.append(torch.log(torch.softmax(torch.tensor(flat_scores[offset : offset + length]))))
-    offset += length
-  return pad_sequence(scores)
-
 def compatibility_from_ids(entity_id_to_row, compats, candidate_ids):
   dim = OrderedDict([('root_mention_dim' , 0),
                      ('leaf_mention_dim' , 1),

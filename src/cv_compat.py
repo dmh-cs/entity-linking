@@ -21,7 +21,7 @@ from data_fetchers import get_connection
 from fixed_weights_model import FixedWeights
 from ltr_bow import get_model
 from samplers import SubsetSequentialSampler
-from max_product_shallow_tree import emissions_from_flat_scores, compatibility_from_ids, mp_doc
+from max_product import emissions_from_flat_scores, compatibility_from_ids, mp_doc
 
 from rabbit_ml import get_cli_args
 
