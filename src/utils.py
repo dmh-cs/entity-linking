@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import unidecode
 from itertools import product
 from random import shuffle
@@ -108,3 +108,18 @@ def hparam_search(p, arg_options, rand_p=False):
   return freeze(filtered)
 
 def is_odd(num): return num % 2 != 0
+
+def elim_dim(dim, dim_name):
+  keys = []
+  vals = []
+  after_eliminated_dim = False
+  for key, val in dim.items():
+    if key == dim_name:
+      after_eliminated_dim = True
+      continue
+    elif after_eliminated_dim:
+      vals.append(val - 1)
+    else:
+      vals.append(val)
+    keys.append(key)
+  return OrderedDict(zip(keys, vals))
