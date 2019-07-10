@@ -51,6 +51,7 @@ def mp_tree_depth_1(root_emission, leaf_emissions, compat_with_root) -> int:
     leaf_option_dim = 0
     root_option_dim = 1
     return np.max(emission.reshape(-1, 1) + compatibility, leaf_option_dim)
+  if len(leaf_emissions) == 0: return np.argmax(root_emission)
   to_stack = [torch.tensor(_message(emission, compatibility))
               for emission, compatibility in zip(leaf_emissions,
                                                  compat_with_root)]

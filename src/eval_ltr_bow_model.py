@@ -83,7 +83,7 @@ def main():
           ranking_size = len(ids)
           top_1.append(ids[torch.argmax(candidate_scores[offset : offset + ranking_size]).item()])
           offset += ranking_size
-        for guess, label, idx, ids in zip(top_1, target, ctr, candidate_ids):
+        for guess, label, ids, idx in zip(top_1, target, candidate_ids, ctr):
           if guess == label:
             num_correct += 1
           else:
