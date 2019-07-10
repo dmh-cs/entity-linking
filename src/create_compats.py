@@ -26,7 +26,8 @@ import re
 import torch
 import utils as u
 from scipy.sparse import save_npz, dok_matrix, csr_matrix, coo_matrix, load_npz
-from itertools import combinations
+from itertools import combinations, groupby
+from operator import itemgetter
 
 class MentionDataset:
   def __init__(self,
@@ -42,18 +43,20 @@ class MentionDataset:
     self.prior_approx_mapping = u.get_prior_approx_mapping(self.entity_candidates_prior)
     self.mentions = None
     self.labels = None
+    self.mention_doc_id = None
 
-  def __len__(self):
-    return len(self.with_labels)
-
-  def __getitem__(self, idx):
-    label = self.labels[idx]
-    mention = self.mentions[idx]
-    cands = get_candidate_ids_simple(self.entity_candidates_prior,
-                                     self.prior_approx_mapping,
-                                     mention).tolist()
-    if label not in cands: return
-    return cands
+  def __iter__(self):
+    for doc_id, group in groupby(zip(self.labels, self.mentions, self.mention_doc_id),
+                                 key=itemgetter(2)):
+      group = list(group)
+      doc_cands = []
+      for (label, mention, doc_id) in group:
+        mention_cands = get_candidate_ids_simple(self.entity_candidates_prior,
+                                                 self.prior_approx_mapping,
+                                                 mention).tolist()
+        if label not in mention_cands: continue
+        doc_cands.extend(mention_cands)
+      yield list(set(doc_cands))
 
 class MentionWikiDataset(MentionDataset):
   def __init__(self,
@@ -68,6 +71,7 @@ class MentionWikiDataset(MentionDataset):
     self.page_ids = page_ids
     self.mention_infos = self.get_mention_infos(page_ids)
     self.mentions = [info['mention'] for info in self.mention_infos]
+    self.mention_doc_id = [info['page_id'] for info in self.mention_infos]
     self.labels = [info['entity_id'] for info in self.mention_infos]
 
   def get_mention_infos(self, page_ids):
@@ -88,6 +92,7 @@ class MentionCoNLLDataset(MentionDataset):
     self.mentions = get_mentions(lines)
     self.entity_page_ids = get_entity_page_ids(lines)
     self.labels = from_page_ids_to_entity_ids(self.cursor, self.entity_page_ids)
+    self.mention_doc_id = get_doc_id_per_mention(lines)
 
 def sparse_to_tfidf_vs(idf, sparse):
   idf_array = np.array([idf[i] if i in idf else idf[0]
@@ -138,7 +143,6 @@ def main():
       entity_id_to_row = pickle.load(fh)
     idf = get_idf(token_idx_lookup, p.run.idf_path)
     desc_fs_sparse = csr_matrix(load_npz('./desc_fs.npz'))
-    # mat = dok_matrix((len(entity_id_to_row), len(entity_id_to_row)))
     desc_vs = csr_matrix(sparse_to_tfidf_vs(idf, desc_fs_sparse))
     norm = (desc_vs.multiply(desc_vs)).sum(1)
     all_e_ids = set()
@@ -159,9 +163,6 @@ def main():
         j.extend([row_num
                   for row_num in cand_rows
                   for __ in range(len(cand_rows))])
-        # for i, row_1 in enumerate(cand_rows):
-        #   for j, row_2 in enumerate(cand_rows):
-        #     mat[row_1, row_2] = scores[i, j]
     mat = csr_matrix(coo_matrix((data, (i, j))))
     train_str = 'wiki+conll_' + '_'.join([str(p.train.num_pages_to_use)])
     save_npz('compats_{}.npz'.format(train_str), mat)

@@ -9,12 +9,13 @@ def emissions_from_flat_scores(lens, flat_scores):
   scores = []
   offset = 0
   for length in lens:
-    scores.append(torch.log(torch.softmax(torch.tensor(flat_scores[offset : offset + length]),
+    section = torch.tensor(flat_scores[offset : offset + length])
+    section_min = section.min()
+    scale = section.max() - section_min
+    scores.append(torch.log(torch.softmax((section - section_min) / scale,
                                           0)))
     offset += length
-  return pad_sequence(scores,
-                      batch_first=True,
-                      padding_value=-np.inf).numpy()
+  return [score.numpy() for score in scores]
 
 def compatibilities_from_ids(entity_id_to_row, compats, candidate_ids):
   row_nums = [[entity_id_to_row.get(cand_id) for cand_id in ids]
@@ -37,18 +38,23 @@ def compatibilities_from_ids(entity_id_to_row, compats, candidate_ids):
               row.append(compats[root, leaf])
         edge_factor.append(row)
       result = np.array(edge_factor)
-      factors.append(np.log(result / result.sum()))
+      factor_normalization = result.sum()
+      if factor_normalization == 0.0:
+        factors.append(np.log(np.ones_like(result) / result.size))
+      else:
+        factors.append(np.log(result / result.sum()))
     compat_with_roots.append(factors)
   return compat_with_roots
 
 def mp_tree_depth_1(root_emission, leaf_emissions, compat_with_root) -> int:
   def _message(emission, compatibility):
-    option_dim = 0
-    best_compatibility = np.max(compatibility, option_dim)
-    return emission + best_compatibility
-  messages = np.stack([_message(emission, compatibility)
-                       for emission, compatibility in zip(leaf_emissions,
-                                                          compat_with_root)])
+    leaf_option_dim = 0
+    root_option_dim = 1
+    return np.max(emission.reshape(-1, 1) + compatibility, leaf_option_dim)
+  to_stack = [torch.tensor(_message(emission, compatibility))
+              for emission, compatibility in zip(leaf_emissions,
+                                                 compat_with_root)]
+  messages = np.stack(pad_sequence(to_stack, batch_first=True, padding_value=-np.inf))
   leaf_mention_dim = 0
   root_scores = root_emission + np.sum(messages, leaf_mention_dim)
   return np.argmax(root_scores)
@@ -57,7 +63,7 @@ def mp_shallow_tree_doc(emissions, compatibilities):
   results = []
   gen = enumerate(zip(emissions, compatibilities))
   for root_idx, (root_emission, compat_with_root) in gen:
-    leaf_emissions = np.delete(emissions, root_idx)
+    leaf_emissions = np.delete(emissions, root_idx, 0)
     results.append(mp_tree_depth_1(root_emission,
                                    leaf_emissions,
                                    compat_with_root))
