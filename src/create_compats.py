@@ -54,7 +54,6 @@ class MentionDataset:
         mention_cands = get_candidate_ids_simple(self.entity_candidates_prior,
                                                  self.prior_approx_mapping,
                                                  mention).tolist()
-        if label not in mention_cands: continue
         doc_cands.extend(mention_cands)
       yield list(set(doc_cands))
 
@@ -145,24 +144,31 @@ def main():
     desc_fs_sparse = csr_matrix(load_npz('./desc_fs.npz'))
     desc_vs = csr_matrix(sparse_to_tfidf_vs(idf, desc_fs_sparse))
     norm = (desc_vs.multiply(desc_vs)).sum(1)
-    all_e_ids = set()
+    all_e_id_pairs = set()
     data = []
     i = []
     j = []
+    row_to_entity_id = _.invert(entity_id_to_row)
     for dataset in datasets:
       for cands in progressbar(iter(dataset)):
         if cands is None: continue
         cand_rows = [entity_id_to_row[e_id]
                      for e_id in cands
-                     if (e_id in entity_id_to_row) and (e_id not in all_e_ids)]
-        all_e_ids.update(cands)
+                     if (e_id in entity_id_to_row)]
         cand_mat = desc_vs[cand_rows]
         scores = cand_mat.dot(cand_mat.T) / norm[cand_rows]
-        data.extend(np.array(scores).ravel().tolist())
-        i.extend(cand_rows * len(cand_rows))
-        j.extend([row_num
-                  for row_num in cand_rows
-                  for __ in range(len(cand_rows))])
+        new_i = cand_rows * len(cand_rows)
+        new_j = [row_num
+                 for row_num in cand_rows
+                 for __ in range(len(cand_rows))]
+        list_scores = np.array(scores).ravel().tolist()
+        for res_i in range(len(list_scores)):
+          pair = (row_to_entity_id[min(new_i[res_i], new_j[res_i])],
+                  row_to_entity_id[max(new_i[res_i], new_j[res_i])])
+          if pair not in all_e_id_pairs:
+            data.append(list_scores[res_i])
+            i.append(new_i[res_i])
+            j.append(new_j[res_i])
     mat = csr_matrix(coo_matrix((data, (i, j))))
     train_str = 'wiki+conll_' + '_'.join([str(p.train.num_pages_to_use)])
     save_npz('compats_{}.npz'.format(train_str), mat)
