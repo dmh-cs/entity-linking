@@ -12,7 +12,7 @@ from torch.utils.data.sampler import BatchSampler, SequentialSampler
 from torch.utils.data import DataLoader
 import torch
 import pickle
-from scipy.sparse import load_npz
+from scipy.sparse import load_npz, csr_matrix
 
 import numpy as np
 from nltk.stem.snowball import SnowballStemmer
@@ -24,7 +24,7 @@ from fixed_weights_model import FixedWeights
 from ltr_bow import get_model
 from samplers import SubsetSequentialSampler
 from max_product import emissions_from_flat_scores, compatibilities_from_ids, mp_shallow_tree_doc
-from create_compats import MentionCoNLLDataset
+from create_compats import MentionCoNLLDataset, get_idf, sparse_to_tfidf_vs
 
 from rabbit_ml import get_cli_args
 
@@ -73,12 +73,18 @@ def main():
                                    p.run.idf_path,
                                    p.train.train_size,
                                    p.run.txt_dataset_path)
-      compats = load_npz('compats_wiki+conll_100000.npz')
+      # compats = load_npz('compats_wiki+conll_100000.npz')
       with open('./entity_to_row_id.pkl', 'rb') as fh:
         entity_id_to_row = pickle.load(fh)
+      idf = get_idf(token_idx_lookup, p.run.idf_path)
+      desc_fs_sparse = csr_matrix(load_npz('./desc_fs.npz'))
+      desc_vs = csr_matrix(sparse_to_tfidf_vs(idf, desc_fs_sparse))
+      norm = np.sqrt((desc_vs.multiply(desc_vs)).sum(1))
       ctr = count()
       num_correct = 0
       num_in_val = 0
+      num_correct_small = 0
+      num_in_val_small = 0
       grouped = groupby(((dataset[idx], doc_id_dataset.mention_doc_id[idx])
                          for idx in range(len(val_indices) + len(test_indices))),
                         key=itemgetter(1))
@@ -94,21 +100,33 @@ def main():
         keep_top_n = 5
         top_emissions = []
         top_cands = []
-        for emission, cand_ids in zip(emissions, candidate_ids):
+        idxs_to_check = []
+        for i, (emission, cand_ids, top_1, idx) in enumerate(zip(emissions, candidate_ids, target, ctr)):
+          if len(cand_ids) > 1:
+            if cand_ids[np.argmax(emission)] != top_1:
+              if idx in val_indices:
+                idxs_to_check.append(i)
+
           em, cand = zip(*nlargest(keep_top_n, zip(emission, cand_ids), key=itemgetter(0)))
           top_emissions.append(np.array(em))
           top_cands.append(cand)
         compatibilities = compatibilities_from_ids(entity_id_to_row,
-                                                   compats,
+                                                   desc_vs,
+                                                   norm,
                                                    top_cands)
         top_1_idx = mp_shallow_tree_doc(top_emissions,
                                         compatibilities)
         top_1 = [cand_ids[idx] for cand_ids, idx in zip(top_cands, top_1_idx)]
-        for guess, label, idx in zip(top_1, target, ctr):
-          if idx in val_indices:
-            num_in_val += 1
-            if guess == label: num_correct += 1
+        for guess, label in zip(top_1, target):
+          num_in_val += 1
+          if guess == label: num_correct += 1
+        for idx in idxs_to_check:
+          guess = top_1[idx]
+          label = target[idx]
+          num_in_val_small += 1
+          if guess == label: num_correct_small += 1
       print(num_correct / num_in_val)
+      print(num_correct_small / num_in_val_small)
 
 
 

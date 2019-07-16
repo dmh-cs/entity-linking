@@ -12,12 +12,15 @@ def emissions_from_flat_scores(lens, flat_scores):
     section = torch.tensor(flat_scores[offset : offset + length])
     section_min = section.min()
     scale = section.max() - section_min
-    scores.append(torch.log(torch.softmax((section - section_min) / scale,
-                                          0)))
+    if scale == 0.0:
+      scores.append(torch.log(torch.ones_like(section)))
+    else:
+      scores.append(torch.log(torch.softmax((section - section_min) / scale,
+                                            0)))
     offset += length
   return [score.numpy() for score in scores]
 
-def compatibilities_from_ids(entity_id_to_row, compats, candidate_ids):
+def compatibilities_from_ids(entity_id_to_row, desc_vs, norm, candidate_ids):
   row_nums = [[entity_id_to_row.get(cand_id) for cand_id in ids]
               for ids in candidate_ids]
   compat_with_roots = []
@@ -35,7 +38,13 @@ def compatibilities_from_ids(entity_id_to_row, compats, candidate_ids):
             if root is None:
               row.append(0.0)
             else:
-              row.append(compats[root, leaf])
+              prod = desc_vs[root].multiply(desc_vs[leaf]).sum()
+              div = norm[root].item() * norm[leaf].item()
+              if div > 0:
+                compat = (prod / div)
+              else:
+                compat = 0.0
+              row.append(compat)
         edge_factor.append(row)
       result = np.array(edge_factor)
       factor_normalization = result.sum()
