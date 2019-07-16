@@ -66,7 +66,7 @@ def mp_tree_depth_1(root_emission, leaf_emissions, compat_with_root) -> int:
                                                  compat_with_root)]
   messages = np.stack(pad_sequence(to_stack, batch_first=True, padding_value=-np.inf))
   leaf_mention_dim = 0
-  root_scores = root_emission + np.sum(messages, leaf_mention_dim)
+  root_scores = root_emission + np.sum(messages, leaf_mention_dim) / len(messages)
   return np.argmax(root_scores)
 
 def mp_shallow_tree_doc(emissions, compatibilities):
