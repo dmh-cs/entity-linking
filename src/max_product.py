@@ -30,13 +30,15 @@ def compatibilities_from_ids(entity_id_to_row, desc_vs, norm, candidate_ids):
       if root_idx == leaf_idx: continue
       edge_factor = []
       for leaf in leaf_options:
+        # default_val = 1.0 / len(root_options) * len(leaf_options)
+        default_val = 0.0
         if leaf is None:
-          row = [0.0 for __ in range(len(root_options))]
+          row = [default_val for __ in range(len(root_options))]
         else:
           row = []
           for root in root_options:
             if root is None:
-              row.append(0.0)
+              row.append(default_val)
             else:
               prod = desc_vs[root].multiply(desc_vs[leaf]).sum()
               div = norm[root].item() * norm[leaf].item()

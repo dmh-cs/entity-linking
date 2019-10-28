@@ -35,7 +35,6 @@ args_with_values =  [{'name': 'batch_size'                 , 'for': 'train_param
                      {'name': 'env'                        , 'for': 'path', 'type': lambda string: str(string) if string is not None else string},
                      {'name': 'comments'                   , 'for': 'run_param', 'type': str}]
 
-runner = None
 def main():
   global runner
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

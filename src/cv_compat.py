@@ -116,6 +116,7 @@ def main():
                                                    top_cands)
         top_1_idx = mp_shallow_tree_doc(top_emissions,
                                         compatibilities)
+        # top_1_idx = [np.argmax(em) for em in top_emissions]
         top_1 = [cand_ids[idx] for cand_ids, idx in zip(top_cands, top_1_idx)]
         for guess, label in zip(top_1, target):
           num_in_val += 1

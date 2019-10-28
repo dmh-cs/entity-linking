@@ -31,11 +31,11 @@ features = ['mention_tfidf',
             'candidate_tfidf_norm']
 
 class LtRBoWMLP(nn.Module):
-  def __init__(self, hidden_sizes, dropout_keep_prob=0.5, tanh_final_layer=False):
+  def __init__(self, hidden_sizes, dropout_keep_prob=0.5, tanh_final_layer=False, num_features=None):
     super().__init__()
     self.hidden_sizes = hidden_sizes
     self.dropout_keep_prob = dropout_keep_prob
-    self.num_features = len(features)
+    self.num_features = num_features or len(features)
     self.tanh_final_layer = tanh_final_layer
     self.mlp = MLP(self.num_features, 1, self.hidden_sizes, self.dropout_keep_prob)
 

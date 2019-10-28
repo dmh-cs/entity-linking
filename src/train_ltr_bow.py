@@ -161,6 +161,7 @@ def main():
           calc_loss = nn.BCEWithLogitsLoss()
         models_by_epoch = []
         model_performances = []
+        did_early_stop = False
         for epoch_num in range(cand_p.train.max_num_epochs):
           epoch_loss = 0
           get_stop_by_val = itemgetter(cand_p.train.stop_by)
@@ -180,6 +181,7 @@ def main():
               best_performances.insert(idx, performance['acc'])
               choose_model(cand_p,
                            models_by_epoch[-cand_p.train.stop_after_n_bad_epochs - 1])
+              did_early_stop = True
               break
           for batch_num, batch in enumerate(dataloader):
             model.train()
@@ -204,10 +206,11 @@ def main():
             loss.backward()
             optimizer.step()
           print('epoch loss', epoch_loss / len(dataloader))
+        if not did_early_stop:
           idx = np.searchsorted(best_performances, performance['acc'])
           best_options.insert(idx, thaw(cand_p))
           best_performances.insert(idx, performance['acc'])
-        choose_model(cand_p, model)
+          choose_model(cand_p, model)
         print('best', list(zip(best_options[-10:],
                                best_performances[-10:])))
 
